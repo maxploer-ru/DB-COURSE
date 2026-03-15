@@ -1,0 +1,90 @@
+@startuml use_case
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+
+title Use-Case диаграмма — Видеохостинг-платформа
+
+actor "Гость" as Guest
+actor "Пользователь" as User
+actor "Модератор" as Moderator
+actor "Администратор" as Admin
+
+Guest <|-- User
+User <|-- Moderator
+Moderator <|-- Admin
+
+rectangle "Видеохостинг-платформа" {
+    usecase "Просмотр списка видео" as UC1
+    usecase "Поиск видео" as UC2
+    usecase "Просмотр видео" as UC3
+    usecase "Чтение комментариев" as UC4
+    usecase "Регистрация" as UC5
+    usecase "Авторизация" as UC6
+
+    usecase "Создание канала" as UC7
+    usecase "Загрузка видео" as UC8
+    usecase "Редактирование видео" as UC9
+    usecase "Удаление видео" as UC10
+    usecase "Оценка видео" as UC11
+    usecase "Написание комментария" as UC12
+    usecase "Оценка комментария" as UC13
+    usecase "Подписка на канал" as UC14
+    usecase "Отписка от канала" as UC15
+    usecase "Создание плейлиста" as UC16
+    usecase "Добавление видео в плейлист" as UC17
+    usecase "Удаление видео из плейлиста" as UC18
+    usecase "Удаление плейлиста" as UC19
+    usecase "Просмотр уведомлений" as UC20
+    usecase "Просмотр истории просмотров" as UC21
+    usecase "Редактирование профиля" as UC22
+
+    usecase "Удаление видео (модерация)" as UC23
+    usecase "Удаление комментария (модерация)" as UC24
+
+    usecase "Управление пользователями" as UC25
+    usecase "Назначение ролей" as UC26
+    usecase "Удаление пользователя" as UC27
+    usecase "Управление ролями" as UC28
+
+    usecase "Уведомление о новом видео" as UC29
+    usecase "Уведомление об ответе" as UC30
+}
+
+Guest -- UC1
+Guest -- UC2
+Guest -- UC3
+Guest -- UC4
+Guest -- UC5
+Guest -- UC6
+
+User -- UC7
+User -- UC8
+User -- UC9
+User -- UC10
+User -- UC11
+User -- UC12
+User -- UC13
+User -- UC14
+User -- UC15
+User -- UC16
+User -- UC17
+User -- UC18
+User -- UC19
+User -- UC20
+User -- UC21
+User -- UC22
+
+Moderator -- UC23
+Moderator -- UC24
+
+Admin -- UC25
+Admin -- UC26
+Admin -- UC27
+Admin -- UC28
+
+UC8 ..> UC29
+UC12 ..> UC30
+UC2 ..> UC1
+
+@enduml
