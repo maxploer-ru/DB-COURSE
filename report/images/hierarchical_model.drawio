@@ -1,0 +1,67 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.1 Chrome/142.0.7444.265 Electron/39.8.0 Safari/537.36" version="29.6.1">
+  <diagram name="Page-1" id="af-Vv4kC16fxtBJhz6op">
+    <mxGraphModel dx="650" dy="451" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="UR7ob49R4BaYelyasps1-12" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UR7ob49R4BaYelyasps1-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-13" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="UR7ob49R4BaYelyasps1-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-33" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UR7ob49R4BaYelyasps1-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Университет" vertex="1">
+          <mxGeometry height="30" width="80" x="320" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-18" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="UR7ob49R4BaYelyasps1-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-19" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UR7ob49R4BaYelyasps1-17">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-20" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" target="UR7ob49R4BaYelyasps1-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-2" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Факультет2" vertex="1">
+          <mxGeometry height="30" width="70" x="325" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-29" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UR7ob49R4BaYelyasps1-28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-30" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" target="UR7ob49R4BaYelyasps1-27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Факультет1" vertex="1">
+          <mxGeometry height="30" width="70" x="153" y="394" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-32" edge="1" parent="1" source="UR7ob49R4BaYelyasps1-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="UR7ob49R4BaYelyasps1-31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-4" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;imageWidth=24;" value="Факультет3" vertex="1">
+          <mxGeometry height="30" width="70" x="500" y="394" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра3" vertex="1">
+          <mxGeometry height="30" width="70" x="244" y="443" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра4" vertex="1">
+          <mxGeometry height="30" width="70" x="325" y="444" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра5" vertex="1">
+          <mxGeometry height="30" width="70" x="406" y="444" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-27" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра1" vertex="1">
+          <mxGeometry height="30" width="70" x="72" y="443" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-28" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра2" vertex="1">
+          <mxGeometry height="30" width="70" x="153" y="443" as="geometry" />
+        </mxCell>
+        <mxCell id="UR7ob49R4BaYelyasps1-31" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Кафедра6" vertex="1">
+          <mxGeometry height="30" width="70" x="500" y="443" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
