@@ -1,0 +1,88 @@
+@startuml
+package "Data Access Component (Rating)" {
+
+  interface RatingRepository {
+    +GetVideoRating(userID int, videoID int) bool
+    +SetVideoRating(userID int, videoID int, liked bool)
+    +GetCommentRating(userID int, commentID int) bool
+    +SetCommentRating(userID int, commentID int, liked bool)
+  }
+
+  class PostgresRatingRepository {
+    -db *sql.DB
+    +GetVideoRating(userID int, videoID int) bool
+    +SetVideoRating(userID int, videoID int, liked bool)
+    +GetCommentRating(userID int, commentID int) bool
+    +SetCommentRating(userID int, commentID int, liked bool)
+  }
+
+  RatingRepository <|.. PostgresRatingRepository
+
+  class UsersVideosRatingsDB {
+    +user_id int
+    +video_id int
+    +liked bool
+    +rated_at time.Time
+  }
+
+  class UsersCommentsRatingsDB {
+    +user_id int
+    +comment_id int
+    +liked bool
+    +rated_at time.Time
+  }
+
+}
+
+PostgresRatingRepository --> UsersVideosRatingsDB
+PostgresRatingRepository --> UsersCommentsRatingsDB
+
+package "Business Logic Component (Rating)" {
+
+  interface RatingRepository {
+    +GetVideoRating(userID int, videoID int) bool
+    +SetVideoRating(userID int, videoID int, liked bool)
+  }
+
+  interface Cache {
+    +Get(key string) any
+    +Set(key string, value any)
+  }
+
+  class RateVideoUseCase {
+    -repo RatingRepository
+    -cache Cache
+
+    +Execute(userID int, videoID int, liked bool)
+  }
+
+  class VideoRating {
+    +UserID int
+    +VideoID int
+    +Liked bool
+    +RatedAt time.Time
+  }
+
+  RateVideoUseCase --> RatingRepository
+  RateVideoUseCase --> Cache
+  RateVideoUseCase --> VideoRating
+}
+
+package "Transport Layer (DTO)" {
+
+  class RateVideoRequest {
+    +user_id int
+    +video_id int
+    +liked bool
+  }
+
+  class RateVideoResponse {
+    +video_id int
+    +likes_count int
+  }
+
+}
+
+UsersVideosRatingsDB --> VideoRating
+VideoRating --> RateVideoResponse
+@enduml
