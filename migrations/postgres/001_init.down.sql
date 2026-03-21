@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS comment_ratings;
+DROP TABLE IF EXISTS video_ratings;
+DROP TABLE IF EXISTS playlist_items;
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS comments;
+DROP TABLE IF EXISTS viewings;
+DROP TABLE IF EXISTS playlists;
+DROP TABLE IF EXISTS videos;
+DROP TABLE IF EXISTS channels;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS roles;

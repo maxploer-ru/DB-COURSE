@@ -1,19 +1,30 @@
 version: '3.8'
 services:
   postgres:
-    container_name: videohost-postgres
+    container_name: ZVideo-postgres
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: videohost
+      POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: ZVideo-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ZVideo-network
+
   minio:
-    container_name: videohost_minio
+    container_name: ZVideo_minio
     image: minio/minio:latest
     environment:
       MINIO_ROOT_USER: minio
@@ -25,9 +36,14 @@ services:
     volumes:
       - minio_data:/data
 
+networks:
+  ZVideo-network:
+    driver: bridge
 
 volumes:
   minio_data:
-    name: videohost_minio_data
+    name: ZVideo_minio_data
   postgres_data:
-    name: videohost_postgres_data
+    name: ZVideo_postgres_data
+  redis_data:
+    name: ZVideo_redis_data
