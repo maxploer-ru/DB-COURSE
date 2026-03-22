@@ -1,7 +1,7 @@
 package mappers
 
 import (
-	"ZVideo/internal/domain/entity"
+	"ZVideo/internal/domain/auth/entity"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 )
 

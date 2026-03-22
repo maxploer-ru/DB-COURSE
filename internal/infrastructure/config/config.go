@@ -13,6 +13,15 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	Server   ServerConfig
+	Auth     AuthConfig
+}
+
+type AuthConfig struct {
+	Password PasswordConfig
+}
+
+type PasswordConfig struct {
+	MinLength int
 }
 
 type DatabaseConfig struct {
@@ -69,6 +78,11 @@ func LoadConfig() *Config {
 		Server: ServerConfig{
 			Port: getEnv("SERVER_PORT", "8080"),
 			Env:  getEnv("APP_ENV", "development"),
+		},
+		Auth: AuthConfig{
+			Password: PasswordConfig{
+				MinLength: 8,
+			},
 		},
 	}
 }

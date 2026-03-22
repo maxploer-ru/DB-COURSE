@@ -1,8 +1,8 @@
 package mappers
 
 import (
-	"ZVideo/internal/domain/entity"
-	"ZVideo/internal/domain/usecase/auth"
+	"ZVideo/internal/domain/auth/entity"
+	"ZVideo/internal/domain/auth/usecase"
 	"ZVideo/internal/infrastructure/http/dto"
 	"time"
 )
@@ -13,8 +13,8 @@ func NewAuthMapper() *AuthMapper {
 	return &AuthMapper{}
 }
 
-func (m *AuthMapper) ToRegisterCommand(req *dto.RegisterRequest) auth.RegisterUserCommand {
-	return auth.RegisterUserCommand{
+func (m *AuthMapper) ToRegisterCommand(req *dto.RegisterRequest) usecase.RegisterUserCommand {
+	return usecase.RegisterUserCommand{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: req.Password,

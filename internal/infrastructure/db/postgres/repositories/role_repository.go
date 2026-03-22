@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"ZVideo/internal/domain/entity"
+	"ZVideo/internal/domain/auth/entity"
 	"context"
 
 	"gorm.io/gorm"

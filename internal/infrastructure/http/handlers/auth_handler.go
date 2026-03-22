@@ -1,7 +1,10 @@
 package handlers
 
 import (
-	"ZVideo/internal/domain/usecase/auth"
+	"ZVideo/internal/domain/auth/service"
+	"ZVideo/internal/domain/auth/usecase"
+	"ZVideo/internal/infrastructure/http/dto"
+	"ZVideo/internal/infrastructure/http/mappers"
 	"errors"
 	"net/http"
 
@@ -9,42 +12,48 @@ import (
 )
 
 type AuthHandler struct {
-	registerUC *auth.RegisterUserUseCase
+	registerUC *usecase.RegisterUserUseCase
 	//loginUC    *auth.LoginUserUseCase
+	mapper *mappers.AuthMapper
 }
 
 func NewAuthHandler(
-	registerUC *auth.RegisterUserUseCase,
+	registerUC *usecase.RegisterUserUseCase,
 	// loginUC *auth.LoginUserUseCase,
+	mapper *mappers.AuthMapper,
 ) *AuthHandler {
 	return &AuthHandler{
 		registerUC: registerUC,
 		//loginUC:    loginUC,
+		mapper: mapper,
 	}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	var cmd auth.RegisterUserCommand
+	var req dto.RegisterRequest
 
-	if err := c.ShouldBindJSON(&cmd); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	cmd := h.mapper.ToRegisterCommand(&req)
 
 	result, err := h.registerUC.Execute(c.Request.Context(), cmd)
 	if err != nil {
 		switch {
-		case errors.Is(err, auth.ErrEmailAlreadyExists):
-			c.JSON(http.StatusConflict, gin.H{"error": "email already exists"})
-		case errors.Is(err, auth.ErrUsernameAlreadyExists):
-			c.JSON(http.StatusConflict, gin.H{"error": "username already exists"})
-		case errors.Is(err, auth.ErrWeakPassword):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "password is too weak"})
+		case errors.Is(err, service.ErrEmailAlreadyExists):
+			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "email already exists"})
+		case errors.Is(err, service.ErrUsernameAlreadyExists):
+			c.JSON(http.StatusConflict, dto.ErrorResponse{Error: "username already exists"})
+		case errors.Is(err, service.ErrWeakPassword):
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "password is too weak"})
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "internal server error"})
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, result)
+	response := h.mapper.ToAuthResponse(result.User, result.AccessToken, result.RefreshToken)
+	c.JSON(http.StatusCreated, response)
 }

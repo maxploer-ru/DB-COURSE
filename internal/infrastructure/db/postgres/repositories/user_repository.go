@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"ZVideo/internal/domain/entity"
+	"ZVideo/internal/domain/auth/entity"
 	"ZVideo/internal/infrastructure/db/postgres/mappers"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 	"context"
@@ -105,4 +105,34 @@ func (repo *UserRepository) Delete(ctx context.Context, id int) error {
 		Model(&models.User{}).
 		Where("id = ?", id).
 		Set("is_active", false).Error
+}
+
+func (repo *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
+	var count int64
+
+	err := repo.db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("email = ?", email).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (repo *UserRepository) ExistsByUsername(ctx context.Context, username string) (bool, error) {
+	var count int64
+
+	err := repo.db.WithContext(ctx).
+		Model(&models.User{}).
+		Where("username = ?", username).
+		Count(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

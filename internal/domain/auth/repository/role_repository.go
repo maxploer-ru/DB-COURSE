@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"ZVideo/internal/domain/entity"
+	"ZVideo/internal/domain/auth/entity"
 	"context"
 )
 

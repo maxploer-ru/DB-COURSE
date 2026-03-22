@@ -1,16 +1,16 @@
 package mappers
 
 import (
-	"ZVideo/internal/domain/entity"
+	entity2 "ZVideo/internal/domain/auth/entity"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 )
 
-func ToDomainUser(model *models.User) *entity.User {
+func ToDomainUser(model *models.User) *entity2.User {
 	if model == nil {
 		return nil
 	}
 
-	user := &entity.User{
+	user := &entity2.User{
 		ID:        model.ID,
 		Username:  model.Username,
 		Email:     model.Email,
@@ -18,7 +18,7 @@ func ToDomainUser(model *models.User) *entity.User {
 		CreatedAt: model.CreatedAt,
 		UpdatedAt: model.UpdatedAt,
 	}
-	user.Role = &entity.Role{
+	user.Role = &entity2.Role{
 		ID:        model.Role.ID,
 		Name:      model.Role.Name,
 		IsDefault: model.Role.IsDefault,
@@ -26,15 +26,15 @@ func ToDomainUser(model *models.User) *entity.User {
 	return user
 }
 
-func ToDomainUserList(models []*models.User) []*entity.User {
-	users := make([]*entity.User, len(models))
+func ToDomainUserList(models []*models.User) []*entity2.User {
+	users := make([]*entity2.User, len(models))
 	for i, model := range models {
 		users[i] = ToDomainUser(model)
 	}
 	return users
 }
 
-func FromDomainUser(user *entity.User) *models.User {
+func FromDomainUser(user *entity2.User) *models.User {
 	if user == nil {
 		return nil
 	}
@@ -52,7 +52,7 @@ func FromDomainUser(user *entity.User) *models.User {
 	}
 }
 
-func FromDomainUserList(users []*entity.User) []*models.User {
+func FromDomainUserList(users []*entity2.User) []*models.User {
 	usersModels := make([]*models.User, len(users))
 	for i, user := range users {
 		usersModels[i] = FromDomainUser(user)

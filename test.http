@@ -1,0 +1,39 @@
+### Регистрация пользователя
+POST http://localhost:8080/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "aszdasdasasdasd",
+  "email": "te1232asdasdz11113st@example.com",
+  "password": "1asdsasdads  ad"
+}
+
+#### Регистрация с разными данными
+#POST http://localhost:8080/api/v1/auth/register
+#Content-Type: application/json
+#
+#{
+#  "username": "john_doe",
+#  "email": "john@example.com",
+#  "password": "Securepass456"
+#}
+#
+#### Регистрация с существующим email (должна вернуть ошибку)
+#POST http://localhost:8080/api/v1/auth/register
+#Content-Type: application/json
+#
+#{
+#  "username": "testuser2",
+#  "email": "test@example.com",
+#  "password": "password123"
+#}
+#
+#### Регистрация с пустыми полями (проверка валидации)
+#POST http://localhost:8080/api/v1/auth/register
+#Content-Type: application/json
+#
+#{
+#  "username": "",
+#  "email": "invalid",
+#  "password": "123"
+#}

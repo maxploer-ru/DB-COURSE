@@ -1,4 +1,4 @@
-package jwt
+package service
 
 import (
 	"ZVideo/internal/infrastructure/config"
@@ -10,12 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Config struct {
-	Secret          string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
-}
-type Service interface {
+type JWTService interface {
 	GenerateAccessToken(userID int, username, role string) (string, error)
 	GenerateRefreshToken(userID int) (string, error)
 	ValidateAccessToken(tokenString string) (*Claims, error)
@@ -35,7 +30,7 @@ type serviceImpl struct {
 	refreshTokenTTL time.Duration
 }
 
-func NewService(cfg *config.JWTConfig) Service {
+func NewJWTService(cfg *config.JWTConfig) JWTService {
 	return &serviceImpl{
 		secret:          cfg.Secret,
 		accessTokenTTL:  cfg.AccessTokenTTL,

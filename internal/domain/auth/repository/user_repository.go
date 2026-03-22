@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"ZVideo/internal/domain/entity"
+	"ZVideo/internal/domain/auth/entity"
 	"context"
 )
 
@@ -12,4 +12,6 @@ type UserRepository interface {
 	GetByUsername(ctx context.Context, username string) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
 	Delete(ctx context.Context, id int) error
+	ExistsByEmail(ctx context.Context, email string) (bool, error)
+	ExistsByUsername(ctx context.Context, username string) (bool, error)
 }

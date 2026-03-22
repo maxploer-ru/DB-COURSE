@@ -1,18 +1,19 @@
 package main
 
 import (
-	authUC "ZVideo/internal/domain/usecase/auth"
-	"ZVideo/internal/infrastructure/config"
-	"ZVideo/internal/infrastructure/db/postgres"
-	"ZVideo/internal/infrastructure/http/handlers"
-	//"ZVideo/internal/infrastructure/http/router"
-	"ZVideo/internal/pkg/jwt"
-	"ZVideo/internal/pkg/password"
 	"log"
 
 	"github.com/gin-gonic/gin"
 
+	authService "ZVideo/internal/domain/auth/service"
+	authUC "ZVideo/internal/domain/auth/usecase"
+
+	"ZVideo/internal/infrastructure/config"
+	"ZVideo/internal/infrastructure/db/postgres"
 	postgresRepo "ZVideo/internal/infrastructure/db/postgres/repositories"
+	redisDB "ZVideo/internal/infrastructure/db/redis"
+	"ZVideo/internal/infrastructure/http/handlers"
+	"ZVideo/internal/infrastructure/http/mappers"
 )
 
 func main() {
@@ -26,16 +27,30 @@ func main() {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
+	redisClient, err := redisDB.NewClient(cfg.Redis)
+	if err != nil {
+		log.Printf("⚠️  Redis connection failed: %v", err)
+	}
+
+	tokenRepo := redisDB.NewTokenRepository(redisClient)
 	userRepo := postgresRepo.NewUserRepository(db)
 	roleRepo := postgresRepo.NewRoleRepository(db)
 
-	passwordSvc := password.NewService()
-	jwtSvc := jwt.NewService(&cfg.JWT)
+	passwordSvc := authService.NewPasswordService()
+	jwtSvc := authService.NewJWTService(&cfg.JWT)
+	userValSvc := authService.NewUserValidationService(userRepo, cfg.Auth.Password)
 
-	registerUC := authUC.NewRegisterUserUseCase(userRepo, roleRepo, passwordSvc, jwtSvc)
-	//loginUC := authUC.NewLoginUserUseCase(userRepo, passwordSvc, jwtSvc)
+	registerUC := authUC.NewRegisterUserUseCase(
+		userRepo,
+		roleRepo,
+		tokenRepo,
+		passwordSvc,
+		jwtSvc,
+		userValSvc,
+	)
 
-	authHandler := handlers.NewAuthHandler(registerUC /*, loginUC*/)
+	authMapper := mappers.NewAuthMapper()
+	authHandler := handlers.NewAuthHandler(registerUC, authMapper)
 
 	r := gin.Default()
 
@@ -44,8 +59,12 @@ func main() {
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
-			//auth.POST("/login", authHandler.Login)
+
 		}
+
+		api.GET("/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok"})
+		})
 	}
 
 	log.Printf("Server starting on port %s", cfg.Server.Port)
