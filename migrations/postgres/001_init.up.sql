@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS videos
     title            VARCHAR(64) NOT NULL,
     description      TEXT,
     filepath         TEXT        NOT NULL,
-    preview_filepath TEXT        NOT NULL,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
