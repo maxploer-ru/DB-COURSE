@@ -19,6 +19,7 @@ var (
 
 type UserValidationService interface {
 	ValidateNewUser(ctx context.Context, email, username, password string) error
+	ValidatePassword(password string) error
 }
 
 type userValidationService struct {
@@ -41,7 +42,7 @@ func (s *userValidationService) ValidateNewUser(
 	email, username, password string,
 ) error {
 
-	if err := s.validatePassword(password); err != nil {
+	if err := s.ValidatePassword(password); err != nil {
 		return err
 	}
 
@@ -72,7 +73,7 @@ func (s *userValidationService) ValidateNewUser(
 	return nil
 }
 
-func (s *userValidationService) validatePassword(password string) error {
+func (s *userValidationService) ValidatePassword(password string) error {
 
 	if len(password) < s.cfg.MinLength {
 		return ErrWeakPassword

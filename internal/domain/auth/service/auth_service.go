@@ -26,6 +26,10 @@ type AuthService interface {
 	Logout(ctx context.Context, accessToken, refreshToken string) error
 
 	ValidateAccessToken(ctx context.Context, token string) (*entity.User, error)
+
+	ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error
+
+	RevokeAllUserTokens(ctx context.Context, userID int) error
 }
 
 type AuthResult struct {
@@ -39,6 +43,7 @@ type authService struct {
 	tokenRepo   repository.TokenRepository
 	passwordSvc PasswordService
 	jwtSvc      JWTService
+	userValSvc  UserValidationService
 }
 
 func NewAuthService(
@@ -46,12 +51,14 @@ func NewAuthService(
 	tokenRepo repository.TokenRepository,
 	passwordSvc PasswordService,
 	jwtSvc JWTService,
+	userValSvc UserValidationService,
 ) AuthService {
 	return &authService{
 		userRepo:    userRepo,
 		tokenRepo:   tokenRepo,
 		passwordSvc: passwordSvc,
 		jwtSvc:      jwtSvc,
+		userValSvc:  userValSvc,
 	}
 }
 
@@ -173,4 +180,45 @@ func (s *authService) ValidateAccessToken(ctx context.Context, token string) (*e
 	}
 
 	return user, nil
+}
+
+func (s *authService) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("get user: %w", err)
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	if !s.passwordSvc.Verify(user.PasswordHash, oldPassword) {
+		return ErrInvalidCredentials
+	}
+
+	if oldPassword == newPassword {
+		return errors.New("new password must be different from old")
+	}
+
+	if err := s.userValSvc.ValidatePassword(newPassword); err != nil {
+		return fmt.Errorf("invalid password: %w", err)
+	}
+
+	hashed, err := s.passwordSvc.Hash(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	user.PasswordHash = hashed
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("update user: %w", err)
+	}
+
+	// Отзываем все токены (безопасность)
+	_ = s.RevokeAllUserTokens(ctx, userID)
+
+	return nil
+}
+
+func (s *authService) RevokeAllUserTokens(ctx context.Context, userID int) error {
+	return s.tokenRepo.DeleteAllUserTokens(ctx, userID)
 }
