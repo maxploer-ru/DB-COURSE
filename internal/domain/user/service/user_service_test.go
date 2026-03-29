@@ -27,8 +27,7 @@ func (m *mockAuthService) RevokeAllUserTokens(ctx context.Context, userID int) e
 
 func TestUserService_GetProfile_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepository)
-	mockAuth := new(mockAuthService)
-	svc := service.NewUserService(mockRepo, mockAuth)
+	svc := service.NewUserService(mockRepo)
 
 	user := &entity.User{ID: 1, Username: "john", Email: "john@example.com"}
 	mockRepo.On("GetByID", mock.Anything, 1).Return(user, nil)
@@ -41,8 +40,7 @@ func TestUserService_GetProfile_Success(t *testing.T) {
 
 func TestUserService_UpdateProfile_Success(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepository)
-	mockAuth := new(mockAuthService)
-	svc := service.NewUserService(mockRepo, mockAuth)
+	svc := service.NewUserService(mockRepo)
 
 	existing := &entity.User{ID: 1, Username: "john", Email: "john@example.com"}
 	mockRepo.On("GetByID", mock.Anything, 1).Return(existing, nil)

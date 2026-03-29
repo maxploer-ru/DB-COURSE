@@ -213,7 +213,6 @@ func (s *authService) ChangePassword(ctx context.Context, userID int, oldPasswor
 		return fmt.Errorf("update user: %w", err)
 	}
 
-	// Отзываем все токены (безопасность)
 	_ = s.RevokeAllUserTokens(ctx, userID)
 
 	return nil

@@ -31,11 +31,6 @@ type UpdateProfileCommand struct {
 	NotificationsEnabled *bool
 }
 
-type AuthService interface {
-	ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error
-	RevokeAllUserTokens(ctx context.Context, userID int) error
-}
-
 type UserService interface {
 	GetProfile(ctx context.Context, userID int) (*Profile, error)
 	UpdateProfile(ctx context.Context, userID int, cmd UpdateProfileCommand) (*Profile, error)
@@ -43,13 +38,11 @@ type UserService interface {
 
 type userService struct {
 	userRepo repository.UserRepository
-	authSvc  AuthService
 }
 
-func NewUserService(userRepo repository.UserRepository, authSvc AuthService) UserService {
+func NewUserService(userRepo repository.UserRepository) UserService {
 	return &userService{
 		userRepo: userRepo,
-		authSvc:  authSvc,
 	}
 }
 
