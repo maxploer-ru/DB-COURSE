@@ -1,5 +1,289 @@
 \chapter{Конструкторский раздел}
 
+\section{Проектирование базы данных}
+
+Согласно ER-диаграмме предметной области, представленной на рисунке~\ref{img:ER}, проектируемая база данных должна содержать следующие таблицы:
+
+\begin{itemize}
+	\item \textit{roles} с информацией о ролях;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор роли;
+		\item \textit{name} --- название роли;
+		\item \textit{is\_default} --- флаг, определяющий роль, присваиваемую новым пользователям по умолчанию.
+	\end{itemize}
+	
+	\item \textit{users} с информацией о пользователях приложения;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор пользователя;
+		\item \textit{role\_id} --- внешний ключ на таблицу \textit{roles}, определяющий роль пользователя;
+		\item \textit{username} --- псевдоним пользователя;
+		\item \textit{email} --- адрес электронной почты;
+		\item \textit{password\_hash} --- хеш пароля пользователя;
+		\item \textit{notifications\_enabled} --- флаг включения/выключения уведомлений;
+		\item \textit{is\_active} --- флаг блокировки пользователя;
+		\item \textit{created\_at} --- дата и время регистрации;
+		\item \textit{updated\_at} --- дата и время последнего обновления профиля.
+	\end{itemize}
+	
+	\item \textit{channels} с информацией о каналах, принадлежащих пользователям;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор канала;
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users}, владелец канала;
+		\item \textit{name} --- название канала;
+		\item \textit{description} --- текстовое описание канала;
+		\item \textit{created\_at} --- дата и время создания канала.
+	\end{itemize}
+	
+	\item \textit{videos} с метаданными видеозаписей;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор видео;
+		\item \textit{channel\_id} --- внешний ключ на таблицу \textit{channels}, канал-владелец видео;
+		\item \textit{title} --- название видео;
+		\item \textit{description} --- текстовое описание видео;
+		\item \textit{filepath} --- путь к файлу с видеозаписью;
+		\item \textit{created\_at} --- дата и время публикации видео.
+	\end{itemize}
+	
+	\item \textit{playlists} с информацией о плейлистах, созданных на канале;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор плейлиста;
+		\item \textit{channel\_id} --- внешний ключ на таблицу \textit{channels}, канал-владелец плейлиста;
+		\item \textit{name} --- название плейлиста;
+		\item \textit{description} --- текстовое описание плейлиста;
+		\item \textit{created\_at} --- дата и время создания плейлиста.
+	\end{itemize}
+	
+	\item \textit{playlist\_items} для связи плейлистов с видео (формализация связи <<многие-ко-многим>> между \textit{playlists} и \textit{videos});
+	\begin{itemize}
+		\item \textit{playlist\_id} --- внешний ключ на таблицу \textit{playlists};
+		\item \textit{video\_id} --- внешний ключ на таблицу \textit{videos};
+		\item \textit{number} --- порядковый номер видео в плейлисте;
+		\item \textit{added\_at} --- дата и время добавления видео в плейлист.
+	\end{itemize}
+	
+	\item \textit{viewings} для хранения истории просмотров видео пользователями;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор записи просмотра;
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users};
+		\item \textit{video\_id} --- внешний ключ на таблицу \textit{videos};
+		\item \textit{watched\_at} --- дата и время просмотра.
+	\end{itemize}
+	
+	\item \textit{comments} для хранения комментариев пользователей к видео;
+	\begin{itemize}
+		\item \textit{id} --- первичный ключ, идентификатор комментария;
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users}, автор комментария;
+		\item \textit{video\_id} --- внешний ключ на таблицу \textit{videos};
+		\item \textit{content} --- текстовое содержание комментария;
+		\item \textit{created\_at} --- дата и время написания комментария.
+	\end{itemize}
+	
+	\item \textit{video\_ratings} для хранения оценок видео (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{videos});
+	\begin{itemize}
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users};
+		\item \textit{video\_id} --- внешний ключ на таблицу \textit{videos};
+		\item \textit{liked} --- булевый флаг (лайк/дизлайк);
+		\item \textit{rated\_at} --- дата и время выставления оценки.
+	\end{itemize}
+	
+	\item \textit{comment\_ratings} для хранения оценок комментариев (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{comments});
+	\begin{itemize}
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users};
+		\item \textit{comment\_id} --- внешний ключ на таблицу \textit{comments};
+		\item \textit{liked} --- булевый флаг (лайк/дизлайк);
+		\item \textit{rated\_at} --- дата и время выставления оценки.
+	\end{itemize}
+	
+	\item \textit{subscriptions} для хранения информации о подписках пользователей на каналы (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{channels});
+	\begin{itemize}
+		\item \textit{user\_id} --- внешний ключ на таблицу \textit{users};
+		\item \textit{channel\_id} --- внешний ключ на таблицу \textit{channels};
+		\item \textit{new\_videos\_count} --- счётчик новых видео для уведомления;
+		\item \textit{subscribed\_at} --- дата и время подписки.
+	\end{itemize}
+\end{itemize}
+
+Диаграмма проектируемой базы данных представлена на рисунке~\ref{img:dbml}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=1\textwidth]{images/dbml.pdf}
+	\caption{Диаграмма базы данных}
+	\label{img:dbml}
+\end{figure}
+
+\section{Доказательство соответствия базы данных условиям 3НФ}
+
+Таблица находится в 1НФ, если выполняются следующие условия:
+\begin{enumerate}
+	\item каждая строка таблицы уникальна;
+	\item каждый столбец содержит только одно значение.
+\end{enumerate}
+
+Таблица находится в 2НФ, если выполняются следующие условия:
+\begin{enumerate}
+	\item таблица находится в 1НФ;
+	\item любой неключевой атрибут должен зависеть от всех атрибутов ключа.
+\end{enumerate}
+
+Таблица находится в 3НФ, если выполняются следующие условия:
+\begin{enumerate}
+	\item таблица находится в 2НФ;
+	\item каждый не ключевой атрибут нетранзитивно зависит от первичного ключа.
+\end{enumerate}
+
+Все таблицы находятся в 1НФ, поскольку в каждой таблице есть первичный ключ, обеспечивающий уникальность строки, и каждый атрибут выделен в отдельный столбец, что обеспечивает простоту содержимого столбца.
+
+Для дальнейшего доказательства необходимо рассмотреть функциональные зависимости каждой таблицы:
+
+$
+\mathcal{F}_{\texttt{roles}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{name}, \texttt{is\_default}\},\\
+	& \texttt{name} \to \{\texttt{id}, \texttt{is\_default}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{users}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to 
+	\left\{
+	\begin{aligned}
+		& \texttt{role\_id}, \texttt{username}, \texttt{email},\\
+		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+	\end{aligned}
+	\right\},\\[6pt]
+	& \texttt{username} \to 
+	\left\{
+	\begin{aligned}
+		& \texttt{id}, \texttt{role\_id}, \texttt{email},\\
+		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+	\end{aligned}
+	\right\},\\[6pt]
+	& \texttt{email} \to 
+	\left\{
+	\begin{aligned}
+		& \texttt{id}, \texttt{role\_id}, \texttt{username},\\
+		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+	\end{aligned}
+	\right\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{channels}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{user\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\},\\
+	& \texttt{name} \to \{\texttt{id}, \texttt{user\_id}, \texttt{description}, \texttt{created\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{videos}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{channel\_id}, \texttt{title}, \texttt{description}, \texttt{filepath}, \texttt{created\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{playlists}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{channel\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{viewings}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{watched\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{comments}} =
+\left\{
+\begin{aligned}
+	& \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{content}, \texttt{created\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{subscriptions}} =
+\left\{
+\begin{aligned}
+	& \{\texttt{user\_id}, \texttt{channel\_id}\} \to \{\texttt{new\_count}, \texttt{subscribed\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{playlist\_items}} =
+\left\{
+\begin{aligned}
+	& \{\texttt{playlist\_id}, \texttt{video\_id}\} \to \{\texttt{number}, \texttt{added\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{video\_ratings}} =
+\left\{
+\begin{aligned}
+	& \{\texttt{user\_id}, \texttt{video\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
+\end{aligned}
+\right.,
+$
+
+$
+\mathcal{F}_{\texttt{comment\_ratings}} =
+\left\{
+\begin{aligned}
+	& \{\texttt{user\_id}, \texttt{comment\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
+\end{aligned}
+\right..
+$
+
+Во всех функциональных зависимостях в левой части присутствуют только потенциальные ключи. Следовательно, каждый неключевой атрибут нетранзитивно зависит от всех атрибутов первичных ключей. Таким образом, все таблицы находятся в 3НФ.
+
+\section{Ролевая модель на уровне базы данных}
+
+
+
+\section{Разработка функций базы данных}
+
+В базе данных не будут храниться агрегатные параметры видео (количество просмотров, количество лайков, количество дизлайков), поскольку эти данные часто изменяемые. Вычисление предпочтительно выполнять динамически, а именно с помощью функции. Схема алгоритма работы функции, вычисляющей количество лайков на видео, представлена на рисунке~\ref{img:likes_function}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/likes_function.pdf}
+	\caption{Схема алгоритма работы функции вычисления количества лайков на видео}
+	\label{img:likes_function}
+\end{figure}
+
+Схема алгоритма работы функции уведомления подписчиков канала о новом видео представлена на рисунке~\ref{img:notifications_function}. 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/notifications_function.pdf}
+	\caption{Схема алгоритма работы функции уведомления подписчиков канала о новом видео}
+	\label{img:notifications_function}
+\end{figure}
 \section*{Выводы по разделу}
 
 \clearpage
