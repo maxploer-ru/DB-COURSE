@@ -192,7 +192,12 @@ $
 \mathcal{F}_{\texttt{videos}} =
 \left\{
 \begin{aligned}
-	& \texttt{id} \to \{\texttt{channel\_id}, \texttt{title}, \texttt{description}, \texttt{filepath}, \texttt{created\_at}\}
+	& \texttt{id} \to \left\{
+	\begin{aligned}
+		& \texttt{channel\_id}, \texttt{title}, \texttt{description}, \\
+		& \texttt{filepath}, \texttt{created\_at}
+	\end{aligned}
+	\right\}
 \end{aligned}
 \right.,
 $
@@ -228,9 +233,14 @@ $
 \mathcal{F}_{\texttt{subscriptions}} =
 \left\{
 \begin{aligned}
-	& \{\texttt{user\_id}, \texttt{channel\_id}\} \to \{\texttt{new\_count}, \texttt{subscribed\_at}\}
+	& \{\texttt{user\_id}, \texttt{channel\_id}\} \to \left\{
+	\begin{aligned}
+		& \texttt{new\_videos\_count}, \\
+		& \texttt{subscribed\_at}
+	\end{aligned}
+	\right\}
 \end{aligned}
-\right.,
+\right\},
 $
 
 $
@@ -264,26 +274,77 @@ $
 
 \section{Ролевая модель на уровне базы данных}
 
+В результате анализа предметной области была введена ролевая модель из следующих четырёх ролей:
+\begin{itemize}
+	\item гость;
+	\item пользователь;
+	\item модератор;
+	\item администратор.
+\end{itemize}
 
+На уровне базы данных ролевая модель отражается через привилегии, то есть набор разрешённых операций для каждой роли на каждой таблице. Однако в данном случае требуется более тонкое управление (например, пользователь может изменять в таблице \textit{users} только данные о себе), что должно обрабатываться на уровне приложения.
+
+В соответствии с диаграммой вариантов использования, представленной на рисунке~\ref{img:UseCase}, определены следующие привилегии.
+
+\subsection*{Привилегии гостя}
+
+Гостю доступна только регистрация и авторизация, то есть операции \textit{INSERT}, \textit{SELECT} над таблицей \textit{users}.
+
+\subsection*{Привилегии пользователя}
+
+Пользователь может выполнять следующие операции:
+\begin{itemize}
+	\item \textit{SELECT} над таблицей \textit{roles};
+	\item \textit{SELECT}, \textit{UPDATE} над таблицей \textit{users};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{channels};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{videos};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists};
+	\item \textit{INSERT}, \textit{SELECT} над таблицей \textit{viewings};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comments};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{DELETE} над таблицей \textit{subscriptions};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists\_items};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{video\_ratings};
+	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comment\_ratings}.
+\end{itemize}
+При этом операции \textit{UPDATE}, \textit{DELETE} пользователь может выполнять только над своими записями в таблице. Кроме того, пользователю недоступно изменение атрибута \textit{is\_active} в таблице \textit{users}.
+
+\subsection*{Привилегии модератора}
+
+Модератор обладает всеми привилегиями пользователя, но при этом может также выполнять операции \textit{UPDATE}, \textit{DELETE} над всеми записями в таблицах \textit{videos}, \textit{comments}.
+
+\subsection*{Привилегии администратора}
+
+Администратор может выполнять все операции над всеми таблицами, в том числе изменять атрибут \textit{is\_active} в таблице \textit{users}.
 
 \section{Разработка функций базы данных}
 
-В базе данных не будут храниться агрегатные параметры видео (количество просмотров, количество лайков, количество дизлайков), поскольку эти данные часто изменяемые. Вычисление предпочтительно выполнять динамически, а именно с помощью функции. Схема алгоритма работы функции, вычисляющей количество лайков на видео, представлена на рисунке~\ref{img:likes_function}.
+В базе данных не будут храниться агрегатные параметры видео (количество просмотров, количество лайков, количество дизлайков), поскольку эти данные часто изменяемые.
+Вычисление предпочтительно выполнять динамически, а именно с помощью функции.
+Схемы алгоритмов работы функций, вычисляющей количество лайков, дизлайков на видео, представлены на рисунках~\ref{img:likes_function}--\ref{img:dislikes_function}.
 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.8\textwidth]{images/likes_function.pdf}
+	\includegraphics[width=0.65\textwidth]{images/likes_function.pdf}
 	\caption{Схема алгоритма работы функции вычисления количества лайков на видео}
 	\label{img:likes_function}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.65\textwidth]{images/dislikes_function.pdf}
+	\caption{Схема алгоритма работы функции вычисления количества дизлайков на видео}
+	\label{img:dislikes_function}
 \end{figure}
 
 Схема алгоритма работы функции уведомления подписчиков канала о новом видео представлена на рисунке~\ref{img:notifications_function}. 
 \begin{figure}[H]
 	\centering
-	\includegraphics[width=0.8\textwidth]{images/notifications_function.pdf}
+	\includegraphics[width=0.65\textwidth]{images/notifications_function.pdf}
 	\caption{Схема алгоритма работы функции уведомления подписчиков канала о новом видео}
 	\label{img:notifications_function}
 \end{figure}
+
 \section*{Выводы по разделу}
 
+В конструкторском разделе спроектирована реляционная база данных, в которой каждая таблица приведена к третьей нормальной форме. Разработанная ранее ролевая модель была спроектирована на уровне базы данных: для каждой роли определены привилегии на операции с таблицами. Спроектированы функции динамического вычисления количества лайков, дизлайков и уведомления подписчиков о новом видео.
 \clearpage
