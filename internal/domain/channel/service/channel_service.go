@@ -17,6 +17,8 @@ type ChannelService interface {
 	GetChannel(ctx context.Context, id int) (*entity.Channel, error)
 	UpdateChannel(ctx context.Context, channelID int, name, description *string) (*entity.Channel, error)
 	DeleteChannel(ctx context.Context, channelID, userID int) error
+	Exists(ctx context.Context, channelID int) (bool, error)
+	IsOwner(ctx context.Context, channelID, userID int) (bool, error)
 }
 
 type channelService struct {
@@ -107,4 +109,23 @@ func (s *channelService) DeleteChannel(ctx context.Context, channelID, userID in
 		return fmt.Errorf("delete channel: %w", err)
 	}
 	return nil
+}
+
+func (s *channelService) Exists(ctx context.Context, channelID int) (bool, error) {
+	ch, err := s.channelRepo.GetByID(ctx, channelID)
+	if err != nil {
+		return false, fmt.Errorf("check channel exists: %w", err)
+	}
+	return ch != nil, nil
+}
+
+func (s *channelService) IsOwner(ctx context.Context, channelID, userID int) (bool, error) {
+	ch, err := s.channelRepo.GetByID(ctx, channelID)
+	if err != nil {
+		return false, fmt.Errorf("check channel owner: %w", err)
+	}
+	if ch == nil {
+		return false, ErrChannelNotFound
+	}
+	return ch.UserID == userID, nil
 }

@@ -13,19 +13,16 @@ import (
 
 type AuthHandler struct {
 	registerUC *usecase.RegisterUserUseCase
-	//loginUC    *auth.LoginUserUseCase
-	mapper *mappers.AuthMapper
+	mapper     *mappers.AuthMapper
 }
 
 func NewAuthHandler(
 	registerUC *usecase.RegisterUserUseCase,
-	// loginUC *auth.LoginUserUseCase,
 	mapper *mappers.AuthMapper,
 ) *AuthHandler {
 	return &AuthHandler{
 		registerUC: registerUC,
-		//loginUC:    loginUC,
-		mapper: mapper,
+		mapper:     mapper,
 	}
 }
 

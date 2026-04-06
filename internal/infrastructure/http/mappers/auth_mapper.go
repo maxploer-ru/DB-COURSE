@@ -21,18 +21,7 @@ func (m *AuthMapper) ToRegisterCommand(req *dto.RegisterRequest) usecase.Registe
 	}
 }
 
-//func (m *AuthMapper) ToLoginCommand(req *dto.LoginRequest) auth.LoginUserCommand {
-//	return auth.LoginUserCommand{
-//		Email:    req.Email,
-//		Password: req.Password,
-//	}
-//}
 //
-//func (m *AuthMapper) ToRefreshTokenCommand(req *dto.RefreshTokenRequest) auth.RefreshTokenCommand {
-//	return auth.RefreshTokenCommand{
-//		RefreshToken: req.RefreshToken,
-//	}
-//}
 
 func (m *AuthMapper) ToAuthResponse(user *entity.User, accessToken, refreshToken string) dto.AuthResponse {
 	return dto.AuthResponse{

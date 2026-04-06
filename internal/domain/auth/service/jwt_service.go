@@ -24,21 +24,21 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-type serviceImpl struct {
+type jwtService struct {
 	secret          string
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 }
 
 func NewJWTService(cfg *config.JWTConfig) JWTService {
-	return &serviceImpl{
+	return &jwtService{
 		secret:          cfg.Secret,
 		accessTokenTTL:  cfg.AccessTokenTTL,
 		refreshTokenTTL: cfg.RefreshTokenTTL,
 	}
 }
 
-func (s *serviceImpl) GenerateAccessToken(userID int, username, role string) (string, error) {
+func (s *jwtService) GenerateAccessToken(userID int, username, role string) (string, error) {
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
@@ -55,7 +55,7 @@ func (s *serviceImpl) GenerateAccessToken(userID int, username, role string) (st
 	return token.SignedString([]byte(s.secret))
 }
 
-func (s *serviceImpl) GenerateRefreshToken(userID int) (string, error) {
+func (s *jwtService) GenerateRefreshToken(userID int) (string, error) {
 	claims := jwt.RegisteredClaims{
 		Subject:   strconv.Itoa(userID),
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshTokenTTL)),
@@ -68,7 +68,7 @@ func (s *serviceImpl) GenerateRefreshToken(userID int) (string, error) {
 	return token.SignedString([]byte(s.secret))
 }
 
-func (s *serviceImpl) ValidateAccessToken(tokenString string) (*Claims, error) {
+func (s *jwtService) ValidateAccessToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
@@ -87,7 +87,7 @@ func (s *serviceImpl) ValidateAccessToken(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-func (s *serviceImpl) ValidateRefreshToken(tokenString string) (int, error) {
+func (s *jwtService) ValidateRefreshToken(tokenString string) (int, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")

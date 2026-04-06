@@ -36,7 +36,7 @@ func NewSubscriptionService(subRepo repository.SubscriptionRepository, channelRe
 }
 
 func (s *subscriptionService) Subscribe(ctx context.Context, userID, channelID int) error {
-	// проверяем существование канала
+
 	ch, err := s.channelRepo.GetByID(ctx, channelID)
 	if err != nil {
 		return fmt.Errorf("get channel: %w", err)
@@ -44,7 +44,7 @@ func (s *subscriptionService) Subscribe(ctx context.Context, userID, channelID i
 	if ch == nil {
 		return ErrChannelNotFound
 	}
-	// проверяем, не подписан ли уже
+
 	exists, err := s.subRepo.IsSubscribed(ctx, userID, channelID)
 	if err != nil {
 		return fmt.Errorf("check subscription: %w", err)

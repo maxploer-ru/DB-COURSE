@@ -11,24 +11,20 @@ import (
 )
 
 var (
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrTokenBlacklisted    = errors.New("token is blacklisted")
-	ErrUserInactive        = errors.New("user is inactive")
-	ErrUserNotFound        = errors.New("user not found")
+	ErrUserNameAlreadyExists = errors.New("username already exists")
+	ErrInvalidCredentials    = errors.New("invalid credentials")
+	ErrInvalidRefreshToken   = errors.New("invalid refresh token")
+	ErrTokenBlacklisted      = errors.New("token is blacklisted")
+	ErrUserInactive          = errors.New("user is inactive")
+	ErrUserNotFound          = errors.New("user not found")
 )
 
 type AuthService interface {
 	Login(ctx context.Context, email, password string) (*AuthResult, error)
-
 	Refresh(ctx context.Context, refreshToken string) (*AuthResult, error)
-
 	Logout(ctx context.Context, accessToken, refreshToken string) error
-
 	ValidateAccessToken(ctx context.Context, token string) (*entity.User, error)
-
 	ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error
-
 	RevokeAllUserTokens(ctx context.Context, userID int) error
 }
 
@@ -60,6 +56,22 @@ func NewAuthService(
 		jwtSvc:      jwtSvc,
 		userValSvc:  userValSvc,
 	}
+}
+
+func (s *authService) Register(ctx context.Context, username, email, password string) error {
+	exists, err := s.userRepo.ExistsByUsername(ctx, username)
+	if err != nil {
+		return err
+	} else if exists {
+		return ErrUserNameAlreadyExists
+	}
+	exists, err = s.userRepo.ExistsByEmail(ctx, email)
+	if err != nil {
+		return err
+	} else if exists {
+		return ErrUserInactive
+	}
+	return nil
 }
 
 func (s *authService) Login(ctx context.Context, email, password string) (*AuthResult, error) {

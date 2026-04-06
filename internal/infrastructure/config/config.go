@@ -13,7 +13,31 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	Server   ServerConfig
+	HTTP     HTTPConfig
 	Auth     AuthConfig
+}
+
+type HTTPConfig struct {
+	Port            string
+	Env             string
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
+	IdleTimeout     time.Duration
+	ShutdownTimeout time.Duration
+
+	AllowedOrigins []string
+	AllowedMethods []string
+	AllowedHeaders []string
+	ExposedHeaders []string
+
+	RateLimit       int
+	RateLimitWindow time.Duration
+
+	MaxBodySize       int64
+	EnableCompression bool
+	EnableSwagger     bool
+	ServeStatic       bool
+	StaticDir         string
 }
 
 type AuthConfig struct {
@@ -79,6 +103,28 @@ func LoadConfig() *Config {
 			Port: getEnv("SERVER_PORT", "8080"),
 			Env:  getEnv("APP_ENV", "development"),
 		},
+		HTTP: HTTPConfig{
+			Port:            getEnv("HTTP_PORT", "8080"),
+			Env:             getEnv("APP_ENV", "development"),
+			ReadTimeout:     getEnvAsDuration("HTTP_READ_TIMEOUT", 15*time.Second),
+			WriteTimeout:    getEnvAsDuration("HTTP_WRITE_TIMEOUT", 60*time.Second),
+			IdleTimeout:     getEnvAsDuration("HTTP_IDLE_TIMEOUT", 120*time.Second),
+			ShutdownTimeout: getEnvAsDuration("HTTP_SHUTDOWN_TIMEOUT", 30*time.Second),
+
+			AllowedOrigins: getEnvAsSlice("HTTP_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8080"}),
+			AllowedMethods: getEnvAsSlice("HTTP_ALLOWED_METHODS", []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}),
+			AllowedHeaders: getEnvAsSlice("HTTP_ALLOWED_HEADERS", []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"}),
+			ExposedHeaders: getEnvAsSlice("HTTP_EXPOSED_HEADERS", []string{"Link", "X-Request-ID"}),
+
+			RateLimit:       getEnvAsInt("HTTP_RATE_LIMIT", 100),
+			RateLimitWindow: getEnvAsDuration("HTTP_RATE_LIMIT_WINDOW", 1*time.Minute),
+
+			MaxBodySize:       getEnvAsInt64("HTTP_MAX_BODY_SIZE", 10<<20),
+			EnableCompression: getEnvAsBool("HTTP_ENABLE_COMPRESSION", true),
+			EnableSwagger:     getEnvAsBool("HTTP_ENABLE_SWAGGER", false),
+			ServeStatic:       getEnvAsBool("HTTP_SERVE_STATIC", true),
+			StaticDir:         getEnv("HTTP_STATIC_DIR", "./uploads"),
+		},
 		Auth: AuthConfig{
 			Password: PasswordConfig{
 				MinLength: 8,
@@ -92,6 +138,56 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvAsInt64(key string, defaultValue int64) int64 {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsSlice(key string, defaultValue []string) []string {
+	if value := os.Getenv(key); value != "" {
+		var parts []string
+		for _, part := range splitByComma(value) {
+			if part != "" {
+				parts = append(parts, part)
+			}
+		}
+		if len(parts) > 0 {
+			return parts
+		}
+	}
+	return defaultValue
+}
+
+func splitByComma(s string) []string {
+	var result []string
+	current := ""
+	for _, ch := range s {
+		if ch == ',' {
+			result = append(result, current)
+			current = ""
+		} else {
+			current += string(ch)
+		}
+	}
+	if current != "" {
+		result = append(result, current)
+	}
+	return result
 }
 
 func getEnvAsInt(key string, defaultValue int) int {

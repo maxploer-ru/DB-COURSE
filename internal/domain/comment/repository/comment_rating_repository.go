@@ -1,4 +1,3 @@
-// internal/domain/comment/repository/comment_rating_repository.go
 package repository
 
 import (
