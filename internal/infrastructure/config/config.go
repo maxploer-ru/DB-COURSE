@@ -15,6 +15,14 @@ type Config struct {
 	Server   ServerConfig
 	HTTP     HTTPConfig
 	Auth     AuthConfig
+	Minio    MinioConfig
+	Logging  LoggingConfig
+}
+
+type LoggingConfig struct {
+	Level      string
+	OutputPath string
+	AddSource  bool
 }
 
 type HTTPConfig struct {
@@ -24,20 +32,14 @@ type HTTPConfig struct {
 	WriteTimeout    time.Duration
 	IdleTimeout     time.Duration
 	ShutdownTimeout time.Duration
+}
 
-	AllowedOrigins []string
-	AllowedMethods []string
-	AllowedHeaders []string
-	ExposedHeaders []string
-
-	RateLimit       int
-	RateLimitWindow time.Duration
-
-	MaxBodySize       int64
-	EnableCompression bool
-	EnableSwagger     bool
-	ServeStatic       bool
-	StaticDir         string
+type MinioConfig struct {
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	Bucket    string
+	UseSSL    bool
 }
 
 type AuthConfig struct {
@@ -110,25 +112,23 @@ func LoadConfig() *Config {
 			WriteTimeout:    getEnvAsDuration("HTTP_WRITE_TIMEOUT", 60*time.Second),
 			IdleTimeout:     getEnvAsDuration("HTTP_IDLE_TIMEOUT", 120*time.Second),
 			ShutdownTimeout: getEnvAsDuration("HTTP_SHUTDOWN_TIMEOUT", 30*time.Second),
-
-			AllowedOrigins: getEnvAsSlice("HTTP_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8080"}),
-			AllowedMethods: getEnvAsSlice("HTTP_ALLOWED_METHODS", []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"}),
-			AllowedHeaders: getEnvAsSlice("HTTP_ALLOWED_HEADERS", []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"}),
-			ExposedHeaders: getEnvAsSlice("HTTP_EXPOSED_HEADERS", []string{"Link", "X-Request-ID"}),
-
-			RateLimit:       getEnvAsInt("HTTP_RATE_LIMIT", 100),
-			RateLimitWindow: getEnvAsDuration("HTTP_RATE_LIMIT_WINDOW", 1*time.Minute),
-
-			MaxBodySize:       getEnvAsInt64("HTTP_MAX_BODY_SIZE", 10<<20),
-			EnableCompression: getEnvAsBool("HTTP_ENABLE_COMPRESSION", true),
-			EnableSwagger:     getEnvAsBool("HTTP_ENABLE_SWAGGER", false),
-			ServeStatic:       getEnvAsBool("HTTP_SERVE_STATIC", true),
-			StaticDir:         getEnv("HTTP_STATIC_DIR", "./uploads"),
 		},
 		Auth: AuthConfig{
 			Password: PasswordConfig{
 				MinLength: 8,
 			},
+		},
+		Minio: MinioConfig{
+			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey: getEnv("MINIO_ROOT_USER", "minioadmin"),
+			SecretKey: getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
+			Bucket:    getEnv("MINIO_BUCKET", "zvideo-videos"),
+			UseSSL:    getEnvAsBool("MINIO_USE_SSL", false),
+		},
+		Logging: LoggingConfig{
+			Level:      getEnv("LOG_LEVEL", "debug"),
+			OutputPath: getEnv("LOG_OUTPUT", "stdout"),
+			AddSource:  getEnvAsBool("LOG_ADD_SOURCE", false),
 		},
 	}
 }

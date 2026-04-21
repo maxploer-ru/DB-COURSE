@@ -8,8 +8,8 @@ type User struct {
 	Username             string    `gorm:"type:varchar(32);unique;not null"`
 	Email                string    `gorm:"type:varchar(64);unique;not null"`
 	PasswordHash         string    `gorm:"not null"`
-	NotificationsEnabled bool      `gorm:"not null;default:true"`
 	IsActive             bool      `gorm:"not null;default:true"`
+	NotificationsEnabled bool      `gorm:"not null;default:true"`
 	CreatedAt            time.Time `gorm:"not null;autoCreateTime"`
 	UpdatedAt            time.Time `gorm:"not null;autoUpdateTime"`
 

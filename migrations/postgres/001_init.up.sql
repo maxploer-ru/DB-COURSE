@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS users
     username              VARCHAR(32) UNIQUE NOT NULL,
     email                 VARCHAR(64) UNIQUE NOT NULL,
     password_hash         TEXT               NOT NULL,
-    notifications_enabled BOOLEAN            NOT NULL DEFAULT TRUE,
     is_active             BOOLEAN            NOT NULL DEFAULT TRUE,
+    notifications_enabled BOOLEAN            NOT NULL DEFAULT TRUE,
     created_at            TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ        NOT NULL DEFAULT NOW()
 );
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users
 CREATE TABLE IF NOT EXISTS channels
 (
     id          SERIAL PRIMARY KEY,
-    user_id     INT                NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id     INT UNIQUE                NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name        VARCHAR(32) UNIQUE NOT NULL,
     description TEXT,
     created_at  TIMESTAMPTZ        NOT NULL DEFAULT NOW()

@@ -1,21 +1,21 @@
 package mappers
 
 import (
-	"ZVideo/internal/domain/auth/entity"
+	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 )
 
-func ToDomainRole(model *models.Role) *entity.Role {
+func ToDomainRole(model *models.Role) *domain.Role {
 	if model == nil {
 		return nil
 	}
-	return &entity.Role{
+	return &domain.Role{
 		ID:        model.ID,
 		Name:      model.Name,
 		IsDefault: model.IsDefault,
 	}
 }
-func FromDomainRole(model *entity.Role) *models.Role {
+func FromDomainRole(model *domain.Role) *models.Role {
 	if model == nil {
 		return nil
 	}

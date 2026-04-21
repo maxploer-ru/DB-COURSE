@@ -1,24 +1,24 @@
 package mappers
 
 import (
-	entity2 "ZVideo/internal/domain/auth/entity"
+	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 )
 
-func ToDomainUser(model *models.User) *entity2.User {
+func ToDomainUser(model *models.User) *domain.User {
 	if model == nil {
 		return nil
 	}
 
-	user := &entity2.User{
-		ID:        model.ID,
-		Username:  model.Username,
-		Email:     model.Email,
-		RoleID:    model.RoleID,
-		CreatedAt: model.CreatedAt,
-		UpdatedAt: model.UpdatedAt,
+	user := &domain.User{
+		ID:                   model.ID,
+		Username:             model.Username,
+		Email:                model.Email,
+		PasswordHash:         model.PasswordHash,
+		IsActive:             model.IsActive,
+		NotificationsEnabled: model.NotificationsEnabled,
 	}
-	user.Role = &entity2.Role{
+	user.Role = &domain.Role{
 		ID:        model.Role.ID,
 		Name:      model.Role.Name,
 		IsDefault: model.Role.IsDefault,
@@ -26,33 +26,31 @@ func ToDomainUser(model *models.User) *entity2.User {
 	return user
 }
 
-func ToDomainUserList(models []*models.User) []*entity2.User {
-	users := make([]*entity2.User, len(models))
+func ToDomainUserList(models []*models.User) []*domain.User {
+	users := make([]*domain.User, len(models))
 	for i, model := range models {
 		users[i] = ToDomainUser(model)
 	}
 	return users
 }
 
-func FromDomainUser(user *entity2.User) *models.User {
+func FromDomainUser(user *domain.User) *models.User {
 	if user == nil {
 		return nil
 	}
 
 	return &models.User{
 		ID:                   user.ID,
-		RoleID:               user.RoleID,
+		RoleID:               user.Role.ID, // TODO: проверять что не nil
 		Username:             user.Username,
 		Email:                user.Email,
 		PasswordHash:         user.PasswordHash,
-		NotificationsEnabled: user.NotificationsEnabled,
 		IsActive:             user.IsActive,
-		CreatedAt:            user.CreatedAt,
-		UpdatedAt:            user.UpdatedAt,
+		NotificationsEnabled: user.NotificationsEnabled,
 	}
 }
 
-func FromDomainUserList(users []*entity2.User) []*models.User {
+func FromDomainUserList(users []*domain.User) []*models.User {
 	usersModels := make([]*models.User, len(users))
 	for i, user := range users {
 		usersModels[i] = FromDomainUser(user)
