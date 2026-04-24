@@ -12,6 +12,7 @@ import (
 type Handlers struct {
 	Auth               *handlers.AuthHandler
 	Channel            *handlers.ChannelHandler
+	CommunityHandler   *handlers.CommunityHandler
 	Video              *handlers.VideoHandler
 	Subscription       *handlers.SubscriptionHandler
 	VideoInteraction   *handlers.VideoInteractionHandler
@@ -39,6 +40,8 @@ func NewRouter(h *Handlers, authSvc service.AuthService, baseLogger domain.Logge
 
 		r.Get("/channels/{id}", h.Channel.GetChannel)
 		r.Get("/channels/me", h.Channel.GetMyChannel)
+		r.Get("/channels/me/community", h.CommunityHandler.GetMyCommunity)
+		r.Get("/channels/{channelID}/community", h.CommunityHandler.GetChannelCommunity)
 		r.Post("/channels", h.Channel.CreateChannel)
 		r.Patch("/channels/{id}", h.Channel.UpdateChannel)
 		r.Delete("/channels/{id}", h.Channel.DeleteChannel)
@@ -60,6 +63,12 @@ func NewRouter(h *Handlers, authSvc service.AuthService, baseLogger domain.Logge
 		r.Post("/channels/{id}/subscribe", h.Subscription.Subscribe)
 		r.Delete("/channels/{id}/subscribe", h.Subscription.Unsubscribe)
 		r.Get("/subscriptions", h.Subscription.GetUserSubscriptions)
+		r.Post("/channels/{channelID}/community/posts", h.CommunityHandler.CreatePost)
+		r.Patch("/community/posts/{postID}", h.CommunityHandler.UpdatePost)
+		r.Delete("/community/posts/{postID}", h.CommunityHandler.DeletePost)
+		r.Post("/community/posts/{postID}/comments", h.CommunityHandler.CreateComment)
+		r.Patch("/community/comments/{id}", h.CommunityHandler.UpdateComment)
+		r.Delete("/community/comments/{id}", h.CommunityHandler.DeleteComment)
 		r.Get("/channels/{channelID}/playlists", h.Playlist.ListByChannel)
 		r.Post("/channels/{channelID}/playlists", h.Playlist.Create)
 		r.Get("/playlists/{id}", h.Playlist.GetByID)

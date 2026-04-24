@@ -158,6 +158,7 @@ func (ch *ChannelHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WarnContext(r.Context(), "Unauthorized access to GetChannel",
 			slog.String("error", err.Error()))
+
 		response.RespondWithError(w, http.StatusUnauthorized, "UNAUTHORIZED", "user not authorized")
 		return
 	}

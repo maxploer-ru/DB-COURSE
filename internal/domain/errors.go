@@ -32,9 +32,13 @@ var (
 	ErrAlreadyRated   = errors.New("already rated")
 	ErrRatingNotFound = errors.New("rating not found")
 
-	ErrCommentNotFound             = errors.New("comment not found")
-	ErrCommentRatingNotFound       = errors.New("comment rating not found")
-	ErrInvalidNotificationSettings = errors.New("invalid notification settings")
+	ErrCommentNotFound              = errors.New("comment not found")
+	ErrCommentRatingNotFound        = errors.New("comment rating not found")
+	ErrInvalidNotificationSettings  = errors.New("invalid notification settings")
+	ErrCommunityPostNotFound        = errors.New("community post not found")
+	ErrCommunityCommentNotFound     = errors.New("community comment not found")
+	ErrCommunityPostContentEmpty    = errors.New("community post content cannot be empty")
+	ErrCommunityCommentContentEmpty = errors.New("community comment content cannot be empty")
 
 	ErrForbidden = errors.New("forbidden")
 )

@@ -76,6 +76,7 @@ func main() {
 	userRepository := repository.NewUserRepository(db)
 	roleRepository := repository.NewRoleRepository(db)
 	channelRepository := repository.NewChannelRepository(db)
+	communityRepository := repository.NewCommunityRepository(db)
 	videoRepository := repository.NewVideoRepository(db)
 	subscriptionRepository := repository.NewSubscriptionRepository(db)
 	videoRatingRepository := repository.NewVideoRatingRepository(db)
@@ -95,6 +96,7 @@ func main() {
 	authService := service.NewAuthService(userRepository, roleRepository, refreshSessionCache, passwordService, jwtService, userValidationService)
 	storageService := storage.NewMinioStorageService(minioClient, cfg.Minio.Bucket)
 	channelService := service.NewChannelService(channelRepository, videoRepository, storageService)
+	communityService := service.NewCommunityService(communityRepository, channelService, userRepository)
 	videoService := service.NewVideoService(videoRepository, subscriptionRepository, channelService, storageService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepository, channelRepository, counter)
 	playlistService := service.NewPlaylistService(playlistRepository, videoRepository, channelService)
@@ -106,6 +108,7 @@ func main() {
 	h := router.Handlers{
 		Auth:               handlers.NewAuthHandler(authService),
 		Channel:            handlers.NewChannelHandler(channelService, subscriptionService),
+		CommunityHandler:   handlers.NewCommunityHandler(communityService, subscriptionService),
 		Video:              handlers.NewVideoHandler(videoService, interactionService),
 		Subscription:       handlers.NewSubscriptionHandler(subscriptionService, channelService),
 		VideoInteraction:   handlers.NewVideoInteractionHandler(interactionService),

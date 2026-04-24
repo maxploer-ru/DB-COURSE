@@ -90,6 +90,14 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 
 	case errors.Is(err, domain.ErrCommentNotFound):
 		RespondWithError(w, http.StatusNotFound, "COMMENT_NOT_FOUND", "Comment not found")
+	case errors.Is(err, domain.ErrCommunityPostNotFound):
+		RespondWithError(w, http.StatusNotFound, "COMMUNITY_POST_NOT_FOUND", "Community post not found")
+	case errors.Is(err, domain.ErrCommunityCommentNotFound):
+		RespondWithError(w, http.StatusNotFound, "COMMUNITY_COMMENT_NOT_FOUND", "Community comment not found")
+	case errors.Is(err, domain.ErrCommunityPostContentEmpty):
+		RespondWithError(w, http.StatusBadRequest, "COMMUNITY_POST_CONTENT_EMPTY", "Community post content cannot be empty")
+	case errors.Is(err, domain.ErrCommunityCommentContentEmpty):
+		RespondWithError(w, http.StatusBadRequest, "COMMUNITY_COMMENT_CONTENT_EMPTY", "Community comment content cannot be empty")
 
 	case errors.Is(err, domain.ErrCommentRatingNotFound):
 		RespondWithError(w, http.StatusNotFound, "RATING_NOT_FOUND", "Comment rating not found")
