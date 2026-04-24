@@ -13,6 +13,7 @@ func ToVideoResponse(video *domain.Video, stats *domain.VideoStats) *dto.VideoRe
 	return &dto.VideoResponse{
 		ID:          video.ID,
 		ChannelID:   video.ChannelID,
+		ChannelName: video.ChannelName,
 		Title:       video.Title,
 		Description: video.Description,
 		Views:       stats.Views,

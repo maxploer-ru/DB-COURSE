@@ -35,7 +35,9 @@ func (r *CommentRepository) Create(ctx context.Context, comment *domain.Comment)
 
 func (r *CommentRepository) GetByID(ctx context.Context, id int) (*domain.Comment, error) {
 	var model models.Comment
-	err := r.db.WithContext(ctx).First(&model, id).Error
+	err := r.db.WithContext(ctx).
+		Preload("User").
+		First(&model, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -52,6 +54,7 @@ func (r *CommentRepository) ListByVideo(ctx context.Context, videoID int, limit,
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
+		Preload("User").
 		Find(&models).Error
 	if err != nil {
 		return nil, fmt.Errorf("list comments by video: %w", err)

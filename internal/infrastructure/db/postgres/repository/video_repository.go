@@ -32,7 +32,9 @@ func (r *VideoRepository) Create(ctx context.Context, video *domain.Video) error
 
 func (r *VideoRepository) GetByID(ctx context.Context, id int) (*domain.Video, error) {
 	var dbVideo models.Video
-	err := r.db.WithContext(ctx).First(&dbVideo, id).Error
+	err := r.db.WithContext(ctx).
+		Preload("Channel").
+		First(&dbVideo, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -79,6 +81,7 @@ func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domai
 	err := r.db.WithContext(ctx).
 		Limit(limit).
 		Offset(offset).
+		Preload("Channel").
 		Find(&dbVideos).Error
 	if err != nil {
 		return nil, fmt.Errorf("list videos: %w", err)
@@ -97,6 +100,7 @@ func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limi
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
+		Preload("Channel").
 		Find(&dbVideos).Error
 
 	if err != nil {

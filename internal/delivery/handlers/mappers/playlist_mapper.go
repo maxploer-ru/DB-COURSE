@@ -13,8 +13,9 @@ func ToPlaylistResponse(playlist *domain.Playlist) *dto.PlaylistResponse {
 	items := make([]dto.PlaylistItemResponse, 0, len(playlist.Items))
 	for _, item := range playlist.Items {
 		items = append(items, dto.PlaylistItemResponse{
-			VideoID: item.VideoID,
-			Number:  item.Number,
+			VideoID:    item.VideoID,
+			VideoTitle: item.VideoTitle,
+			Number:     item.Number,
 		})
 	}
 

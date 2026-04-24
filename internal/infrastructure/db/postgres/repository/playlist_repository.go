@@ -34,6 +34,7 @@ func (r *PlaylistRepository) GetByID(ctx context.Context, playlistID int) (*doma
 		Preload("PlaylistVideos", func(db *gorm.DB) *gorm.DB {
 			return db.Order("number ASC")
 		}).
+		Preload("PlaylistVideos.Video").
 		First(&model, playlistID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -54,6 +55,7 @@ func (r *PlaylistRepository) ListByChannel(ctx context.Context, channelID int, l
 		Preload("PlaylistVideos", func(db *gorm.DB) *gorm.DB {
 			return db.Order("number ASC")
 		}).
+		Preload("PlaylistVideos.Video").
 		Find(&modelsList).Error
 	if err != nil {
 		return nil, fmt.Errorf("list playlists by channel failed: %w", err)

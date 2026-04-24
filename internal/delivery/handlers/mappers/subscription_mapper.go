@@ -49,7 +49,7 @@ func ToSubscriptionListResponse(subs []*domain.Subscription) []*dto.Subscription
 	for i, sub := range subs {
 		resp[i] = &dto.SubscriptionResponse{
 			ChannelID:      sub.ChannelID,
-			ChannelName:    "Fill Later",
+			ChannelName:    "",
 			NewVideosCount: sub.NewVideosCount,
 			SubscribedAt:   sub.SubscribedAt,
 		}

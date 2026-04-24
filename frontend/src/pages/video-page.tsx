@@ -170,7 +170,7 @@ export function VideoPage() {
       <h1>{videoQuery.data.title}</h1>
       <p className="page__lead">{videoQuery.data.description}</p>
       <p className="video-card__meta">
-        {channelQuery.data ? channelQuery.data.name : `Канал #${videoQuery.data.channelId}`} • {videoQuery.data.views} просмотров • {videoQuery.data.likes} лайков • {videoQuery.data.dislikes} дизлайков • {videoQuery.data.comments} комментариев
+        {channelQuery.data?.name || videoQuery.data.channelName || 'Канал'} • {videoQuery.data.views} просмотров • {videoQuery.data.likes} лайков • {videoQuery.data.dislikes} дизлайков • {videoQuery.data.comments} комментариев
       </p>
       <div className="comments__actions">
         <Link className="app-button app-button--ghost" to={`/channels/${videoQuery.data.channelId}`}>
@@ -271,7 +271,7 @@ export function VideoPage() {
                 <p>{comment.content}</p>
               )}
               <small>
-                Автор #{comment.userId} • {new Date(comment.createdAt).toLocaleString()} • {comment.likes}/{comment.dislikes}
+                Автор {comment.username || 'Автор'} • {new Date(comment.createdAt).toLocaleString()} • {comment.likes}/{comment.dislikes}
               </small>
               {isAuthenticated && currentUserId === comment.userId && editingCommentId !== comment.id && (
                 <div className="comments__actions">

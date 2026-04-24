@@ -12,6 +12,7 @@ func ToDomainVideo(dbVideo *models.Video) *domain.Video {
 	return &domain.Video{
 		ID:          dbVideo.ID,
 		ChannelID:   dbVideo.ChannelID,
+		ChannelName: dbVideo.Channel.Name,
 		Title:       dbVideo.Title,
 		Description: dbVideo.Description,
 		Filepath:    dbVideo.Filepath,

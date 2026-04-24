@@ -29,6 +29,7 @@ type UserApiResponse = {
 type VideoApiResponse = {
   id: number
   channel_id: number
+  channel_name: string
   title: string
   description: string
   views: number
@@ -41,6 +42,7 @@ type VideoApiResponse = {
 type CommentApiResponse = {
   id: number
   user_id: number
+  username: string
   video_id: number
   content: string
   likes: number
@@ -68,6 +70,7 @@ type ChannelApiResponse = {
 
 type PlaylistItemApiResponse = {
   video_id: number
+  video_title: string
   number: number
 }
 
@@ -98,6 +101,7 @@ function mapVideo(payload: VideoApiResponse): Video {
   return {
     id: payload.id,
     channelId: payload.channel_id,
+    channelName: payload.channel_name,
     title: payload.title,
     description: payload.description,
     views: payload.views,
@@ -112,6 +116,7 @@ function mapComment(payload: CommentApiResponse): Comment {
   return {
     id: payload.id,
     userId: payload.user_id,
+    username: payload.username,
     videoId: payload.video_id,
     content: payload.content,
     likes: payload.likes,
@@ -151,6 +156,7 @@ function mapPlaylist(payload: PlaylistApiResponse): Playlist {
     createdAt: payload.created_at,
     items: (payload.items ?? []).map((item) => ({
       videoId: item.video_id,
+      videoTitle: item.video_title,
       number: item.number,
     })),
   }

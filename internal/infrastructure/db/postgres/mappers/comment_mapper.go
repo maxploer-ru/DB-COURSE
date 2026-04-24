@@ -12,6 +12,7 @@ func ToDomainComment(model *models.Comment) *domain.Comment {
 	return &domain.Comment{
 		ID:        model.ID,
 		UserID:    model.UserID,
+		Username:  model.User.Username,
 		VideoID:   model.VideoID,
 		Content:   model.Content,
 		CreatedAt: model.CreatedAt,

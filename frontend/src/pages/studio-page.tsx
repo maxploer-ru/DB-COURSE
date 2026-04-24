@@ -375,7 +375,7 @@ export function StudioPage() {
             <ul className="subscription-list">
               {playlist.items.map((item) => (
                 <li key={item.videoId} className="subscription-list__item">
-                  <span>Видео #{item.videoId}</span>
+                  <span>{item.videoTitle || 'Видео'}</span>
                   <button
                     className="app-button app-button--ghost"
                     type="button"

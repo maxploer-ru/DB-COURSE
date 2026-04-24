@@ -10,6 +10,8 @@ type Video struct {
 	Filepath    string    `gorm:"not null"`
 	CreatedAt   time.Time `gorm:"not null;default:current_timestamp"`
 
+	Channel Channel `gorm:"foreignkey:ChannelID"`
+
 	WatchHistory []Viewing `gorm:"foreignkey:VideoID"`
 	Comments     []Comment `gorm:"foreignkey:VideoID"`
 

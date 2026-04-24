@@ -13,8 +13,9 @@ type UpdatePlaylistRequest struct {
 }
 
 type PlaylistItemResponse struct {
-	VideoID int `json:"video_id"`
-	Number  int `json:"number"`
+	VideoID    int    `json:"video_id"`
+	VideoTitle string `json:"video_title"`
+	Number     int    `json:"number"`
 }
 
 type PlaylistResponse struct {

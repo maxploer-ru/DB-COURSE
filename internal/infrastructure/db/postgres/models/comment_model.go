@@ -9,5 +9,7 @@ type Comment struct {
 	Content   string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null;default:current_timestamp"`
 
+	User User `gorm:"foreignkey:UserID"`
+
 	UserCommentRatings []CommentRating `gorm:"foreignkey:CommentID"`
 }

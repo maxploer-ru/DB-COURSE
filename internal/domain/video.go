@@ -5,6 +5,7 @@ import "time"
 type Video struct {
 	ID          int
 	ChannelID   int
+	ChannelName string
 	Title       string
 	Description string
 	Filepath    string

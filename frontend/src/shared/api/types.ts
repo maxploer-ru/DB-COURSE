@@ -24,6 +24,7 @@ export type MessageResponse = {
 export type Video = {
   id: number
   channelId: number
+  channelName: string
   title: string
   description: string
   views: number
@@ -36,6 +37,7 @@ export type Video = {
 export type Comment = {
   id: number
   userId: number
+  username: string
   videoId: number
   content: string
   likes: number
@@ -77,6 +79,7 @@ export type StreamUrlResponse = {
 
 export type PlaylistItem = {
   videoId: number
+  videoTitle: string
   number: number
 }
 

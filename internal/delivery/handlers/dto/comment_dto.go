@@ -13,6 +13,7 @@ type UpdateCommentRequest struct {
 type CommentResponse struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
+	Username  string    `json:"username"`
 	VideoID   int       `json:"video_id"`
 	Content   string    `json:"content"`
 	Likes     int       `json:"likes"`

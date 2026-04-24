@@ -22,8 +22,9 @@ func ToDomainPlaylist(model *models.Playlist) *domain.Playlist {
 		playlist.Items = make([]domain.PlaylistItem, 0, len(model.PlaylistVideos))
 		for _, item := range model.PlaylistVideos {
 			playlist.Items = append(playlist.Items, domain.PlaylistItem{
-				VideoID: item.VideoID,
-				Number:  item.Number,
+				VideoID:    item.VideoID,
+				VideoTitle: item.Video.Title,
+				Number:     item.Number,
 			})
 		}
 	}

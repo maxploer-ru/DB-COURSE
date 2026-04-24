@@ -13,7 +13,7 @@ export function VideoCard({ video }: VideoCardProps) {
         <h3>{video.title}</h3>
       </Link>
       <p className="video-card__meta">
-        <Link to={`/channels/${video.channelId}`}>Канал #{video.channelId}</Link> • {video.views} просмотров • {video.likes} лайков • {video.dislikes} дизлайков
+        <Link to={`/channels/${video.channelId}`}>{video.channelName || 'Канал'}</Link> • {video.views} просмотров • {video.likes} лайков • {video.dislikes} дизлайков
       </p>
     </article>
   )

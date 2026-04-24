@@ -15,6 +15,7 @@ type UpdateVideoRequest struct {
 type VideoResponse struct {
 	ID          int    `json:"id"`
 	ChannelID   int    `json:"channel_id"`
+	ChannelName string `json:"channel_name"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Views       int    `json:"views"`

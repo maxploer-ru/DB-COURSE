@@ -36,7 +36,7 @@ export function PlaylistPage() {
       <ul className="subscription-list">
         {items.map((item) => (
           <li key={item.videoId} className="subscription-list__item">
-            <h3>#{item.number} • Видео {item.videoId}</h3>
+            <h3>#{item.number} • {item.videoTitle || 'Видео'}</h3>
             <Link className="app-button app-button--ghost" to={`/videos/${item.videoId}`}>
               Открыть видео
             </Link>

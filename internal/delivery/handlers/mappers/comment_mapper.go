@@ -9,6 +9,7 @@ func ToCommentResponse(comment *domain.Comment, likes, dislikes int) dto.Comment
 	return dto.CommentResponse{
 		ID:        comment.ID,
 		UserID:    comment.UserID,
+		Username:  comment.Username,
 		VideoID:   comment.VideoID,
 		Content:   comment.Content,
 		Likes:     likes,

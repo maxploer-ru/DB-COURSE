@@ -12,6 +12,7 @@ type Playlist struct {
 }
 
 type PlaylistItem struct {
-	VideoID int
-	Number  int
+	VideoID    int
+	VideoTitle string
+	Number     int
 }
