@@ -53,6 +53,30 @@ export type Channel = {
   subscribersCount: number
 }
 
+export type CommunityComment = {
+  id: number
+  postId: number
+  userId: number
+  username: string
+  content: string
+  createdAt: string
+}
+
+export type CommunityPost = {
+  id: number
+  channelId: number
+  userId: number
+  username: string
+  content: string
+  createdAt: string
+  comments: CommunityComment[]
+}
+
+export type Community = {
+  channel: Channel
+  posts: CommunityPost[]
+}
+
 export type CommentListResponse = {
   comments: Comment[]
   total: number

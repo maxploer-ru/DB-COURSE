@@ -2,6 +2,9 @@ import { apiClient } from './client'
 import type {
   AuthResponse,
   Channel,
+  Community,
+  CommunityComment,
+  CommunityPost,
   Comment,
   CommentListResponse,
   MessageResponse,
@@ -68,6 +71,30 @@ type ChannelApiResponse = {
   subscribers_count: number
 }
 
+type CommunityCommentApiResponse = {
+  id: number
+  post_id: number
+  user_id: number
+  username: string
+  content: string
+  created_at: string
+}
+
+type CommunityPostApiResponse = {
+  id: number
+  channel_id: number
+  user_id: number
+  username: string
+  content: string
+  created_at: string
+  comments: CommunityCommentApiResponse[]
+}
+
+type CommunityApiResponse = {
+  channel: ChannelApiResponse
+  posts: CommunityPostApiResponse[]
+}
+
 type PlaylistItemApiResponse = {
   video_id: number
   video_title: string
@@ -132,6 +159,36 @@ function mapChannel(payload: ChannelApiResponse): Channel {
     name: payload.name,
     description: payload.description,
     subscribersCount: payload.subscribers_count,
+  }
+}
+
+function mapCommunityComment(payload: CommunityCommentApiResponse): CommunityComment {
+  return {
+    id: payload.id,
+    postId: payload.post_id,
+    userId: payload.user_id,
+    username: payload.username,
+    content: payload.content,
+    createdAt: payload.created_at,
+  }
+}
+
+function mapCommunityPost(payload: CommunityPostApiResponse): CommunityPost {
+  return {
+    id: payload.id,
+    channelId: payload.channel_id,
+    userId: payload.user_id,
+    username: payload.username,
+    content: payload.content,
+    createdAt: payload.created_at,
+    comments: (payload.comments ?? []).map(mapCommunityComment),
+  }
+}
+
+function mapCommunity(payload: CommunityApiResponse): Community {
+  return {
+    channel: mapChannel(payload.channel),
+    posts: (payload.posts ?? []).map(mapCommunityPost),
   }
 }
 
@@ -207,6 +264,38 @@ export const channelApi = {
   },
   remove: async (channelId: number) => {
     const { data } = await apiClient.delete<MessageResponse>(`/channels/${channelId}`)
+    return data
+  },
+  getCommunity: async (channelId: number) => {
+    const { data } = await apiClient.get<CommunityApiResponse>(`/channels/${channelId}/community`)
+    return mapCommunity(data)
+  },
+  getMyCommunity: async () => {
+    const { data } = await apiClient.get<CommunityApiResponse>('/channels/me/community')
+    return mapCommunity(data)
+  },
+  createCommunityPost: async (channelId: number, payload: { content: string }) => {
+    const { data } = await apiClient.post<CommunityPostApiResponse>(`/channels/${channelId}/community/posts`, payload)
+    return mapCommunityPost(data)
+  },
+  updateCommunityPost: async (postId: number, payload: { content: string }) => {
+    const { data } = await apiClient.patch<CommunityPostApiResponse>(`/community/posts/${postId}`, payload)
+    return mapCommunityPost(data)
+  },
+  deleteCommunityPost: async (postId: number) => {
+    const { data } = await apiClient.delete<MessageResponse>(`/community/posts/${postId}`)
+    return data
+  },
+  createCommunityComment: async (postId: number, payload: { content: string }) => {
+    const { data } = await apiClient.post<CommunityCommentApiResponse>(`/community/posts/${postId}/comments`, payload)
+    return mapCommunityComment(data)
+  },
+  updateCommunityComment: async (commentId: number, payload: { content: string }) => {
+    const { data } = await apiClient.patch<CommunityCommentApiResponse>(`/community/comments/${commentId}`, payload)
+    return mapCommunityComment(data)
+  },
+  deleteCommunityComment: async (commentId: number) => {
+    const { data } = await apiClient.delete<MessageResponse>(`/community/comments/${commentId}`)
     return data
   },
 }

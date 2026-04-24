@@ -45,6 +45,9 @@ export function AppShell() {
               <NavLink to="/my-channel" className={navLinkClassName}>
                 Мой канал
               </NavLink>
+              <NavLink to="/my-community" className={navLinkClassName}>
+                Сообщество
+              </NavLink>
               <NavLink to="/studio" className={navLinkClassName}>
                 Студия
               </NavLink>
@@ -75,7 +78,3 @@ export function AppShell() {
     </div>
   )
 }
-
-
-
-

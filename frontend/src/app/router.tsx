@@ -1,11 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminPage } from '../pages/admin-page'
 import { AppShell } from './ui/app-shell'
+import { CommunityPage } from '../pages/community-page'
 import { ChannelPage } from '../pages/channel-page'
 import { ProtectedRoute } from '../features/auth/protected-route'
-import { HomePage } from '../pages/home-page'
 import { LoginPage } from '../pages/login-page'
 import { MyChannelPage } from '../pages/my-channel-page'
+import { MyCommunityPage } from '../pages/my-community-page'
 import { MyFeedPage } from '../pages/my-feed-page'
 import { NotFoundPage } from '../pages/not-found-page'
 import { NotificationsPage } from '../pages/notifications-page'
@@ -20,22 +21,24 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route element={<ProtectedRoute />}>
+            <Route index element={<Navigate to="/my-feed" replace />} />
+            <Route path="channels/:channelId" element={<ChannelPage />} />
+            <Route path="channels/:channelId/community" element={<CommunityPage />} />
             <Route path="videos" element={<VideosPage />} />
             <Route path="videos/:videoId" element={<VideoPage />} />
-            <Route path="channels/:channelId" element={<ChannelPage />} />
             <Route path="playlists/:playlistId" element={<PlaylistPage />} />
             <Route path="my-channel" element={<MyChannelPage />} />
+            <Route path="my-community" element={<MyCommunityPage />} />
             <Route path="my-feed" element={<MyFeedPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="studio" element={<StudioPage />} />
             <Route path="admin" element={<AdminPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-          <Route path="404" element={<NotFoundPage />} />
-          <Route path="*" element={<Navigate to="/404" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

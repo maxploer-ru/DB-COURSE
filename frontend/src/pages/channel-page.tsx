@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { channelApi, playlistApi, subscriptionApi, videoApi } from '../shared/api/endpoints'
+import { useAuthStore } from '../features/auth/store'
 
 export function ChannelPage() {
   const queryClient = useQueryClient()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { channelId } = useParams()
   const parsedChannelId = Number(channelId)
 
@@ -28,6 +30,7 @@ export function ChannelPage() {
   const mySubscriptionsQuery = useQuery({
     queryKey: ['my-subscriptions'],
     queryFn: () => subscriptionApi.listMySubscriptions({ limit: 100, offset: 0 }),
+    enabled: isAuthenticated,
   })
 
   const subscribeMutation = useMutation({
@@ -78,19 +81,28 @@ export function ChannelPage() {
       <p className="page__lead">{channelQuery.data.description || 'Описание отсутствует'}</p>
       <p className="video-card__meta">Подписчиков: {channelQuery.data.subscribersCount}</p>
       <div className="comments__actions">
-        {isSubscribed ? (
-          <button
-            className="app-button app-button--ghost"
-            type="button"
-            onClick={() => unsubscribeMutation.mutate()}
-            disabled={unsubscribeMutation.isPending}
-          >
-            Отписаться
-          </button>
+        <Link className="app-button app-button--ghost" to={`/channels/${parsedChannelId}/community`}>
+          Сообщество
+        </Link>
+        {isAuthenticated ? (
+          isSubscribed ? (
+            <button
+              className="app-button app-button--ghost"
+              type="button"
+              onClick={() => unsubscribeMutation.mutate()}
+              disabled={unsubscribeMutation.isPending}
+            >
+              Отписаться
+            </button>
+          ) : (
+            <button className="app-button app-button--ghost" type="button" onClick={() => subscribeMutation.mutate()} disabled={subscribeMutation.isPending}>
+              Подписаться
+            </button>
+          )
         ) : (
-          <button className="app-button app-button--ghost" type="button" onClick={() => subscribeMutation.mutate()} disabled={subscribeMutation.isPending}>
-            Подписаться
-          </button>
+          <Link className="app-button app-button--ghost" to="/login">
+            Войдите, чтобы подписаться
+          </Link>
         )}
       </div>
 

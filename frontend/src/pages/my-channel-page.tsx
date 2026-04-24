@@ -115,6 +115,9 @@ export function MyChannelPage() {
         <Link to={`/channels/${channel.id}`} className="app-button app-button--ghost">
           Открыть публичную страницу
         </Link>
+        <Link to="/my-community" className="app-button app-button--ghost">
+          Открыть сообщество
+        </Link>
       </div>
 
       <form
