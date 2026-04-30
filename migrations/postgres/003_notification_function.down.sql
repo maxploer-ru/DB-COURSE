@@ -1,1 +1,0 @@
-DROP FUNCTION IF EXISTS notify_subscribers_about_new_video(p_channel_id INT);

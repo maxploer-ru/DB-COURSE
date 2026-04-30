@@ -6,10 +6,13 @@ import (
 	"ZVideo/internal/infrastructure/auth"
 	"ZVideo/internal/infrastructure/cache"
 	"ZVideo/internal/infrastructure/config"
+	"ZVideo/internal/infrastructure/db/mongo"
+	mongorepo "ZVideo/internal/infrastructure/db/mongo/repository"
 	"ZVideo/internal/infrastructure/db/postgres"
-	"ZVideo/internal/infrastructure/db/postgres/repository"
+	pgrepo "ZVideo/internal/infrastructure/db/postgres/repository"
 	"ZVideo/internal/infrastructure/logger"
 	"ZVideo/internal/infrastructure/storage"
+	"ZVideo/internal/repository"
 	"ZVideo/internal/service"
 	"context"
 	"fmt"
@@ -18,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -44,18 +48,64 @@ func main() {
 	}
 	level := parseLogLevel(cfg.Logging.Level)
 	baseLogger := logger.NewSlogLogger(level, logOutput, cfg.Logging.AddSource)
-	db, err := postgres.NewConnection(cfg.Database)
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+
+	var (
+		userRepository          repository.UserRepository
+		roleRepository          repository.RoleRepository
+		channelRepository       repository.ChannelRepository
+		communityRepository     repository.CommunityRepository
+		videoRepository         repository.VideoRepository
+		subscriptionRepository  repository.SubscriptionRepository
+		videoRatingRepository   repository.VideoRatingRepository
+		viewingRepository       repository.ViewingRepository
+		commentRepository       repository.CommentRepository
+		commentRatingRepository repository.CommentRatingRepository
+		playlistRepository      repository.PlaylistRepository
+	)
+
+	switch strings.ToLower(cfg.DatabaseDriver) {
+	case "mongo", "mongodb":
+		mongoConn, err := mongo.NewConnection(cfg.Mongo)
+		if err != nil {
+			log.Fatal("Failed to connect to database:", err)
+		}
+		defer func() {
+			_ = mongoConn.Close(context.Background())
+		}()
+
+		userRepository = mongorepo.NewUserRepository(mongoConn.DB)
+		roleRepository = mongorepo.NewRoleRepository(mongoConn.DB)
+		channelRepository = mongorepo.NewChannelRepository(mongoConn.DB)
+		communityRepository = mongorepo.NewCommunityRepository(mongoConn.DB)
+		videoRepository = mongorepo.NewVideoRepository(mongoConn.DB)
+		subscriptionRepository = mongorepo.NewSubscriptionRepository(mongoConn.DB)
+		videoRatingRepository = mongorepo.NewVideoRatingRepository(mongoConn.DB)
+		viewingRepository = mongorepo.NewViewingRepository(mongoConn.DB)
+		commentRepository = mongorepo.NewCommentRepository(mongoConn.DB)
+		commentRatingRepository = mongorepo.NewCommentRatingRepository(mongoConn.DB)
+		playlistRepository = mongorepo.NewPlaylistRepository(mongoConn.DB)
+	case "postgres", "pg":
+		pgDB, err := postgres.NewConnection(cfg.Database)
+		if err != nil {
+			log.Fatal("Failed to connect to database:", err)
+		}
+
+		userRepository = pgrepo.NewUserRepository(pgDB)
+		roleRepository = pgrepo.NewRoleRepository(pgDB)
+		channelRepository = pgrepo.NewChannelRepository(pgDB)
+		communityRepository = pgrepo.NewCommunityRepository(pgDB)
+		videoRepository = pgrepo.NewVideoRepository(pgDB)
+		subscriptionRepository = pgrepo.NewSubscriptionRepository(pgDB)
+		videoRatingRepository = pgrepo.NewVideoRatingRepository(pgDB)
+		viewingRepository = pgrepo.NewViewingRepository(pgDB)
+		commentRepository = pgrepo.NewCommentRepository(pgDB)
+		commentRatingRepository = pgrepo.NewCommentRatingRepository(pgDB)
+		playlistRepository = pgrepo.NewPlaylistRepository(pgDB)
+	default:
+		log.Fatal("Unsupported DB_DRIVER:", cfg.DatabaseDriver)
 	}
 
-	minioClient, err := storage.NewMinioClient(storage.MinioConfig{
-		Endpoint:  cfg.Minio.Endpoint,
-		AccessKey: cfg.Minio.AccessKey,
-		SecretKey: cfg.Minio.SecretKey,
-		UseSSL:    cfg.Minio.UseSSL,
-		Bucket:    cfg.Minio.Bucket,
-	})
+	minioClient, presignClient, err := storage.NewMinioClient(cfg.Minio)
 	if err != nil {
 		log.Fatal("MinIO client initialization failed:", err)
 	}
@@ -73,18 +123,6 @@ func main() {
 		DB:       cfg.Redis.Database,
 	})
 
-	userRepository := repository.NewUserRepository(db)
-	roleRepository := repository.NewRoleRepository(db)
-	channelRepository := repository.NewChannelRepository(db)
-	communityRepository := repository.NewCommunityRepository(db)
-	videoRepository := repository.NewVideoRepository(db)
-	subscriptionRepository := repository.NewSubscriptionRepository(db)
-	videoRatingRepository := repository.NewVideoRatingRepository(db)
-	viewingRepository := repository.NewViewingRepository(db)
-	commentRepository := repository.NewCommentRepository(db)
-	commentRatingRepository := repository.NewCommentRatingRepository(db)
-	playlistRepository := repository.NewPlaylistRepository(db)
-
 	counter := cache.NewRedisSubscriberCounter(redisClient)
 	statsCache := cache.NewVideoStatsCache(redisClient)
 	commentStatsCache := cache.NewCommentStatsCache(redisClient)
@@ -94,7 +132,7 @@ func main() {
 	jwtService := auth.NewJwtService(cfg.JWT.Secret, cfg.JWT.Secret+"_refresh", cfg.JWT.AccessTokenTTL, cfg.JWT.RefreshTokenTTL)
 	userValidationService := auth.NewUserValidator()
 	authService := service.NewAuthService(userRepository, roleRepository, refreshSessionCache, passwordService, jwtService, userValidationService)
-	storageService := storage.NewMinioStorageService(minioClient, cfg.Minio.Bucket)
+	storageService := storage.NewMinioStorageService(minioClient, presignClient, cfg.Minio.Bucket)
 	channelService := service.NewChannelService(channelRepository, videoRepository, storageService)
 	communityService := service.NewCommunityService(communityRepository, channelService, userRepository)
 	videoService := service.NewVideoService(videoRepository, subscriptionRepository, channelService, storageService)

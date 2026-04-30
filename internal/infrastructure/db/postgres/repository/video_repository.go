@@ -76,9 +76,11 @@ func (r *VideoRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domain.Video, error) {
+func (r *VideoRepository) List(ctx context.Context, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
 	var dbVideos []models.Video
-	err := r.db.WithContext(ctx).
+	query := r.db.WithContext(ctx).Model(&models.Video{})
+	query = applyVideoSort(query, sort)
+	err := query.
 		Limit(limit).
 		Offset(offset).
 		Preload("Channel").
@@ -93,17 +95,16 @@ func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domai
 	return domainVideos, nil
 }
 
-func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error) {
+func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
 	var dbVideos []models.Video
-	err := r.db.WithContext(ctx).
-		Where("channel_id = ?", channelID).
-		Order("created_at DESC").
+	query := r.db.WithContext(ctx).Model(&models.Video{}).
+		Where("channel_id = ?", channelID)
+	query = applyVideoSort(query, sort)
+	if err := query.
 		Limit(limit).
 		Offset(offset).
 		Preload("Channel").
-		Find(&dbVideos).Error
-
-	if err != nil {
+		Find(&dbVideos).Error; err != nil {
 		return nil, fmt.Errorf("list videos by channel: %w", err)
 	}
 
@@ -115,13 +116,30 @@ func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limi
 }
 
 func (r *VideoRepository) ListFilepathsByChannel(ctx context.Context, channelID int) ([]string, error) {
-	filepaths := make([]string, 0)
+	filepath := make([]string, 0)
 	err := r.db.WithContext(ctx).
 		Model(&models.Video{}).
 		Where("channel_id = ?", channelID).
-		Pluck("filepath", &filepaths).Error
+		Pluck("filepath", &filepath).Error
 	if err != nil {
-		return nil, fmt.Errorf("list filepaths by channel: %w", err)
+		return nil, fmt.Errorf("list file paths by channel: %w", err)
 	}
-	return filepaths, nil
+	return filepath, nil
+}
+
+func applyVideoSort(query *gorm.DB, sort domain.VideoSort) *gorm.DB {
+	switch sort {
+	case domain.VideoSortViews:
+		return query.
+			Joins("LEFT JOIN (SELECT video_id, COUNT(*) AS views_count FROM viewings GROUP BY video_id) v ON v.video_id = videos.id").
+			Order("COALESCE(v.views_count, 0) DESC").
+			Order("videos.created_at DESC")
+	case domain.VideoSortRating:
+		return query.
+			Joins("LEFT JOIN (SELECT video_id, SUM(CASE WHEN liked THEN 1 ELSE -1 END) AS rating_score FROM video_ratings GROUP BY video_id) r ON r.video_id = videos.id").
+			Order("COALESCE(r.rating_score, 0) DESC").
+			Order("videos.created_at DESC")
+	default:
+		return query.Order("videos.created_at DESC")
+	}
 }

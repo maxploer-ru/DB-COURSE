@@ -1,135 +1,139 @@
 \chapter{Конструкторский раздел}
 
+
 \section{Проектирование базы данных}
 
-Согласно ER-диаграмме предметной области, представленной на рисунке~\ref{img:ER}, проектируемая база данных должна содержать следующие таблицы (с указанными ограничениями целостности):
+Согласно ER-диаграмме предметной области, представленной на рисунке~\ref{fig:er}, проектируемая база данных должна содержать следующие таблицы (с указанными ограничениями целостности):
 
 \begin{itemize}
-	\item \textit{roles} с информацией о ролях:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор роли (первичный ключ, целочисленный тип);
-		\item \textit{name} --- название роли (строковый тип, непустое значение);
-		\item \textit{is\_default} --- флаг, определяющий роль, присваиваемую новым пользователям по умолчанию (логический тип, по умолчанию \textit{FALSE}).
-	\end{itemize}
-	
-	\item \textit{users} с информацией о пользователях приложения:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор пользователя (первичный ключ, целочисленный тип);
-		\item \textit{role\_id} --- роль пользователя (внешний ключ на таблицу \textit{roles}, целочисленный тип, непустое значение);
-		\item \textit{username} --- псевдоним пользователя (строковый тип, уникальное и непустое значение);
-		\item \textit{email} --- адрес электронной почты (строковый тип, уникальное и непустое значение);
-		\item \textit{password\_hash} --- хеш пароля пользователя (строковый тип, непустое значение);
-		\item \textit{notifications\_enabled} --- флаг включения/выключения уведомлений (логический тип, непустое значение, по умолчанию \textit{TRUE});
-		\item \textit{is\_active} --- флаг блокировки пользователя (логический тип, непустое значение, по умолчанию \textit{TRUE});
-		\item \textit{created\_at} --- дата и время регистрации (тип даты и времени, непустое значение, по умолчанию текущее время);
-		\item \textit{updated\_at} --- дата и время последнего обновления профиля (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{channels} с информацией о каналах, принадлежащих пользователям:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор канала (первичный ключ, целочисленный тип);
-		\item \textit{user\_id} --- владелец канала (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
-		\item \textit{name} --- название канала (строковый тип, уникальное и непустое значение);
-		\item \textit{description} --- текстовое описание канала (строковый тип);
-		\item \textit{created\_at} --- дата и время создания канала (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{videos} с метаданными видеозаписей:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор видео (первичный ключ, целочисленное значение);
-		\item \textit{channel\_id} --- канал-владелец видео (внешний ключ на таблицу \textit{channels}, целочисленный тип, непустое значение);
-		\item \textit{title} --- название видео (строковый тип, непустое значение);
-		\item \textit{description} --- текстовое описание видео (строковый тип);
-		\item \textit{filepath} --- путь к файлу с видеозаписью (строковый тип, непустое значение);
-		\item \textit{created\_at} --- дата и время публикации видео (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{playlists} с информацией о плейлистах, созданных на канале:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор плейлиста (первичный ключ, целочисленный тип);
-		\item \textit{channel\_id} --- канал-владелец плейлиста (внешний ключ на таблицу \textit{channels}, целочисленный тип, непустое значение);
-		\item \textit{name} --- название плейлиста (строковый тип, непустое значение);
-		\item \textit{description} --- текстовое описание плейлиста (строковый тип);
-		\item \textit{created\_at} --- дата и время создания плейлиста (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{playlist\_items} для связи плейлистов с видео (формализация связи <<многие-ко-многим>> между \textit{playlists} и \textit{videos}):
-	\begin{itemize}
-		\item \textit{playlist\_id} --- идентификатор плейлиста (часть составного первичного ключа, внешний ключ на таблицу \textit{playlists}, целочисленный тип);
-		\item \textit{video\_id} --- идентификатор видео (часть составного первичного ключа, внешний ключ на таблицу \textit{videos}, целочисленный тип);
-		\item \textit{number} --- порядковый номер видео в плейлисте (целочисленный тип);
-		\item \textit{added\_at} --- дата и время добавления видео в плейлист (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{viewings} для хранения истории просмотров видео пользователями:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор просмотра (первичный ключ, целочисленный тип);
-		\item \textit{user\_id} --- идентификатор пользователя (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
-		\item \textit{video\_id} --- идентификатор видео (внешний ключ на таблицу \textit{videos}, целочисленный тип, непустое значение);
-		\item \textit{watched\_at} --- дата и время просмотра (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{comments} для хранения комментариев пользователей к видео:
-	\begin{itemize}
-		\item \textit{id} --- идентификатор комментария (первичный ключ, целочисленный тип);
-		\item \textit{user\_id} --- автор комментария (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
-		\item \textit{video\_id} --- идентификатор видео (внешний ключ на таблицу \textit{videos}, целочисленный тип, непустое значение);
-		\item \textit{content} --- текстовое содержание комментария (строковый тип, непустое значение);
-		\item \textit{created\_at} --- дата и время написания комментария (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{video\_ratings} для хранения оценок видео (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{videos}):
-	\begin{itemize}
-		\item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
-		\item \textit{video\_id} --- идентификатор видео (часть составного первичного ключа. внешний ключ на таблицу \textit{videos}, целочисленный тип);
-		\item \textit{liked} --- флаг лайк/дизлайк (логический тип, непустое значение);
-		\item \textit{rated\_at} --- дата и время выставления оценки (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{comment\_ratings} для хранения оценок комментариев (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{comments}):
-	\begin{itemize}
-		\item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
-		\item \textit{comment\_id} --- идентификатор комментария (часть составного первичного ключа. внешний ключ на таблицу \textit{comments}, целочисленный тип);
-		\item \textit{liked} ---  флаг лайк/дизлайк (логический тип, непустое значение);
-		\item \textit{rated\_at} --- дата и время выставления оценки (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
-	
-	\item \textit{subscriptions} для хранения информации о подписках пользователей на каналы (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{channels}):
-	\begin{itemize}
-		\item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
-		\item \textit{channel\_id} --- идентификатор канала (часть составного первичного ключа, внешний ключ на таблицу \textit{channels}, целочисленный тип);
-		\item \textit{new\_videos\_count} --- счётчик новых видео для уведомления (целочисленный тип, по умолчанию 0);
-		\item \textit{subscribed\_at} --- дата и время подписки (тип даты и времени, непустое значение, по умолчанию текущее время).
-	\end{itemize}
+    \item \textit{roles} с информацией о ролях:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор роли (первичный ключ, целочисленный тип);
+        \item \textit{name} --- название роли (строковый тип, непустое значение);
+        \item \textit{is\_default} --- флаг, определяющий роль, присваиваемую новым пользователям по умолчанию (логический тип, по умолчанию \textit{FALSE}).
+    \end{itemize}
+
+    \item \textit{users} с информацией о пользователях приложения:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор пользователя (первичный ключ, целочисленный тип);
+        \item \textit{role\_id} --- роль пользователя (внешний ключ на таблицу \textit{roles}, целочисленный тип, непустое значение);
+        \item \textit{username} --- псевдоним пользователя (строковый тип, уникальное и непустое значение);
+        \item \textit{email} --- адрес электронной почты (строковый тип, уникальное и непустое значение);
+        \item \textit{password\_hash} --- хеш пароля пользователя (строковый тип, непустое значение);
+        \item \textit{notifications\_enabled} --- флаг включения/выключения уведомлений (логический тип, непустое значение, по умолчанию \textit{TRUE});
+        \item \textit{is\_active} --- флаг блокировки пользователя (логический тип, непустое значение, по умолчанию \textit{TRUE});
+        \item \textit{created\_at} --- дата и время регистрации (тип даты и времени, непустое значение, по умолчанию текущее время);
+        \item \textit{updated\_at} --- дата и время последнего обновления профиля (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{channels} с информацией о каналах, принадлежащих пользователям:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор канала (первичный ключ, целочисленный тип);
+        \item \textit{user\_id} --- владелец канала (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
+        \item \textit{name} --- название канала (строковый тип, уникальное и непустое значение);
+        \item \textit{description} --- текстовое описание канала (строковый тип);
+        \item \textit{created\_at} --- дата и время создания канала (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{videos} с метаданными видеозаписей:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор видео (первичный ключ, целочисленное значение);
+        \item \textit{channel\_id} --- канал-владелец видео (внешний ключ на таблицу \textit{channels}, целочисленный тип, непустое значение);
+        \item \textit{title} --- название видео (строковый тип, непустое значение);
+        \item \textit{description} --- текстовое описание видео (строковый тип);
+        \item \textit{filepath} --- путь к файлу с видеозаписью (строковый тип, непустое значение);
+        \item \textit{created\_at} --- дата и время публикации видео (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{playlists} с информацией о плейлистах, созданных на канале:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор плейлиста (первичный ключ, целочисленный тип);
+        \item \textit{channel\_id} --- канал-владелец плейлиста (внешний ключ на таблицу \textit{channels}, целочисленный тип, непустое значение);
+        \item \textit{name} --- название плейлиста (строковый тип, непустое значение);
+        \item \textit{description} --- текстовое описание плейлиста (строковый тип);
+        \item \textit{created\_at} --- дата и время создания плейлиста (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{playlist\_items} для связи плейлистов с видео (формализация связи <<многие-ко-многим>> между \textit{playlists} и \textit{videos}):
+    \begin{itemize}
+        \item \textit{playlist\_id} --- идентификатор плейлиста (часть составного первичного ключа, внешний ключ на таблицу \textit{playlists}, целочисленный тип);
+        \item \textit{video\_id} --- идентификатор видео (часть составного первичного ключа, внешний ключ на таблицу \textit{videos}, целочисленный тип);
+        \item \textit{number} --- порядковый номер видео в плейлисте (целочисленный тип);
+        \item \textit{added\_at} --- дата и время добавления видео в плейлист (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{viewings} для хранения истории просмотров видео пользователями:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор просмотра (первичный ключ, целочисленный тип);
+        \item \textit{user\_id} --- идентификатор пользователя (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
+        \item \textit{video\_id} --- идентификатор видео (внешний ключ на таблицу \textit{videos}, целочисленный тип, непустое значение);
+        \item \textit{watched\_at} --- дата и время просмотра (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{comments} для хранения комментариев пользователей к видео:
+    \begin{itemize}
+        \item \textit{id} --- идентификатор комментария (первичный ключ, целочисленный тип);
+        \item \textit{user\_id} --- автор комментария (внешний ключ на таблицу \textit{users}, целочисленный тип, непустое значение);
+        \item \textit{video\_id} --- идентификатор видео (внешний ключ на таблицу \textit{videos}, целочисленный тип, непустое значение);
+        \item \textit{content} --- текстовое содержание комментария (строковый тип, непустое значение);
+        \item \textit{created\_at} --- дата и время написания комментария (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{video\_ratings} для хранения оценок видео (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{videos}):
+    \begin{itemize}
+        \item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
+        \item \textit{video\_id} --- идентификатор видео (часть составного первичного ключа.
+        внешний ключ на таблицу \textit{videos}, целочисленный тип);
+        \item \textit{liked} --- флаг лайк/дизлайк (логический тип, непустое значение);
+        \item \textit{rated\_at} --- дата и время выставления оценки (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{comment\_ratings} для хранения оценок комментариев (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{comments}):
+    \begin{itemize}
+        \item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
+        \item \textit{comment\_id} --- идентификатор комментария (часть составного первичного ключа.
+        внешний ключ на таблицу \textit{comments}, целочисленный тип);
+        \item \textit{liked} --- флаг лайк/дизлайк (логический тип, непустое значение);
+        \item \textit{rated\_at} --- дата и время выставления оценки (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
+
+    \item \textit{subscriptions} для хранения информации о подписках пользователей на каналы (формализация связи <<многие-ко-многим>> между \textit{users} и \textit{channels}):
+    \begin{itemize}
+        \item \textit{user\_id} --- идентификатор пользователя (часть составного первичного ключа, внешний ключ на таблицу \textit{users}, целочисленный тип);
+        \item \textit{channel\_id} --- идентификатор канала (часть составного первичного ключа, внешний ключ на таблицу \textit{channels}, целочисленный тип);
+        \item \textit{new\_videos\_count} --- счётчик новых видео для уведомления (целочисленный тип, по умолчанию 0);
+        \item \textit{subscribed\_at} --- дата и время подписки (тип даты и времени, непустое значение, по умолчанию текущее время).
+    \end{itemize}
 \end{itemize}
 
-Диаграмма проектируемой базы данных представлена на рисунке~\ref{img:dbml}.
+Диаграмма проектируемой базы данных представлена на рисунке~\ref{fig:dbml}.
 
 \begin{figure}[H]
-	\centering
-	\includegraphics[width=1\textwidth]{images/dbml.pdf}
-	\caption{Диаграмма базы данных}
-	\label{img:dbml}
+    \centering
+    \includegraphics[width=1\textwidth]{images/dbml}
+    \caption{Диаграмма базы данных}
+    \label{fig:dbml}
 \end{figure}
+
 
 \section{Доказательство соответствия базы данных условиям 3НФ}
 
 Таблица находится в 1НФ, если выполняются следующие условия:
 \begin{enumerate}
-	\item каждая строка таблицы уникальна;
-	\item каждый столбец содержит только одно значение.
+    \item каждая строка таблицы уникальна;
+    \item каждый столбец содержит только одно значение.
 \end{enumerate}
 
 Таблица находится в 2НФ, если выполняются следующие условия:
 \begin{enumerate}
-	\item таблица находится в 1НФ;
-	\item любой неключевой атрибут должен зависеть от всех атрибутов ключа.
+    \item таблица находится в 1НФ;
+    \item любой неключевой атрибут должен зависеть от всех атрибутов ключа.
 \end{enumerate}
 
 Таблица находится в 3НФ, если выполняются следующие условия:
 \begin{enumerate}
-	\item таблица находится в 2НФ;
-	\item каждый не ключевой атрибут нетранзитивно зависит от первичного ключа.
+    \item таблица находится в 2НФ;
+    \item каждый не ключевой атрибут нетранзитивно зависит от первичного ключа.
 \end{enumerate}
 
 Все таблицы находятся в 1НФ, поскольку в каждой таблице есть первичный ключ, обеспечивающий уникальность строки, и каждый атрибут выделен в отдельный столбец, что обеспечивает простоту содержимого столбца.
@@ -139,152 +143,156 @@
 $
 \mathcal{F}_{\texttt{roles}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \{\texttt{name}, \texttt{is\_default}\},\\
-	& \texttt{name} \to \{\texttt{id}, \texttt{is\_default}\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \{\texttt{name}, \texttt{is\_default}\},\\
+        & \texttt{name} \to \{\texttt{id}, \texttt{is\_default}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{users}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to 
-	\left\{
-	\begin{aligned}
-		& \texttt{role\_id}, \texttt{username}, \texttt{email},\\
-		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
-		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
-	\end{aligned}
-	\right\},\\[6pt]
-	& \texttt{username} \to 
-	\left\{
-	\begin{aligned}
-		& \texttt{id}, \texttt{role\_id}, \texttt{email},\\
-		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
-		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
-	\end{aligned}
-	\right\},\\[6pt]
-	& \texttt{email} \to 
-	\left\{
-	\begin{aligned}
-		& \texttt{id}, \texttt{role\_id}, \texttt{username},\\
-		& \texttt{password\_hash}, \texttt{notifications\_enabled},\\
-		& \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
-	\end{aligned}
-	\right\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to
+        \left\{
+            \begin{aligned}
+                & \texttt{role\_id}, \texttt{username}, \texttt{email},\\
+                & \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+                & \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+            \end{aligned}
+        \right\},\\[6pt]
+        & \texttt{username} \to
+        \left\{
+            \begin{aligned}
+                & \texttt{id}, \texttt{role\_id}, \texttt{email},\\
+                & \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+                & \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+            \end{aligned}
+        \right\},\\[6pt]
+        & \texttt{email} \to
+        \left\{
+            \begin{aligned}
+                & \texttt{id}, \texttt{role\_id}, \texttt{username},\\
+                & \texttt{password\_hash}, \texttt{notifications\_enabled},\\
+                & \texttt{is\_active}, \texttt{created\_at}, \texttt{updated\_at}
+            \end{aligned}
+        \right\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{channels}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \{\texttt{user\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\},\\
-	& \texttt{name} \to \{\texttt{id}, \texttt{user\_id}, \texttt{description}, \texttt{created\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \{\texttt{user\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\},\\
+        & \texttt{name} \to \{\texttt{id}, \texttt{user\_id}, \texttt{description}, \texttt{created\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{videos}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \left\{
-	\begin{aligned}
-		& \texttt{channel\_id}, \texttt{title}, \texttt{description}, \\
-		& \texttt{filepath}, \texttt{created\_at}
-	\end{aligned}
-	\right\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \left\{
+                              \begin{aligned}
+                                  & \texttt{channel\_id}, \texttt{title}, \texttt{description}, \\
+                                  & \texttt{filepath}, \texttt{created\_at}
+                              \end{aligned}
+        \right\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{playlists}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \{\texttt{channel\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \{\texttt{channel\_id}, \texttt{name}, \texttt{description}, \texttt{created\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{viewings}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{watched\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{watched\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{comments}} =
 \left\{
-\begin{aligned}
-	& \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{content}, \texttt{created\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \texttt{id} \to \{\texttt{user\_id}, \texttt{video\_id}, \texttt{content}, \texttt{created\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{subscriptions}} =
 \left\{
-\begin{aligned}
-	& \{\texttt{user\_id}, \texttt{channel\_id}\} \to \left\{
-	\begin{aligned}
-		& \texttt{new\_videos\_count}, \\
-		& \texttt{subscribed\_at}
-	\end{aligned}
-	\right\}
-\end{aligned}
+    \begin{aligned}
+        & \{\texttt{user\_id}, \texttt{channel\_id}\} \to \left\{
+                                                              \begin{aligned}
+                                                                  & \texttt{new\_videos\_count}, \\
+                                                                  & \texttt{subscribed\_at}
+                                                              \end{aligned}
+        \right\}
+    \end{aligned}
 \right\},
 $
 
 $
 \mathcal{F}_{\texttt{playlist\_items}} =
 \left\{
-\begin{aligned}
-	& \{\texttt{playlist\_id}, \texttt{video\_id}\} \to \{\texttt{number}, \texttt{added\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \{\texttt{playlist\_id}, \texttt{video\_id}\} \to \{\texttt{number}, \texttt{added\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{video\_ratings}} =
 \left\{
-\begin{aligned}
-	& \{\texttt{user\_id}, \texttt{video\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \{\texttt{user\_id}, \texttt{video\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
+    \end{aligned}
 \right.,
 $
 
 $
 \mathcal{F}_{\texttt{comment\_ratings}} =
 \left\{
-\begin{aligned}
-	& \{\texttt{user\_id}, \texttt{comment\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
-\end{aligned}
+    \begin{aligned}
+        & \{\texttt{user\_id}, \texttt{comment\_id}\} \to \{\texttt{liked}, \texttt{rated\_at}\}
+    \end{aligned}
 \right..
 $
 
-Во всех функциональных зависимостях в левой части присутствуют только потенциальные ключи. Следовательно, каждый неключевой атрибут нетранзитивно зависит от всех атрибутов первичных ключей. Таким образом, все таблицы находятся в 3НФ.
+Во всех функциональных зависимостях в левой части присутствуют только потенциальные ключи.
+Следовательно, каждый неключевой атрибут нетранзитивно зависит от всех атрибутов первичных ключей.
+Таким образом, все таблицы находятся в 3НФ.
+
 
 \section{Ролевая модель на уровне базы данных}
 
 В результате анализа предметной области была введена ролевая модель из следующих четырёх ролей:
 \begin{itemize}
-	\item гость;
-	\item пользователь;
-	\item модератор;
-	\item администратор.
+    \item гость;
+    \item пользователь;
+    \item модератор;
+    \item администратор.
 \end{itemize}
 
-На уровне базы данных ролевая модель отражается через привилегии, то есть набор разрешённых операций для каждой роли на каждой таблице. Однако в данном случае требуется более тонкое управление (например, пользователь может изменять в таблице \textit{users} только данные о себе), что должно обрабатываться на уровне приложения.
+На уровне базы данных ролевая модель отражается через привилегии, то есть набор разрешённых операций для каждой роли на каждой таблице.
+Однако в данном случае требуется более тонкое управление (например, пользователь может изменять в таблице \textit{users} только данные о себе), что должно обрабатываться на уровне приложения.
 
-В соответствии с диаграммой вариантов использования, представленной на рисунке~\ref{img:UseCase}, определены следующие привилегии.
+В соответствии с диаграммой вариантов использования, представленной на рисунке~\ref{fig:usecase}, определены следующие привилегии.
 
 \subsection*{Привилегии гостя}
 
@@ -294,19 +302,20 @@ $
 
 Пользователь может выполнять следующие операции:
 \begin{itemize}
-	\item \textit{SELECT} над таблицей \textit{roles};
-	\item \textit{SELECT}, \textit{UPDATE} над таблицей \textit{users};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{channels};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{videos};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists};
-	\item \textit{INSERT}, \textit{SELECT} над таблицей \textit{viewings};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comments};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{DELETE} над таблицей \textit{subscriptions};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists\_items};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{video\_ratings};
-	\item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comment\_ratings}.
+    \item \textit{SELECT} над таблицей \textit{roles};
+    \item \textit{SELECT}, \textit{UPDATE} над таблицей \textit{users};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{channels};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{videos};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists};
+    \item \textit{INSERT}, \textit{SELECT} над таблицей \textit{viewings};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comments};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{DELETE} над таблицей \textit{subscriptions};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{playlists\_items};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{video\_ratings};
+    \item \textit{INSERT}, \textit{SELECT}, \textit{UPDATE}, \textit{DELETE} над таблицей \textit{comment\_ratings}.
 \end{itemize}
-При этом операции \textit{UPDATE}, \textit{DELETE} пользователь может выполнять только над своими записями в таблице. Кроме того, пользователю недоступно изменение атрибута \textit{is\_active} в таблице \textit{users}.
+При этом операции \textit{UPDATE}, \textit{DELETE} пользователь может выполнять только над своими записями в таблице.
+Кроме того, пользователю недоступно изменение атрибута \textit{is\_active} в таблице \textit{users}.
 
 \subsection*{Привилегии модератора}
 
@@ -316,17 +325,21 @@ $
 
 Администратор может выполнять все операции над всеми таблицами, в том числе изменять атрибут \textit{is\_active} в таблице \textit{users}.
 
+
 \section{Разработка функций базы данных}
 
-Схема алгоритма работы функции уведомления подписчиков канала о новом видео представлена на рисунке~\ref{img:notifications_function}. 
+Схема алгоритма работы функции уведомления подписчиков канала о новом видео представлена на рисунке~\ref{fig:notifications_function}.
 \begin{figure}[H]
-	\centering
-	\includegraphics[width=0.65\textwidth]{images/notifications_function.pdf}
-	\caption{Схема алгоритма работы функции уведомления подписчиков канала о новом видео}
-	\label{img:notifications_function}
+    \centering
+    \includegraphics[width=0.65\textwidth]{images/notifications_function}
+    \caption{Схема алгоритма работы функции уведомления подписчиков канала о новом видео}
+    \label{fig:notifications_function}
 \end{figure}
+
 
 \section*{Выводы по разделу}
 
-В конструкторском разделе спроектирована реляционная база данных, соответствующая 3НФ. Разработанная ранее ролевая модель была спроектирована на уровне базы данных: для каждой роли определены привилегии на операции с таблицами. Спроектирована функция уведомления подписчиков канала о новом видео.
+В конструкторском разделе спроектирована реляционная база данных, соответствующая 3НФ.
+Разработанная ранее ролевая модель была спроектирована на уровне базы данных: для каждой роли определены привилегии на операции с таблицами.
+Спроектирована функция уведомления подписчиков канала о новом видео.
 \clearpage

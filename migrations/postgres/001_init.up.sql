@@ -4,6 +4,11 @@ CREATE TABLE IF NOT EXISTS roles
     name       VARCHAR(32) UNIQUE NOT NULL,
     is_default BOOLEAN            NOT NULL DEFAULT FALSE
 );
+INSERT INTO roles (name, is_default)
+VALUES ('admin' , false),
+       ('moderator' , false),
+       ('user', true)
+ON CONFLICT (name) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS users
 (
@@ -41,7 +46,7 @@ CREATE TABLE IF NOT EXISTS playlists
 (
     id          SERIAL PRIMARY KEY,
     channel_id  INT         NOT NULL REFERENCES channels (id) ON DELETE CASCADE,
-    name        VARCHAR(32) NOT NULL,
+    name        VARCHAR(64) NOT NULL,
     description TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

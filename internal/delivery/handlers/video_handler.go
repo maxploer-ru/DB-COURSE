@@ -216,11 +216,12 @@ func (h *VideoHandler) ListMyVideos(w http.ResponseWriter, r *http.Request) {
 
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
+	sort := parseVideoSort(r.URL.Query().Get("sort"))
 	limit, offset := parsePagination(limitStr, offsetStr)
 
-	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset))
+	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset), slog.String("sort", string(sort)))
 
-	videos, err := h.videoSvc.ListMyVideos(r.Context(), userCtx.UserID, limit, offset)
+	videos, err := h.videoSvc.ListMyVideos(r.Context(), userCtx.UserID, limit, offset, sort)
 	if err != nil {
 		logger.WarnContext(r.Context(), "Failed to list user videos",
 			slog.String("error", err.Error()))
@@ -249,11 +250,12 @@ func (h *VideoHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
+	sort := parseVideoSort(r.URL.Query().Get("sort"))
 	limit, offset := parsePagination(limitStr, offsetStr)
 
-	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset))
+	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset), slog.String("sort", string(sort)))
 
-	videos, err := h.videoSvc.ListAllVideos(r.Context(), limit, offset)
+	videos, err := h.videoSvc.ListAllVideos(r.Context(), limit, offset, sort)
 	if err != nil {
 		logger.WarnContext(r.Context(), "Failed to list all videos",
 			slog.String("error", err.Error()))
@@ -292,11 +294,12 @@ func (h *VideoHandler) ListChannelVideos(w http.ResponseWriter, r *http.Request)
 
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
+	sort := parseVideoSort(r.URL.Query().Get("sort"))
 	limit, offset := parsePagination(limitStr, offsetStr)
 
-	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset))
+	logger = logger.With(slog.Int("limit", limit), slog.Int("offset", offset), slog.String("sort", string(sort)))
 
-	videos, err := h.videoSvc.ListChannelVideos(r.Context(), channelID, limit, offset)
+	videos, err := h.videoSvc.ListChannelVideos(r.Context(), channelID, limit, offset, sort)
 	if err != nil {
 		logger.WarnContext(r.Context(), "Failed to list channel videos",
 			slog.String("error", err.Error()))
@@ -409,16 +412,32 @@ func (h *VideoHandler) GetStreamingPresignedURL(w http.ResponseWriter, r *http.R
 
 func parsePagination(limitStr, offsetStr string) (int, int) {
 	limit := 10
+	offset := 0
+
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
-	offset := 0
+
 	if offsetStr != "" {
 		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
 			offset = o
 		}
 	}
+
 	return limit, offset
+}
+
+func parseVideoSort(value string) domain.VideoSort {
+	switch value {
+	case string(domain.VideoSortViews):
+		return domain.VideoSortViews
+	case string(domain.VideoSortRating):
+		return domain.VideoSortRating
+	case string(domain.VideoSortNewest):
+		return domain.VideoSortNewest
+	default:
+		return domain.VideoSortNewest
+	}
 }

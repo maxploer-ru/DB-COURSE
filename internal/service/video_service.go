@@ -14,9 +14,9 @@ type VideoService interface {
 	GetVideo(ctx context.Context, videoID int) (*domain.Video, error)
 	UpdateVideo(ctx context.Context, videoID, userID int, title, description *string) (*domain.Video, error)
 	DeleteVideo(ctx context.Context, videoID, userID int) error
-	ListChannelVideos(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error)
-	ListMyVideos(ctx context.Context, userID int, limit, offset int) ([]*domain.Video, error)
-	ListAllVideos(ctx context.Context, limit, offset int) ([]*domain.Video, error)
+	ListChannelVideos(ctx context.Context, channelID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
+	ListMyVideos(ctx context.Context, userID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
+	ListAllVideos(ctx context.Context, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
 	GetUploadPresignedURL(ctx context.Context, channelID, userID int, filename string) (url string, fileKey string, err error)
 	GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error)
 }
@@ -87,6 +87,40 @@ func (s *videoService) CreateVideo(ctx context.Context, channelID, userID int, t
 		logger.WarnContext(ctx, "Failed to notify subscribers about new video", slog.String("error", err.Error()))
 	}
 	return video, nil
+}
+
+func (s *videoService) GetUploadPresignedURL(ctx context.Context, channelID, userID int, filename string) (string, string, error) {
+	logger := domain.GetLogger(ctx).With(
+		slog.String("service", "VideoService"),
+		slog.String("operation", "GetUploadPresignedURL"),
+		slog.Int("channel_id", channelID),
+		slog.Int("user_id", userID),
+		slog.String("filename", filename),
+	)
+
+	logger.DebugContext(ctx, "Checking channel ownership")
+	isOwner, err := s.channelSvc.IsOwner(ctx, channelID, userID)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to check channel ownership", slog.String("error", err.Error()))
+		return "", "", fmt.Errorf("check channel owner: %w", err)
+	}
+	if !isOwner {
+		logger.WarnContext(ctx, "User is not the channel owner")
+		return "", "", domain.ErrForbidden
+	}
+
+	fileKey := fmt.Sprintf("videos/%d/%d_%s", channelID, time.Now().UnixNano(), filename)
+	logger = logger.With(slog.String("file_key", fileKey))
+
+	logger.DebugContext(ctx, "Generating upload presigned URL")
+	url, err := s.storageSvc.GenerateUploadPresignedURL(ctx, fileKey, 15*time.Minute)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to generate upload URL", slog.String("error", err.Error()))
+		return "", "", fmt.Errorf("generate upload url failed: %w", err)
+	}
+	logger = logger.With(slog.String("presigned_url", url))
+	logger.InfoContext(ctx, "Upload presigned URL generated successfully")
+	return url, fileKey, nil
 }
 
 func (s *videoService) GetVideo(ctx context.Context, videoID int) (*domain.Video, error) {
@@ -199,7 +233,6 @@ func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int) err
 	logger.DebugContext(ctx, "Deleting video file from storage")
 	if err := s.storageSvc.DeleteObject(ctx, video.Filepath); err != nil {
 		logger.WarnContext(ctx, "Failed to delete video file from storage", slog.String("error", err.Error()))
-		// Продолжаем удаление записи из БД
 	}
 
 	logger.DebugContext(ctx, "Deleting video from repository")
@@ -212,13 +245,14 @@ func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int) err
 	return nil
 }
 
-func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error) {
+func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoService"),
 		slog.String("operation", "ListChannelVideos"),
 		slog.Int("channel_id", channelID),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset),
+		slog.String("sort", string(sort)),
 	)
 
 	logger.DebugContext(ctx, "Checking channel existence")
@@ -233,7 +267,7 @@ func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, lim
 	}
 
 	logger.DebugContext(ctx, "Listing videos from repository")
-	videos, err := s.videoRepo.ListByChannel(ctx, channelID, limit, offset)
+	videos, err := s.videoRepo.ListByChannel(ctx, channelID, limit, offset, sort)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to list videos", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("list videos failed: %w", err)
@@ -242,13 +276,14 @@ func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, lim
 	return videos, nil
 }
 
-func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offset int) ([]*domain.Video, error) {
+func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoService"),
 		slog.String("operation", "ListMyVideos"),
 		slog.Int("user_id", userID),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset),
+		slog.String("sort", string(sort)),
 	)
 
 	logger.DebugContext(ctx, "Fetching user's channel")
@@ -260,7 +295,7 @@ func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offs
 	logger = logger.With(slog.Int("channel_id", channel.ID))
 
 	logger.DebugContext(ctx, "Listing user's videos")
-	videos, err := s.videoRepo.ListByChannel(ctx, channel.ID, limit, offset)
+	videos, err := s.videoRepo.ListByChannel(ctx, channel.ID, limit, offset, sort)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to list videos", slog.String("error", err.Error()))
 		return nil, err
@@ -269,56 +304,23 @@ func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offs
 	return videos, nil
 }
 
-func (s *videoService) ListAllVideos(ctx context.Context, limit, offset int) ([]*domain.Video, error) {
+func (s *videoService) ListAllVideos(ctx context.Context, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoService"),
 		slog.String("operation", "ListAllVideos"),
 		slog.Int("limit", limit),
 		slog.Int("offset", offset),
+		slog.String("sort", string(sort)),
 	)
 
 	logger.DebugContext(ctx, "Listing all videos")
-	videos, err := s.videoRepo.List(ctx, limit, offset)
+	videos, err := s.videoRepo.List(ctx, limit, offset, sort)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to list videos", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("list videos failed: %w", err)
 	}
 	logger.DebugContext(ctx, "Videos listed successfully", slog.Int("count", len(videos)))
 	return videos, nil
-}
-
-func (s *videoService) GetUploadPresignedURL(ctx context.Context, channelID, userID int, filename string) (string, string, error) {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "VideoService"),
-		slog.String("operation", "GetUploadPresignedURL"),
-		slog.Int("channel_id", channelID),
-		slog.Int("user_id", userID),
-		slog.String("filename", filename),
-	)
-
-	logger.DebugContext(ctx, "Checking channel ownership")
-	isOwner, err := s.channelSvc.IsOwner(ctx, channelID, userID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to check channel ownership", slog.String("error", err.Error()))
-		return "", "", fmt.Errorf("check channel owner: %w", err)
-	}
-	if !isOwner {
-		logger.WarnContext(ctx, "User is not the channel owner")
-		return "", "", domain.ErrForbidden
-	}
-
-	fileKey := fmt.Sprintf("videos/%d/%d_%s", channelID, time.Now().UnixNano(), filename)
-	logger = logger.With(slog.String("file_key", fileKey))
-
-	logger.DebugContext(ctx, "Generating upload presigned URL")
-	url, err := s.storageSvc.GenerateUploadPresignedURL(ctx, fileKey, 15*time.Minute)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to generate upload URL", slog.String("error", err.Error()))
-		return "", "", fmt.Errorf("generate upload url failed: %w", err)
-	}
-
-	logger.InfoContext(ctx, "Upload presigned URL generated successfully")
-	return url, fileKey, nil
 }
 
 func (s *videoService) GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error) {

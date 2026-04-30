@@ -1,0 +1,1277 @@
+openapi: 3.0.3
+info:
+  title: ZVideo API
+  version: "1.0.0"
+  description: API specification generated from server routes and DTOs.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /register:
+    post:
+      summary: Register user
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /login:
+    post:
+      summary: Login
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: refresh_token cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /refresh:
+    post:
+      summary: Refresh access token
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: Tokens refreshed
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: refresh_token cookie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /logout:
+    post:
+      summary: Logout
+      tags: [Auth]
+      security: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /me:
+    get:
+      summary: Get current user
+      tags: [Auth]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /me/notifications:
+    patch:
+      summary: Update notification settings
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationsSettingsRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /channels:
+    post:
+      summary: Create channel
+      tags: [Channels]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelRequest"
+      responses:
+        "201":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "409": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{id}:
+    get:
+      summary: Get channel by ID
+      tags: [Channels]
+      parameters:
+        - $ref: "#/components/parameters/ChannelIdById"
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    patch:
+      summary: Update channel
+      tags: [Channels]
+      parameters:
+        - $ref: "#/components/parameters/ChannelIdById"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChannelRequest"
+      responses:
+        "200":
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete channel
+      tags: [Channels]
+      parameters:
+        - $ref: "#/components/parameters/ChannelIdById"
+      responses:
+        "200":
+          description: Channel deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/me:
+    get:
+      summary: Get my channel
+      tags: [Channels]
+      responses:
+        "200":
+          description: Channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/me/community:
+    get:
+      summary: Get my community
+      tags: [Community]
+      responses:
+        "200":
+          description: Community
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{channelID}/community:
+    get:
+      summary: Get channel community
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/ChannelId"
+      responses:
+        "200":
+          description: Community
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{channelID}/community/posts:
+    post:
+      summary: Create community post
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/ChannelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommunityPostRequest"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPostResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /community/posts/{postID}:
+    patch:
+      summary: Update community post
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommunityPostRequest"
+      responses:
+        "200":
+          description: Post updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPostResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete community post
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Post deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /community/posts/{postID}/comments:
+    post:
+      summary: Create community comment
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommunityCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityCommentResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /community/comments/{id}:
+    patch:
+      summary: Update community comment
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentRequest"
+      responses:
+        "200":
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityCommentResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete community comment
+      tags: [Community]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200":
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /videos:
+    get:
+      summary: List videos
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/VideoSort"
+      responses:
+        "200":
+          description: Videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      summary: Create video
+      tags: [Videos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVideoRequest"
+      responses:
+        "201":
+          description: Video created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/me:
+    get:
+      summary: List my videos
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/VideoSort"
+      responses:
+        "200":
+          description: Videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{channelID}/videos:
+    get:
+      summary: List channel videos
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/ChannelId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/VideoSort"
+      responses:
+        "200":
+          description: Videos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VideoResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{id}:
+    get:
+      summary: Get video by ID
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Video
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    patch:
+      summary: Update video
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVideoRequest"
+      responses:
+        "200":
+          description: Video updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete video
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Video deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/upload-url:
+    post:
+      summary: Get upload presigned URL
+      tags: [Videos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadPresignedURLRequest"
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadPresignedURLResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{id}/stream-url:
+    get:
+      summary: Get streaming URL
+      tags: [Videos]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Streaming URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StreamingURLResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{id}/like:
+    post:
+      summary: Like video
+      tags: [Video Ratings]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Liked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{id}/dislike:
+    post:
+      summary: Dislike video
+      tags: [Video Ratings]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Disliked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{id}/rating:
+    delete:
+      summary: Remove video rating
+      tags: [Video Ratings]
+      parameters:
+        - $ref: "#/components/parameters/VideoId"
+      responses:
+        "200":
+          description: Rating removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /videos/{videoID}/comments:
+    get:
+      summary: List video comments
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/VideoIdByVideoID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentListResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      summary: Create video comment
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/VideoIdByVideoID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /comments/{id}:
+    patch:
+      summary: Update comment
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCommentRequest"
+      responses:
+        "200":
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete comment
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200":
+          description: Comment deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /comments/{id}/like:
+    post:
+      summary: Like comment
+      tags: [Comment Ratings]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200":
+          description: Liked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /comments/{id}/dislike:
+    post:
+      summary: Dislike comment
+      tags: [Comment Ratings]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200":
+          description: Disliked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /comments/{id}/rating:
+    delete:
+      summary: Remove comment rating
+      tags: [Comment Ratings]
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        "200":
+          description: Rating removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /subscriptions:
+    get:
+      summary: List user subscriptions
+      tags: [Subscriptions]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionChannelResponse"
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{id}/subscribe:
+    post:
+      summary: Subscribe to channel
+      tags: [Subscriptions]
+      parameters:
+        - $ref: "#/components/parameters/ChannelIdById"
+      responses:
+        "200":
+          description: Subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Unsubscribe from channel
+      tags: [Subscriptions]
+      parameters:
+        - $ref: "#/components/parameters/ChannelIdById"
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /channels/{channelID}/playlists:
+    get:
+      summary: List playlists by channel
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/ChannelId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Playlists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlaylistResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      summary: Create playlist
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/ChannelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlaylistRequest"
+      responses:
+        "201":
+          description: Playlist created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaylistResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /playlists/{id}:
+    get:
+      summary: Get playlist by ID
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/PlaylistId"
+      responses:
+        "200":
+          description: Playlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaylistResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+    patch:
+      summary: Update playlist
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/PlaylistId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlaylistRequest"
+      responses:
+        "200":
+          description: Playlist updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaylistResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Delete playlist
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/PlaylistId"
+      responses:
+        "200":
+          description: Playlist deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /playlists/{id}/videos/{videoID}:
+    post:
+      summary: Add video to playlist
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/PlaylistId"
+        - $ref: "#/components/parameters/VideoIdByVideoID"
+      responses:
+        "200":
+          description: Video added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      summary: Remove video from playlist
+      tags: [Playlists]
+      parameters:
+        - $ref: "#/components/parameters/PlaylistId"
+        - $ref: "#/components/parameters/VideoIdByVideoID"
+      responses:
+        "200":
+          description: Video removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/users/{id}/ban:
+    post:
+      summary: Ban user
+      tags: [Admin]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User banned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/users/{id}/unban:
+    post:
+      summary: Unban user
+      tags: [Admin]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User unbanned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ErrorResponse:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  parameters:
+    ChannelId:
+      name: channelID
+      in: path
+      required: true
+      schema:
+        type: integer
+    ChannelIdById:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    VideoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    VideoIdByVideoID:
+      name: videoID
+      in: path
+      required: true
+      schema:
+        type: integer
+    PostId:
+      name: postID
+      in: path
+      required: true
+      schema:
+        type: integer
+    CommentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    PlaylistId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+    VideoSort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [newest, views, rating]
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required: [code, message]
+      required: [error]
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+    RegisterRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required: [username, email, password]
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+    NotificationsSettingsRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required: [enabled]
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        notifications_enabled:
+          type: boolean
+      required: [id, username, email, role, notifications_enabled]
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserResponse"
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+      required: [user, access_token]
+    CreateChannelRequest:
+      type: object
+      properties:
+        channel_name:
+          type: string
+        description:
+          type: string
+      required: [channel_name, description]
+    UpdateChannelRequest:
+      type: object
+      properties:
+        channel_name:
+          type: string
+        description:
+          type: string
+    ChannelResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        subscribers_count:
+          type: integer
+      required: [id, user_id, name, description, subscribers_count]
+    CreateVideoRequest:
+      type: object
+      properties:
+        channel_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        file_key:
+          type: string
+      required: [channel_id, title, description, file_key]
+    UpdateVideoRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+    VideoResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel_id:
+          type: integer
+        channel_name:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        views:
+          type: integer
+        likes:
+          type: integer
+        dislikes:
+          type: integer
+        comments:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required: [id, channel_id, channel_name, title, description, views, likes, dislikes, comments, created_at]
+    UploadPresignedURLRequest:
+      type: object
+      properties:
+        channel_id:
+          type: integer
+        filename:
+          type: string
+      required: [channel_id, filename]
+    UploadPresignedURLResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        file_key:
+          type: string
+      required: [url, file_key]
+    StreamingURLResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
+    CreateCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+    UpdateCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        username:
+          type: string
+        video_id:
+          type: integer
+        content:
+          type: string
+        likes:
+          type: integer
+        dislikes:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required: [id, user_id, username, video_id, content, likes, dislikes, created_at]
+    CommentListResponse:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentResponse"
+        total:
+          type: integer
+      required: [comments]
+    CreateCommunityPostRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+    UpdateCommunityPostRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+    CreateCommunityCommentRequest:
+      type: object
+      properties:
+        content:
+          type: string
+      required: [content]
+    CommunityCommentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        post_id:
+          type: integer
+        user_id:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id, post_id, user_id, username, content, created_at]
+    CommunityPostResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel_id:
+          type: integer
+        user_id:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommunityCommentResponse"
+      required: [id, channel_id, user_id, username, content, created_at, comments]
+    CommunityResponse:
+      type: object
+      properties:
+        channel:
+          $ref: "#/components/schemas/ChannelResponse"
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommunityPostResponse"
+      required: [channel, posts]
+    CreatePlaylistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+      required: [name, description]
+    UpdatePlaylistRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    PlaylistItemResponse:
+      type: object
+      properties:
+        video_id:
+          type: integer
+        video_title:
+          type: string
+        number:
+          type: integer
+      required: [video_id, video_title, number]
+    PlaylistResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        channel_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaylistItemResponse"
+      required: [id, channel_id, name, description, created_at, items]
+    SubscriptionChannelResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        subscribers_count:
+          type: integer
+        new_videos_count:
+          type: integer
+        subscribed_at:
+          type: string
+          format: date-time
+      required: [id, user_id, name, description, subscribers_count, new_videos_count, subscribed_at]
+

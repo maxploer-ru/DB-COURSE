@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"ZVideo/internal/infrastructure/config"
 	"context"
 	"fmt"
 	"log"
@@ -10,36 +11,38 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type MinioConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	UseSSL    bool
-	Bucket    string
-}
-
-// NewMinioClient создаёт и проверяет подключение к MinIO.
-func NewMinioClient(cfg MinioConfig) (*minio.Client, error) {
+func NewMinioClient(cfg config.MinioConfig) (*minio.Client, *minio.Client, error) {
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create minio client: %w", err)
+		return nil, nil, fmt.Errorf("failed to create minio client: %w", err)
 	}
 
-	// Healthcheck соединения
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if _, err := client.ListBuckets(ctx); err != nil {
-		return nil, fmt.Errorf("minio connection check failed: %w", err)
+		return nil, nil, fmt.Errorf("minio connection check failed: %w", err)
+	}
+	log.Printf("MinIO client connected to %s", cfg.Endpoint)
+
+	externalEndpoint := cfg.ExternalEndpoint
+	if externalEndpoint == "" {
+		externalEndpoint = cfg.Endpoint
+	}
+	presignClient, err := minio.New(externalEndpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure: false,
+		Region: "us-east-1",
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create presign minio client: %w", err)
 	}
 
-	log.Printf("MinIO client connected to %s", cfg.Endpoint)
-	return client, nil
+	return client, presignClient, nil
 }
 
-// EnsureBucketExists проверяет существование бакета и создаёт его при необходимости.
 func EnsureBucketExists(ctx context.Context, client *minio.Client, bucketName string) error {
 	exists, err := client.BucketExists(ctx, bucketName)
 	if err != nil {

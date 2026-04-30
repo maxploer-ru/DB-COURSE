@@ -9,14 +9,16 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	Server   ServerConfig
-	HTTP     HTTPConfig
-	Auth     AuthConfig
-	Minio    MinioConfig
-	Logging  LoggingConfig
+	DatabaseDriver string
+	Database       DatabaseConfig
+	Mongo          MongoConfig
+	Redis          RedisConfig
+	JWT            JWTConfig
+	Server         ServerConfig
+	HTTP           HTTPConfig
+	Auth           AuthConfig
+	Minio          MinioConfig
+	Logging        LoggingConfig
 }
 
 type LoggingConfig struct {
@@ -35,11 +37,12 @@ type HTTPConfig struct {
 }
 
 type MinioConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	Endpoint         string
+	ExternalEndpoint string
+	AccessKey        string
+	SecretKey        string
+	Bucket           string
+	UseSSL           bool
 }
 
 type AuthConfig struct {
@@ -56,6 +59,20 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	DBName   string
+}
+
+type MongoConfig struct {
+	URI                    string
+	Host                   string
+	Port                   int
+	User                   string
+	Password               string
+	Database               string
+	AuthSource             string
+	ConnectTimeout         time.Duration
+	ServerSelectionTimeout time.Duration
+	MaxPoolSize            uint64
+	MinPoolSize            uint64
 }
 
 type RedisConfig struct {
@@ -77,18 +94,29 @@ type ServerConfig struct {
 }
 
 func LoadConfig() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		return nil
-	}
+	_ = godotenv.Load()
 
 	return &Config{
+		DatabaseDriver: getEnv("DB_DRIVER", "mongo"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnvAsInt("DB_PORT", 5432),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "1488"),
 			DBName:   getEnv("DB_NAME", "zvideo"),
+		},
+		Mongo: MongoConfig{
+			URI:                    getEnv("MONGO_URI", ""),
+			Host:                   getEnv("MONGO_HOST", "localhost"),
+			Port:                   getEnvAsInt("MONGO_PORT", 27017),
+			User:                   getEnv("MONGO_USER", ""),
+			Password:               getEnv("MONGO_PASSWORD", ""),
+			Database:               getEnv("MONGO_DB", "zvideo"),
+			AuthSource:             getEnv("MONGO_AUTH_SOURCE", "zvideo"),
+			ConnectTimeout:         getEnvAsDuration("MONGO_CONNECT_TIMEOUT", 10*time.Second),
+			ServerSelectionTimeout: getEnvAsDuration("MONGO_SERVER_SELECTION_TIMEOUT", 5*time.Second),
+			MaxPoolSize:            uint64(getEnvAsInt("MONGO_MAX_POOL_SIZE", 50)),
+			MinPoolSize:            uint64(getEnvAsInt("MONGO_MIN_POOL_SIZE", 0)),
 		},
 		Redis: RedisConfig{
 			Host:     getEnv("REDIS_HOST", "localhost"),
@@ -119,11 +147,12 @@ func LoadConfig() *Config {
 			},
 		},
 		Minio: MinioConfig{
-			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("MINIO_ROOT_USER", "minioadmin"),
-			SecretKey: getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
-			Bucket:    getEnv("MINIO_BUCKET", "zvideo-videos"),
-			UseSSL:    getEnvAsBool("MINIO_USE_SSL", false),
+			Endpoint:         getEnv("MINIO_ENDPOINT", "minio:9000"),
+			ExternalEndpoint: getEnv("MINIO_EXTERNAL_ENDPOINT", "localhost:9000"),
+			AccessKey:        getEnv("MINIO_ROOT_USER", "minioadmin"),
+			SecretKey:        getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
+			Bucket:           getEnv("MINIO_BUCKET", "zvideo-videos"),
+			UseSSL:           getEnvAsBool("MINIO_USE_SSL", false),
 		},
 		Logging: LoggingConfig{
 			Level:      getEnv("LOG_LEVEL", "debug"),
@@ -140,15 +169,6 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func getEnvAsInt64(key string, defaultValue int64) int64 {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
-}
-
 func getEnvAsBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {
 		if boolValue, err := strconv.ParseBool(value); err == nil {
@@ -156,38 +176,6 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
-}
-
-func getEnvAsSlice(key string, defaultValue []string) []string {
-	if value := os.Getenv(key); value != "" {
-		var parts []string
-		for _, part := range splitByComma(value) {
-			if part != "" {
-				parts = append(parts, part)
-			}
-		}
-		if len(parts) > 0 {
-			return parts
-		}
-	}
-	return defaultValue
-}
-
-func splitByComma(s string) []string {
-	var result []string
-	current := ""
-	for _, ch := range s {
-		if ch == ',' {
-			result = append(result, current)
-			current = ""
-		} else {
-			current += string(ch)
-		}
-	}
-	if current != "" {
-		result = append(result, current)
-	}
-	return result
 }
 
 func getEnvAsInt(key string, defaultValue int) int {

@@ -8,4 +8,5 @@ DROP TABLE IF EXISTS playlists;
 DROP TABLE IF EXISTS videos;
 DROP TABLE IF EXISTS channels;
 DROP TABLE IF EXISTS users;
+DELETE FROM roles WHERE name IN ('admin', 'moderator', 'user');
 DROP TABLE IF EXISTS roles;
