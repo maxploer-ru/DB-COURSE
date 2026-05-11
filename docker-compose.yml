@@ -49,7 +49,7 @@ services:
     container_name: ZVideo-frontend
     build:
       context: ./frontend
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       api:
         condition: service_started
@@ -58,6 +58,7 @@ services:
     networks:
       - ZVideo-network
     restart: unless-stopped
+
 
   postgres:
     container_name: ZVideo-postgres

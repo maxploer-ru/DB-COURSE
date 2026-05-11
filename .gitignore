@@ -10,3 +10,7 @@
 *.bcf
 *.bbl
 *.xml
+
+frontend/node_modules
+frontend/dist
+frontend/.env
