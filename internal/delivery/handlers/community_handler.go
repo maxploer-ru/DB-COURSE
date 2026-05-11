@@ -27,6 +27,16 @@ func NewCommunityHandler(communitySvc service.CommunityService, subscriptionServ
 	}
 }
 
+// GetChannelCommunity returns community for a channel.
+// @Summary Get channel community
+// @Tags Community
+// @Produce json
+// @Security BearerAuth
+// @Param channelID path int true "Channel ID"
+// @Success 200 {object} dto.CommunityResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /channels/{channelID}/community [get]
 func (h *CommunityHandler) GetChannelCommunity(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "GetChannelCommunity"))
 
@@ -52,6 +62,14 @@ func (h *CommunityHandler) GetChannelCommunity(w http.ResponseWriter, r *http.Re
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToCommunityResponse(community, subsCount))
 }
 
+// GetMyCommunity returns community for the current user's channel.
+// @Summary Get my community
+// @Tags Community
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} dto.CommunityResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /channels/me/community [get]
 func (h *CommunityHandler) GetMyCommunity(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "GetMyCommunity"))
 
@@ -77,6 +95,18 @@ func (h *CommunityHandler) GetMyCommunity(w http.ResponseWriter, r *http.Request
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToCommunityResponse(community, subsCount))
 }
 
+// CreatePost creates a community post.
+// @Summary Create community post
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param channelID path int true "Channel ID"
+// @Param request body dto.CreateCommunityPostRequest true "Create post request"
+// @Success 201 {object} dto.CommunityPostResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /channels/{channelID}/community/posts [post]
 func (h *CommunityHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "CreateCommunityPost"))
 
@@ -111,6 +141,18 @@ func (h *CommunityHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusCreated, mappers.ToCommunityPostResponse(post, nil))
 }
 
+// UpdatePost updates a community post.
+// @Summary Update community post
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param postID path int true "Post ID"
+// @Param request body dto.UpdateCommunityPostRequest true "Update post request"
+// @Success 200 {object} dto.CommunityPostResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /community/posts/{postID} [patch]
 func (h *CommunityHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "UpdateCommunityPost"))
 
@@ -145,6 +187,16 @@ func (h *CommunityHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToCommunityPostResponse(post, nil))
 }
 
+// DeletePost deletes a community post.
+// @Summary Delete community post
+// @Tags Community
+// @Produce json
+// @Security BearerAuth
+// @Param postID path int true "Post ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /community/posts/{postID} [delete]
 func (h *CommunityHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "DeleteCommunityPost"))
 
@@ -171,6 +223,18 @@ func (h *CommunityHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Community post deleted successfully"})
 }
 
+// CreateComment creates a comment on a community post.
+// @Summary Create community comment
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param postID path int true "Post ID"
+// @Param request body dto.CreateCommunityCommentRequest true "Create comment request"
+// @Success 201 {object} dto.CommunityCommentResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /community/posts/{postID}/comments [post]
 func (h *CommunityHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "CreateCommunityComment"))
 
@@ -205,6 +269,18 @@ func (h *CommunityHandler) CreateComment(w http.ResponseWriter, r *http.Request)
 	response.RespondWithJSON(w, http.StatusCreated, mappers.ToCommunityCommentResponse(comment))
 }
 
+// UpdateComment updates a community comment.
+// @Summary Update community comment
+// @Tags Community
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Param request body dto.UpdateCommentRequest true "Update comment request"
+// @Success 200 {object} dto.CommunityCommentResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /community/comments/{id} [patch]
 func (h *CommunityHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "UpdateCommunityComment"))
 
@@ -239,6 +315,16 @@ func (h *CommunityHandler) UpdateComment(w http.ResponseWriter, r *http.Request)
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToCommunityCommentResponse(comment))
 }
 
+// DeleteComment deletes a community comment.
+// @Summary Delete community comment
+// @Tags Community
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /community/comments/{id} [delete]
 func (h *CommunityHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "DeleteCommunityComment"))
 

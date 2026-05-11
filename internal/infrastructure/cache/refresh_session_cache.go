@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -29,7 +30,7 @@ func (c *RefreshSessionCache) Save(ctx context.Context, tokenID string, userID i
 
 func (c *RefreshSessionCache) GetUserID(ctx context.Context, tokenID string) (int, bool, error) {
 	val, err := c.client.Get(ctx, refreshSessionKeyPrefix+tokenID).Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, false, nil
 	}
 	if err != nil {

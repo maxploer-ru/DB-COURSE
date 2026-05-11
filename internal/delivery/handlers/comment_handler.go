@@ -30,6 +30,18 @@ func NewCommentHandler(
 	}
 }
 
+// Create creates a comment for a video.
+// @Summary Create video comment
+// @Tags Comments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param videoID path int true "Video ID"
+// @Param request body dto.CreateCommentRequest true "Create comment request"
+// @Success 201 {object} dto.CommentResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos/{videoID}/comments [post]
 func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "CreateComment"))
@@ -85,6 +97,17 @@ func (h *CommentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusCreated, resp)
 }
 
+// List returns comments for a video.
+// @Summary List video comments
+// @Tags Comments
+// @Produce json
+// @Security BearerAuth
+// @Param videoID path int true "Video ID"
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {object} dto.CommentListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /videos/{videoID}/comments [get]
 func (h *CommentHandler) List(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "ListComments"))
@@ -134,6 +157,18 @@ func (h *CommentHandler) List(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// Update updates a comment.
+// @Summary Update comment
+// @Tags Comments
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Param request body dto.UpdateCommentRequest true "Update comment request"
+// @Success 200 {object} dto.CommentResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /comments/{id} [patch]
 func (h *CommentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "UpdateComment"))
@@ -188,6 +223,16 @@ func (h *CommentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// Delete deletes a comment.
+// @Summary Delete comment
+// @Tags Comments
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /comments/{id} [delete]
 func (h *CommentHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "DeleteComment"))

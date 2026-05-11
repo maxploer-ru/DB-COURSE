@@ -4,8 +4,8 @@ services:
   migrate:
     container_name: ZVideo-migrate
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: docker
+      dockerfile: docker/Dockerfile
     env_file:
       - .env.docker
     entrypoint: ["/app/migrate"]
@@ -22,8 +22,8 @@ services:
   api:
     container_name: ZVideo-api
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: docker
+      dockerfile: docker/Dockerfile
     environment:
       MINIO_EXTERNAL_ENDPOINT: localhost:9000
     env_file:
@@ -49,7 +49,7 @@ services:
     container_name: ZVideo-frontend
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     depends_on:
       api:
         condition: service_started

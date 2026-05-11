@@ -1,3 +1,13 @@
+// @title ZVideo API
+// @version 1.0.0
+// @description API specification generated from handlers (code-first).
+// @BasePath /api
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+//
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/api/main.go -o ./openapi -outputTypes yaml --parseDependency --parseInternal
+//go:generate go run ./cmd/openapi -in ./openapi/swagger.yaml -out ./openapi.yaml
 package main
 
 import (

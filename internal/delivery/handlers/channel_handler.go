@@ -27,6 +27,18 @@ func NewChannelHandler(channelService service.ChannelService, subscriptionServic
 	}
 }
 
+// CreateChannel creates a new channel.
+// @Summary Create channel
+// @Tags Channels
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreateChannelRequest true "Create channel request"
+// @Success 201 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /channels [post]
 func (ch *ChannelHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "CreateChannel"))
@@ -66,6 +78,19 @@ func (ch *ChannelHandler) CreateChannel(w http.ResponseWriter, r *http.Request) 
 	response.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "Channel created successfully"})
 }
 
+// UpdateChannel updates channel data.
+// @Summary Update channel
+// @Tags Channels
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Param request body dto.UpdateChannelRequest true "Update channel request"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /channels/{id} [patch]
 func (ch *ChannelHandler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "UpdateChannel"))
@@ -112,6 +137,17 @@ func (ch *ChannelHandler) UpdateChannel(w http.ResponseWriter, r *http.Request) 
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Channel updated successfully"})
 }
 
+// DeleteChannel removes a channel.
+// @Summary Delete channel
+// @Tags Channels
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /channels/{id} [delete]
 func (ch *ChannelHandler) DeleteChannel(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "DeleteChannel"))
@@ -150,6 +186,17 @@ func (ch *ChannelHandler) DeleteChannel(w http.ResponseWriter, r *http.Request) 
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Channel deleted successfully"})
 }
 
+// GetChannel returns channel details.
+// @Summary Get channel by ID
+// @Tags Channels
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} dto.GetChannelResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /channels/{id} [get]
 func (ch *ChannelHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "GetChannel"))
@@ -199,6 +246,15 @@ func (ch *ChannelHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetMyChannel returns the current user's channel.
+// @Summary Get my channel
+// @Tags Channels
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} dto.GetChannelResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /channels/me [get]
 func (ch *ChannelHandler) GetMyChannel(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "GetMyChannel"))

@@ -20,6 +20,16 @@ func NewVideoInteractionHandler(interactionSvc service.VideoInteractionService) 
 	return &VideoInteractionHandler{interactionSvc: interactionSvc}
 }
 
+// Like registers a like for a video.
+// @Summary Like video
+// @Tags Video Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos/{id}/like [post]
 func (h *VideoInteractionHandler) Like(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "LikeVideo"))
 
@@ -55,6 +65,16 @@ func (h *VideoInteractionHandler) Like(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "liked"})
 }
 
+// Dislike registers a dislike for a video.
+// @Summary Dislike video
+// @Tags Video Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos/{id}/dislike [post]
 func (h *VideoInteractionHandler) Dislike(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "DislikeVideo"))
 
@@ -90,6 +110,16 @@ func (h *VideoInteractionHandler) Dislike(w http.ResponseWriter, r *http.Request
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "disliked"})
 }
 
+// RemoveRating removes a rating for a video.
+// @Summary Remove video rating
+// @Tags Video Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos/{id}/rating [delete]
 func (h *VideoInteractionHandler) RemoveRating(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "RemoveVideoRating"))
 

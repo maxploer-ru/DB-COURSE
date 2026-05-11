@@ -29,6 +29,18 @@ func NewVideoHandler(videoService service.VideoService, interactionService servi
 	}
 }
 
+// CreateVideo creates a new video.
+// @Summary Create video
+// @Tags Videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.CreateVideoRequest true "Create video request"
+// @Success 201 {object} dto.VideoResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /videos [post]
 func (h *VideoHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "CreateVideo"))
 
@@ -78,6 +90,16 @@ func (h *VideoHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusCreated, resp)
 }
 
+// GetVideo returns a video by ID.
+// @Summary Get video by ID
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.VideoResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /videos/{id} [get]
 func (h *VideoHandler) GetVideo(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "GetVideo"))
 
@@ -111,6 +133,20 @@ func (h *VideoHandler) GetVideo(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// UpdateVideo updates a video.
+// @Summary Update video
+// @Tags Videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Param request body dto.UpdateVideoRequest true "Update video request"
+// @Success 200 {object} dto.VideoResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /videos/{id} [patch]
 func (h *VideoHandler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "UpdateVideo"))
 
@@ -164,6 +200,17 @@ func (h *VideoHandler) UpdateVideo(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// DeleteVideo deletes a video.
+// @Summary Delete video
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /videos/{id} [delete]
 func (h *VideoHandler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "DeleteVideo"))
 
@@ -200,6 +247,17 @@ func (h *VideoHandler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Video deleted successfully"})
 }
 
+// ListMyVideos lists videos created by the current user.
+// @Summary List my videos
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Param sort query string false "Sort" Enums(newest,views,rating)
+// @Success 200 {array} dto.VideoResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos/me [get]
 func (h *VideoHandler) ListMyVideos(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "ListMyVideos"))
 
@@ -245,6 +303,17 @@ func (h *VideoHandler) ListMyVideos(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// List lists all videos.
+// @Summary List videos
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Param sort query string false "Sort" Enums(newest,views,rating)
+// @Success 200 {array} dto.VideoResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /videos [get]
 func (h *VideoHandler) List(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "ListVideos"))
 
@@ -279,6 +348,19 @@ func (h *VideoHandler) List(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// ListChannelVideos lists videos for a channel.
+// @Summary List channel videos
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param channelID path int true "Channel ID"
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Param sort query string false "Sort" Enums(newest,views,rating)
+// @Success 200 {array} dto.VideoResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /channels/{channelID}/videos [get]
 func (h *VideoHandler) ListChannelVideos(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "ListChannelVideos"))
 
@@ -323,6 +405,18 @@ func (h *VideoHandler) ListChannelVideos(w http.ResponseWriter, r *http.Request)
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// GetUploadPresignedURL returns a presigned URL for upload.
+// @Summary Get upload presigned URL
+// @Tags Videos
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.UploadPresignedURLRequest true "Upload presigned URL request"
+// @Success 200 {object} dto.UploadPresignedURLResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /videos/upload-url [post]
 func (h *VideoHandler) GetUploadPresignedURL(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "GetUploadPresignedURL"))
 
@@ -363,6 +457,16 @@ func (h *VideoHandler) GetUploadPresignedURL(w http.ResponseWriter, r *http.Requ
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// GetStreamingPresignedURL returns a presigned streaming URL.
+// @Summary Get streaming URL
+// @Tags Videos
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Video ID"
+// @Success 200 {object} dto.StreamingURLResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /videos/{id}/stream-url [get]
 func (h *VideoHandler) GetStreamingPresignedURL(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "GetStreamingPresignedURL"))
 

@@ -20,6 +20,17 @@ func NewAdminHandler(adminSvc service.AdminService) *AdminHandler {
 	return &AdminHandler{adminSvc: adminSvc}
 }
 
+// BanUser bans a user.
+// @Summary Ban user
+// @Tags Admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /admin/users/{id}/ban [post]
 func (h *AdminHandler) BanUser(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "BanUser"))
 
@@ -48,6 +59,17 @@ func (h *AdminHandler) BanUser(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User banned successfully"})
 }
 
+// UnbanUser unbans a user.
+// @Summary Unban user
+// @Tags Admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Router /admin/users/{id}/unban [post]
 func (h *AdminHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "UnbanUser"))
 

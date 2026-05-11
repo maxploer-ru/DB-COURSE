@@ -1,0 +1,33 @@
+@startuml
+actor "Пользователь" as User
+participant "Web SPA" as Web
+participant "Backend" as Backend
+database "Database\n(PostgreSQL)" as DB
+participant "File Storage\n(MinIO/S3)" as Storage
+
+User -> Web: Открыть страницу загрузки видео
+Web --> User: Отобразить форму загрузки
+
+User -> Web: Заполнить данные (название, описание, файл)
+Web -> Backend: POST /videos/upload-url (channelId, filename)
+activate Backend
+Backend -> Backend: Проверка авторизации и владения каналом
+Backend -> Storage: Сгенерировать presigned URL
+Storage --> Backend: URL + fileKey
+Backend --> Web: URL + fileKey
+
+deactivate Backend
+Web -> Storage: Загрузка файла по presigned URL
+Storage --> Web: 200 OK
+
+Web -> Backend: POST /videos (channelId, title, description, fileKey)
+activate Backend
+Backend -> Backend: Валидация данных
+Backend -> DB: Сохранить запись о видео
+DB --> Backend: ID видео
+Backend -> Backend: Уведомить подписчиков (внутренняя операция)
+Backend --> Web: 201 Created (video)
+deactivate Backend
+
+Web --> User: Показать страницу видео
+@enduml

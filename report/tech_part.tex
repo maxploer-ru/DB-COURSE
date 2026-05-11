@@ -1,5 +1,120 @@
 \chapter{Технологический раздел}
 
+
+
+\section{Выбор средств реализации}
+
+\subsection*{Выбор СУБД}
+
+
+Проведён сравнительный анализ следующих систем управления реляционными базами данных: MySQL~\cite{lit9}, PostgreSQL~\cite{lit10}, Oracle Database~\cite{lit11}, Microsoft SQL Server~\cite{lit12} и SQLite~\cite{lit13}.
+
+Критерии сравнения:
+\begin{itemize}
+    \item К1 --- бесплатный доступ;
+    \item К2 --- поддержка транзакций;
+    \item К3 --- поддержка ролевой модели;
+\end{itemize}
+Результаты анализа представлены в таблице~\ref{tab:dbms_comparison}.
+
+
+\begin{longtable}{|p{5cm}|C{1cm}|C{1cm}|C{1cm}|}
+    \caption{Сравнение СУБД}\label{tab:dbms_comparison} \\
+    \hline
+    \textbf{СУБД} & \textbf{К1} & \textbf{К2} & \textbf{К3} \\
+    \hline
+    \endfirsthead
+    \multicolumn{4}{l}{\textit{Продолжение таблицы~\ref{tab:dbms_comparison}}} \\
+    \hline
+    \textbf{СУБД} & \textbf{К1} & \textbf{К2} & \textbf{К3} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    MySQL & $+$ & $+$ & $+$ \\
+    \hline
+    PostgreSQL & $+$ & $+$ & $+$ \\
+    \hline
+    Oracle Database & $-$ & $+$ & $+$ \\
+    \hline
+    Microsoft SQL Server & $-$ & $+$ & $+$ \\
+    \hline
+    SQLite & $+$ & $-$ & $-$ \\
+    \hline
+\end{longtable}
+
+В результате анализа для разработки выбрана СУБД PostgreSQL, поскольку она соответствует сформулированным критериям
+
+
+\section*{Выбор объектного хранилища}
+
+Проведён сравнительный анализ следующих объектных хранилищ: Amazon S3~\cite{lit14}, Google Cloud Storage~\cite{lit15}, MinIO~\cite{lit16}.
+
+Критерии сравнения:
+\begin{itemize}
+    \item бесплатный доступ;
+    \item минимальное потребление ОЗУ;
+    \item модель развёртывания.
+\end{itemize}
+Результаты анализа представлены в таблице~\ref{tab:object_storage_comparison}
+
+\begin{longtable}{|p{5.5cm}|C{1cm}|C{1cm}|C{2.3cm}|}
+    \caption{Сравнение объектных хранилищ}\label{tab:object_storage_comparison} \\
+    \hline
+    \textbf{Объектное хранилище} & \textbf{К1} & \textbf{К2} & \textbf{К3} \\
+    \hline
+    \endfirsthead
+    \multicolumn{4}{l}{\textit{Продолжение таблицы~\ref{tab:object_storage_comparison}}} \\
+    \hline
+    \textbf{Объектное хранилище} & \textbf{К1} & \textbf{К2} & \textbf{К3} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    Amazon S3 & $-$ & $-$ & облачная \\
+    \hline
+    Google Cloud Storage & $-$ & $-$ & облачная \\
+    \hline
+    MinIO & $+$ & $+$ & локальная \\
+    \hline
+\end{longtable}
+
+В результате анализа для разработки выбрано объектное хранилище MinIO\@.
+
+\subsection*{Выбор средств реализации программного обеспечения}
+
+Для реализации приложения выбран язык программирования Go, поскольку он ориентирован на разработку серверных приложений и обладает набором пакетов для работы с REST API, базами данных и хранилищами.
+Разработка будет осуществляться в среде разработки JetBrains GoLand, которая обеспечивает инструменты для написания, отладки и тестирования кода на языке Go\@.
+
+\section{Проектирование программного обеспечения}
+
+При моделировании архитектуры программной системы использован метод графического моделирования C4.
+На уровне контейнеров система представлена как связка Web SPA, Backend, базы данных PostgreSQL и объектного хранилища MinIO\@.
+Web SPA взаимодействует с Backend по REST API для операций.
+Backend хранит метаданные и бизнес-сущности в PostgreSQL, а загрузка/получение видео выполняется через MinIO с использованием presigned URL, выдаваемых Backend.
+Роли пользователей (гость, пользователь, модератор, администратор) отражают сценарии доступа в интерфейсе.
+
+Схема связи компонентов представлена на рисунке~\ref{fig:l2}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{ppo/C4-L2.drawio}
+    \caption{Уровень контейнеров архитектуры системы}
+    \label{fig:l2}
+\end{figure}
+
+Для уточнения взаимодействия компонентов приведена диаграмма последовательности процесса загрузки видео.
+Диаграмма показывает шаги обмена между Web SPA, Backend, PostgreSQL и MinIO, фиксирует порядок вызовов и точки ответственности.
+Диаграмма последовательности представлена на рисунке~\ref{fig:sequence_upload_video}.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{ppo/sequence_upload_video}
+    \caption{Диаграмма последовательности процесса загрузки видео}
+    \label{fig:sequence_upload_video}
+\end{figure}
+
+Реализация хранимой процедуры PostgreSQL для уведомления подписчиков канала о новом видео представлена в листинге~\ref{lst:sql}.
+
+
 \section*{Выводы по разделу}
 
 \clearpage

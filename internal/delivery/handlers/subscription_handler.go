@@ -28,6 +28,16 @@ func NewSubscriptionHandler(
 	}
 }
 
+// Subscribe subscribes the current user to a channel.
+// @Summary Subscribe to channel
+// @Tags Subscriptions
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /channels/{id}/subscribe [post]
 func (h *SubscriptionHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Subscribe"))
@@ -66,6 +76,16 @@ func (h *SubscriptionHandler) Subscribe(w http.ResponseWriter, r *http.Request) 
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Subscribed successfully"})
 }
 
+// Unsubscribe removes a subscription from a channel.
+// @Summary Unsubscribe from channel
+// @Tags Subscriptions
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /channels/{id}/subscribe [delete]
 func (h *SubscriptionHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Unsubscribe"))
@@ -104,6 +124,16 @@ func (h *SubscriptionHandler) Unsubscribe(w http.ResponseWriter, r *http.Request
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Unsubscribed successfully"})
 }
 
+// GetUserSubscriptions lists subscriptions for the current user.
+// @Summary List user subscriptions
+// @Tags Subscriptions
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} dto.SubscriptionChannelResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /subscriptions [get]
 func (h *SubscriptionHandler) GetUserSubscriptions(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "GetUserSubscriptions"))

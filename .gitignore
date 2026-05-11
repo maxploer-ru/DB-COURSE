@@ -1,5 +1,6 @@
 .idea
 .env
+.env.docker
 *.gz
 *.aux
 *.toc

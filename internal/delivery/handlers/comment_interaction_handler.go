@@ -20,6 +20,16 @@ func NewCommentInteractionHandler(interactionSvc service.CommentInteractionServi
 	return &CommentInteractionHandler{interactionSvc: interactionSvc}
 }
 
+// Like registers a like for a comment.
+// @Summary Like comment
+// @Tags Comment Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /comments/{id}/like [post]
 func (h *CommentInteractionHandler) Like(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "LikeComment"))
@@ -58,6 +68,16 @@ func (h *CommentInteractionHandler) Like(w http.ResponseWriter, r *http.Request)
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "liked"})
 }
 
+// Dislike registers a dislike for a comment.
+// @Summary Dislike comment
+// @Tags Comment Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /comments/{id}/dislike [post]
 func (h *CommentInteractionHandler) Dislike(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "DislikeComment"))
@@ -96,6 +116,16 @@ func (h *CommentInteractionHandler) Dislike(w http.ResponseWriter, r *http.Reque
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "disliked"})
 }
 
+// RemoveRating removes a rating for a comment.
+// @Summary Remove comment rating
+// @Tags Comment Ratings
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Comment ID"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /comments/{id}/rating [delete]
 func (h *CommentInteractionHandler) RemoveRating(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "RemoveCommentRating"))

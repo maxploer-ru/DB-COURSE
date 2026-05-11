@@ -2,3 +2,12 @@
 
 \renewcommand{\thetable}{Б.\arabic{table}}
 \setcounter{table}{0}
+\renewcommand{\thelstlisting}{Б.\arabic{lstlisting}}
+\setcounter{lstlisting}{0}
+
+\lstinputlisting[
+    frame=single,
+    breaklines=true,
+    caption={Хранимая процедура для уведомления подписчиков канала о новом видео},
+    label=lst:sql
+]{listings/sql.txt}

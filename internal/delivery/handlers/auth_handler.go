@@ -24,6 +24,16 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	return &AuthHandler{authSvc: authService}
 }
 
+// Register registers a new user.
+// @Summary Register user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "Register request"
+// @Success 201 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 409 {object} dto.ErrorResponse
+// @Router /register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Register"))
@@ -53,6 +63,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "User registered successfully"})
 }
 
+// Login authenticates a user.
+// @Summary Login
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body dto.LoginRequest true "Login request"
+// @Success 200 {object} dto.AuthResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Login"))
@@ -83,6 +103,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// Refresh refreshes access token using cookie.
+// @Summary Refresh access token
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} dto.AuthResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /refresh [post]
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Refresh"))
@@ -108,6 +135,13 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// Logout clears refresh session.
+// @Summary Logout
+// @Tags Auth
+// @Produce json
+// @Success 200 {object} dto.MessageResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	logger := domain.GetLogger(r.Context()).With(
 		slog.String("handler", "Logout"))
@@ -159,6 +193,14 @@ func (h *AuthHandler) ValidateAccessToken(w http.ResponseWriter, r *http.Request
 	response.RespondWithJSON(w, http.StatusOK, resp)
 }
 
+// GetMe returns current user info.
+// @Summary Get current user
+// @Tags Auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} dto.UserResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /me [get]
 func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	userCtx, err := middleware.GetUserFromContext(r.Context())
 	if err != nil {
@@ -175,6 +217,17 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToUserResponse(user))
 }
 
+// UpdateNotificationsSettings updates user notification settings.
+// @Summary Update notification settings
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body dto.NotificationsSettingsRequest true "Notification settings"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /me/notifications [patch]
 func (h *AuthHandler) UpdateNotificationsSettings(w http.ResponseWriter, r *http.Request) {
 	userCtx, err := middleware.GetUserFromContext(r.Context())
 	if err != nil {
