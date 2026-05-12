@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   migrate:
     container_name: ZVideo-migrate
     build:
-      context: docker
+      context: .
       dockerfile: docker/Dockerfile
     env_file:
       - .env.docker
-    entrypoint: ["/app/migrate"]
-    command: ["-direction=up"]
+    entrypoint: [ "/app/migrate" ]
+    command: [ "-direction=up" ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,7 +20,7 @@ services:
   api:
     container_name: ZVideo-api
     build:
-      context: docker
+      context: .
       dockerfile: docker/Dockerfile
     environment:
       MINIO_EXTERNAL_ENDPOINT: localhost:9000
@@ -74,7 +72,7 @@ services:
     networks:
       - ZVideo-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -97,7 +95,7 @@ services:
     networks:
       - ZVideo-network
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -113,7 +111,7 @@ services:
     networks:
       - ZVideo-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -136,7 +134,7 @@ services:
     networks:
       - ZVideo-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 10s
       timeout: 5s
       retries: 5
