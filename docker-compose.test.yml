@@ -1,0 +1,15 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: zvideo_test
+      POSTGRES_USER: zvideo_test
+      POSTGRES_PASSWORD: zvideo_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zvideo_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
