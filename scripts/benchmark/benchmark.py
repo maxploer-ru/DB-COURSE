@@ -1,8 +1,8 @@
-import psycopg2
-import time
 import csv
+import time
 import numpy as np
 import matplotlib.pyplot as plt
+import psycopg2
 from contextlib import contextmanager
 
 DB_CONFIG = {
@@ -10,186 +10,587 @@ DB_CONFIG = {
     "database": "zvideo",
     "user": "postgres",
     "password": "1488",
-    "port": 5432
+    "port": 5432,
+    "connect_timeout": 30,
+    "options": "-c statement_timeout=300000 -c idle_in_transaction_session_timeout=120000"
 }
 
-DATA_SIZES = [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000]
-WARMUP_ITERATIONS = 3
-MEASURE_ITERATIONS = 10
+# Размеры данных для тестирования
+DATA_SIZES = [
+    10_000, 50_000,
+    100_000, 250_000,
+    500_000, 750_000, 1_000_000
+]
+
+# Параметры бенчмарка
+WARMUP_ITERATIONS = 5
+MEASURE_ITERATIONS = 20
 TEST_CHANNEL_ID = 1
 
-# Стратегии индексов (выполняются по одной, остальные индексы отсутствуют)
+# Доли подписчиков тестового канала
+TARGET_CHANNEL_FRACTIONS = [0.001, 0.01, 0.05, 0.10]
+
+# Если стандартное отклонение слишком велико, повторяем замер
+STDDEV_MAX_RATIO = 0.1  # 20% от среднего
+MAX_STDDEV_RETRIES = 100000
+
+# Стратегии индексов
 STRATEGIES = {
     "No Index": [],
     "B-Tree on sub(channel_id)": [
-        "CREATE INDEX idx_sub_channel_btree ON subscriptions USING btree (channel_id)"
-    ],
-    "Hash on sub(channel_id)": [
-        "CREATE INDEX idx_sub_channel_hash ON subscriptions USING hash (channel_id)"
+        "CREATE INDEX IF NOT EXISTS idx_sub_channel_btree ON subscriptions USING btree (channel_id)"
     ],
     "B-Tree on sub(channel_id, user_id)": [
-        "CREATE INDEX idx_sub_channel_user_btree ON subscriptions (channel_id, user_id)"
-    ],
-    "BRIN on sub(channel_id)": [
-        "CREATE INDEX idx_sub_channel_brin ON subscriptions USING brin (channel_id)"
+        "CREATE INDEX IF NOT EXISTS idx_sub_channel_user_btree ON subscriptions USING btree (channel_id, user_id)"
     ],
     "B-Tree on users(notif_enabled, id)": [
-        "CREATE INDEX idx_users_notif_id ON users (notifications_enabled, id)"
+        "CREATE INDEX IF NOT EXISTS idx_users_notif_id_btree ON users USING btree (notifications_enabled, id)"
     ],
-    "Covering sub(channel_id) INCLUDE (user_id, new_videos_count)": [
-        "CREATE INDEX idx_sub_channel_covering ON subscriptions (channel_id) INCLUDE (user_id, new_videos_count)"
+    "B-Tree partial users(id) WHERE notif_enabled": [
+        "CREATE INDEX IF NOT EXISTS idx_users_active_btree ON users USING btree (id) WHERE notifications_enabled = TRUE"
+    ],
+    "Combined: sub(channel_id) + users(notif_enabled, id)": [
+        "CREATE INDEX IF NOT EXISTS idx_sub_channel_btree ON subscriptions USING btree (channel_id)",
+        "CREATE INDEX IF NOT EXISTS idx_users_notif_id_btree ON users USING btree (notifications_enabled, id)"
     ]
 }
 
-INDEX_NAMES = [
+ALL_INDEX_NAMES = [
     "idx_sub_channel_btree",
-    "idx_sub_channel_hash",
     "idx_sub_channel_user_btree",
-    "idx_sub_channel_brin",
-    "idx_users_notif_id",
-    "idx_sub_channel_covering"
+    "idx_users_notif_id_btree",
+    "idx_users_active_btree"
 ]
 
+
+@contextmanager
+def get_connection():
+    """Контекстный менеджер для подключения к БД"""
+    conn = psycopg2.connect(**DB_CONFIG)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
+def kill_idle_transactions(cur):
+    """Убиваем подвисшие idle транзакции, которые блокируют VACUUM"""
+    cur.execute("""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE pid <> pg_backend_pid()
+                  AND state = 'idle in transaction'
+                  AND query NOT LIKE '%pg_stat_activity%';
+                """)
+
+
+def drop_all_experiment_indexes(cur):
+    """Удаление всех индексов эксперимента"""
+    for index_name in ALL_INDEX_NAMES:
+        cur.execute(f"DROP INDEX IF EXISTS {index_name};")
+
+
+def create_indexes(cur, index_ddls):
+    """Создание индексов для стратегии"""
+    for ddl in index_ddls:
+        cur.execute(ddl)
+
+
+def vacuum_all_tables(conn, full=False):
+    """Тщательная очистка всех таблиц с VACUUM"""
+    vacuum_type = "VACUUM FULL" if full else "VACUUM"
+
+    # Завершаем любые открытые транзакции перед переключением autocommit
+    try:
+        conn.rollback()
+    except Exception:
+        pass
+
+    # Временно включаем autocommit, так как VACUUM нельзя выполнять в транзакции
+    old_autocommit = conn.autocommit
+    conn.autocommit = True
+
+    try:
+        with conn.cursor() as cur:
+            # Убиваем мешающие транзакции
+            kill_idle_transactions(cur)
+
+            for table in ["users", "subscriptions", "channels", "roles"]:
+                try:
+                    cur.execute(f"{vacuum_type} ANALYZE {table};")
+                    print(f"     ✓ VACUUM {table} completed")
+                except Exception as e:
+                    print(f"     ⚠ Warning: VACUUM {table} failed: {e}")
+    finally:
+        conn.autocommit = old_autocommit
+
+
+def prepare_database(conn, size, target_fraction):
+    """
+    Полная перегенерация данных с контролируемым распределением подписок.
+    Всё выполняется в отдельных транзакциях для предотвращения блокировок.
+    """
+
+    # === Этап 1: Очистка таблиц (отдельная транзакция) ===
+    with conn.cursor() as cur:
+        cur.execute("DROP TABLE IF EXISTS subscriptions CASCADE;")
+        cur.execute("DROP TABLE IF EXISTS channels CASCADE;")
+        cur.execute("DROP TABLE IF EXISTS users CASCADE;")
+        cur.execute("DROP TABLE IF EXISTS roles CASCADE;")
+    conn.commit()
+
+    # === Этап 2: Создание таблиц заново (чтобы избежать фрагментации) ===
+    with conn.cursor() as cur:
+        # roles
+        cur.execute("""
+                    CREATE TABLE roles (
+                                           id SERIAL PRIMARY KEY,
+                                           name VARCHAR(32) UNIQUE NOT NULL,
+                                           is_default BOOLEAN NOT NULL DEFAULT FALSE
+                    );
+                    """)
+        cur.execute("""
+                    INSERT INTO roles (name, is_default) VALUES
+                                                             ('admin', false), ('moderator', false), ('user', true);
+                    """)
+        cur.execute("SELECT id FROM roles WHERE name = 'user';")
+        role_id = cur.fetchone()[0]
+    conn.commit()
+
+    # === Этап 3: Создание и заполнение users (отдельная транзакция) ===
+    with conn.cursor() as cur:
+        cur.execute("""
+                    CREATE TABLE users (
+                                           id SERIAL PRIMARY KEY,
+                                           role_id INT NOT NULL REFERENCES roles (id) ON DELETE RESTRICT,
+                                           username VARCHAR(32) UNIQUE NOT NULL,
+                                           email VARCHAR(64) UNIQUE NOT NULL,
+                                           password_hash TEXT NOT NULL,
+                                           is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                                           notifications_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                                           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    """)
+
+        cur.execute("""
+                    INSERT INTO users (username, email, password_hash, role_id, notifications_enabled)
+                    SELECT
+                        'user_' || id,
+                        'email_' || id || '@test.com',
+                        'hash',
+                        %s,
+                        (id %% 2 = 0)
+                    FROM generate_series(1, %s) AS id;
+                    """, (role_id, size))
+    conn.commit()
+
+    # === Этап 4: Создание и заполнение channels (отдельная транзакция) ===
+    with conn.cursor() as cur:
+        cur.execute("""
+                    CREATE TABLE channels (
+                                              id SERIAL PRIMARY KEY,
+                                              user_id INT UNIQUE NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                                              name VARCHAR(32) UNIQUE NOT NULL,
+                                              description TEXT,
+                                              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    """)
+
+        channel_count = max(10, size // 10)
+        cur.execute("""
+                    INSERT INTO channels (user_id, name)
+                    SELECT id, 'Channel_' || id
+                    FROM users
+                    ORDER BY id
+                    LIMIT %s;
+                    """, (channel_count,))
+    conn.commit()
+
+    # === Этап 5: Создание и заполнение subscriptions (отдельная транзакция) ===
+    with conn.cursor() as cur:
+        cur.execute("""
+                    CREATE TABLE subscriptions (
+                                                   user_id INT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                                                   channel_id INT NOT NULL REFERENCES channels (id) ON DELETE CASCADE,
+                                                   PRIMARY KEY (user_id, channel_id),
+                                                   new_videos_count INT NOT NULL DEFAULT 0,
+                                                   subscribed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                    """)
+
+        # Фиксируем seed для воспроизводимости
+        cur.execute("SELECT setseed(0.42);")
+
+        # Пороги для распределения (сумма = 1.0)
+        frac_target = target_fraction
+        frac_popular = 0.20                    # 20% → каналы 2-10
+        frac_medium = 0.30                     # 30% → каналы 11-100
+        # остальное (50% - frac_target) → каналы 101+
+
+        # Условные вероятности
+        t1 = frac_target
+        t2 = frac_popular / (1.0 - t1)
+        t3 = frac_medium / (1.0 - t1 - frac_popular)
+
+        cur.execute(f"""
+            INSERT INTO subscriptions (user_id, channel_id)
+            SELECT
+                u.id,
+                CASE
+                    WHEN random() < {t1} THEN {TEST_CHANNEL_ID}
+                    WHEN random() < {t2} THEN (floor(random() * 9) + 2)::int
+                    WHEN random() < {t3} THEN (floor(random() * 90) + 11)::int
+                    ELSE (floor(random() * GREATEST({channel_count} - 100, 1)) + 101)::int
+                END
+            FROM users u;
+        """)
+    conn.commit()
+
+    # === Этап 6: VACUUM после массовой вставки (вне транзакции!) ===
+    print("     Running VACUUM ANALYZE after data generation...")
+    vacuum_all_tables(conn, full=False)
+
+    # === Этап 7: Подсчёт affected rows для тестового канала ===
+    with conn.cursor() as cur:
+        cur.execute("""
+                    SELECT COUNT(*)
+                    FROM subscriptions s
+                             JOIN users u ON s.user_id = u.id
+                    WHERE s.channel_id = %s AND u.notifications_enabled = TRUE;
+                    """, (TEST_CHANNEL_ID,))
+        affected_rows = cur.fetchone()[0]
+
+    return channel_count, affected_rows
+
+
+def reset_counters(conn, channel_id):
+    """Сброс счётчиков новых видео (отдельная транзакция)"""
+    with conn.cursor() as cur:
+        cur.execute("""
+                    UPDATE subscriptions
+                    SET new_videos_count = 0
+                    WHERE channel_id = %s;
+                    """, (channel_id,))
+    conn.commit()
+
+
+def benchmark_function(conn, channel_id):
+    """Измерение времени выполнения функции с реальным COMMIT"""
+    start = time.perf_counter()
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT notify_subscribers_about_new_video(%s);", (channel_id,))
+
+    conn.commit()
+
+    elapsed = (time.perf_counter() - start) * 1000
+    return elapsed
+
+
+def measure_with_retries(conn, channel_id):
+    """Замер с повтором при большом стандартном отклонении"""
+    last_stats = None
+    for attempt in range(1, MAX_STDDEV_RETRIES + 1):
+        # Прогрев
+        for _ in range(WARMUP_ITERATIONS):
+            benchmark_function(conn, channel_id)
+            reset_counters(conn, channel_id)
+
+        times = []
+        for i in range(MEASURE_ITERATIONS):
+            elapsed = benchmark_function(conn, channel_id)
+            times.append(elapsed)
+            reset_counters(conn, channel_id)
+
+            if (i + 1) % 5 == 0:
+                print(".", end="", flush=True)
+
+        avg_time = np.mean(times)
+        std_dev = np.std(times)
+        median_time = np.median(times)
+        min_time = np.min(times)
+        max_time = np.max(times)
+
+        last_stats = {
+            "avg_time_ms": avg_time,
+            "std_dev_ms": std_dev,
+            "median_time_ms": median_time,
+            "min_time_ms": min_time,
+            "max_time_ms": max_time,
+        }
+
+        if avg_time > 0 and (std_dev / avg_time) <= STDDEV_MAX_RATIO:
+            return last_stats
+
+        if attempt < MAX_STDDEV_RETRIES:
+            print(" повтор", end="", flush=True)
+
+    return last_stats
+
+
 def run_benchmark():
+    """Основная функция бенчмарка"""
     final_data = []
 
-    for size in DATA_SIZES:
-        print(f"\n========== DATA SIZE = {size} ==========")
-        for strategy_name, index_ddls in STRATEGIES.items():
-            print(f"  ▶ Testing: {strategy_name} ...", end=" ", flush=True)
+    for target_fraction in TARGET_CHANNEL_FRACTIONS:
+        print(f"\n{'='*80}")
+        print(f"TARGET_CHANNEL_FRACTION = {target_fraction}")
+        print(f"{'='*80}")
 
-            # Полная перегенерация данных для честных условий
-            conn = psycopg2.connect(**DB_CONFIG)
-            conn.autocommit = False
-            cur = conn.cursor()
+        for size in DATA_SIZES:
+            print(f"\n{'='*50}")
+            print(f"DATA SIZE = {size:,}")
+            print(f"{'='*50}")
 
-            # Очистка и наполнение
-            drop_strategy_indexes(cur)
-            prepare_database(cur, size)
+            # Для каждого размера один раз готовим данные
+            print("  Preparing database...")
+            with get_connection() as conn:
+                channel_count, _ = prepare_database(conn, size, target_fraction)
+                print(f"  Channels: {channel_count}, continuing with strategies...")
 
-            # Создание индексов для стратегии
-            for ddl in index_ddls:
-                cur.execute(ddl)
-            cur.execute("ANALYZE users;")
-            cur.execute("ANALYZE subscriptions;")
-            conn.commit()
+            for strategy_name, index_ddls in STRATEGIES.items():
+                print(f"  ▶ {strategy_name:<50} ...", end=" ", flush=True)
 
-            # Счётчик всегда начинается с 0 (DEFAULT)
-            times = []
-            total_iterations = WARMUP_ITERATIONS + MEASURE_ITERATIONS
-            for i in range(total_iterations):
-                conn.autocommit = True
-                with conn.cursor() as c:
-                    c.execute("BEGIN;")
-                    start = time.perf_counter()
-                    c.execute(f"SELECT notify_subscribers_about_new_video({TEST_CHANNEL_ID});")
-                    end = time.perf_counter()
-                    c.execute("ROLLBACK;")
-                if i >= WARMUP_ITERATIONS:
-                    times.append((end - start) * 1000)
+                with get_connection() as conn:
+                    with conn.cursor() as cur:
+                        # Очистка старых индексов
+                        drop_all_experiment_indexes(cur)
 
-            conn.close()
+                        # Создание индексов для текущей стратегии
+                        create_indexes(cur, index_ddls)
 
-            avg_time = np.mean(times)
-            std_dev = np.std(times)
-            final_data.append({
-                "size": size,
-                "strategy": strategy_name,
-                "avg_time_ms": avg_time,
-                "std_dev_ms": std_dev
-            })
-            print(f"OK  (avg: {avg_time:.3f} ms, std: {std_dev:.3f} ms)")
+                        # Обновление статистики
+                        cur.execute("ANALYZE users;")
+                        cur.execute("ANALYZE subscriptions;")
+                    conn.commit()
+
+                    # Получаем актуальное число affected rows
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                                    SELECT COUNT(*)
+                                    FROM subscriptions s
+                                             JOIN users u ON s.user_id = u.id
+                                    WHERE s.channel_id = %s AND u.notifications_enabled = TRUE;
+                                    """, (TEST_CHANNEL_ID,))
+                        affected_rows = cur.fetchone()[0]
+
+                    # Измерение с VACUUM между стратегиями для чистоты
+                    if strategy_name != list(STRATEGIES.keys())[0]:
+                        print("v", end="", flush=True)
+                        vacuum_all_tables(conn, full=False)
+
+                    stats = measure_with_retries(conn, TEST_CHANNEL_ID)
+
+                final_data.append({
+                    "size": size,
+                    "strategy": strategy_name,
+                    "avg_time_ms": stats["avg_time_ms"],
+                    "std_dev_ms": stats["std_dev_ms"],
+                    "median_time_ms": stats["median_time_ms"],
+                    "min_time_ms": stats["min_time_ms"],
+                    "max_time_ms": stats["max_time_ms"],
+                    "affected_rows": affected_rows,
+                    "channel_count": channel_count,
+                    "target_fraction": target_fraction,
+                })
+
+                print(" OK")
+                print(f"     Affected rows: {affected_rows:,}")
+                print(f"     Avg: {stats['avg_time_ms']:.3f} ms, Median: {stats['median_time_ms']:.3f} ms")
+                print(f"     Std: {stats['std_dev_ms']:.3f} ms, Min: {stats['min_time_ms']:.3f} ms, Max: {stats['max_time_ms']:.3f} ms")
 
     save_results(final_data)
 
-def prepare_database(cur, size):
-    """Полная перезагрузка таблиц с заданным числом пользователей и подписок."""
-    cur.execute("TRUNCATE users, channels, subscriptions, roles CASCADE;")
-    cur.execute("ALTER SEQUENCE users_id_seq RESTART WITH 1;")
-    cur.execute("ALTER SEQUENCE channels_id_seq RESTART WITH 1;")
-
-    # Роль для пользователей
-    cur.execute("INSERT INTO roles (name, is_default) VALUES ('user', true) RETURNING id;")
-    role_id = cur.fetchone()[0]
-
-    # Пользователи: чётные идентификаторы -> notifications_enabled = TRUE
-    cur.execute(
-        """
-        INSERT INTO users (username, email, password_hash, role_id, notifications_enabled)
-        SELECT 'user_' || i,
-               'email_' || i || '@test.com',
-               'hash',
-               %s,
-               (i %% 2 = 0)
-        FROM generate_series(1, %s) AS i
-        """,
-        (role_id, size)
-    )
-
-    # Каналов больше, чтобы фильтр по channel_id был селективным
-    channel_count = max(10, size // 100)
-    cur.execute(
-        """
-        INSERT INTO channels (user_id, name)
-        SELECT id, 'Channel_' || id
-        FROM users
-        ORDER BY id
-        LIMIT %s
-        """,
-        (channel_count,)
-    )
-
-    # Фиксируем seed для воспроизводимости
-    cur.execute("SELECT setseed(0.42);")
-
-    # По одной подписке на пользователя на случайный канал
-    cur.execute(
-        """
-        INSERT INTO subscriptions (user_id, channel_id)
-        SELECT id,
-               (floor(random() * %s) + 1)::int
-        FROM users
-        """,
-        (channel_count,)
-    )
-
-    # Не делаем ANALYZE здесь – он будет после создания индексов в тесте
-    print(f"(data generated: {size} users, {channel_count} channels, {size} subs) ", end="", flush=True)
 
 def save_results(data):
-    # CSV
-    with open("benchmark_results.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["size", "strategy", "avg_time_ms", "std_dev_ms"])
+    """Сохранение результатов в CSV и построение графиков"""
+    csv_file = "../../benchmark_results.csv"
+    with open(csv_file, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=[
+            "size", "strategy", "avg_time_ms", "std_dev_ms",
+            "median_time_ms", "min_time_ms", "max_time_ms",
+            "affected_rows", "channel_count", "target_fraction"
+        ])
         writer.writeheader()
         writer.writerows(data)
 
-    # График
-    plt.figure(figsize=(14, 8))
+    print(f"\n✓ Results saved to {csv_file}")
+
+    for target_fraction in TARGET_CHANNEL_FRACTIONS:
+        subset = [d for d in data if d["target_fraction"] == target_fraction]
+        if not subset:
+            continue
+        plot_results(subset, target_fraction)
+        plot_relative_performance(subset, target_fraction)
+
+
+def plot_results(data, target_fraction):
+    """Основная диаграмма (абсолютные значения)"""
+    plt.figure(figsize=(16, 8))
     strategies = list(STRATEGIES.keys())
-    for strat in strategies:
+    sizes = sorted(set(d["size"] for d in data))
+    x = np.arange(len(sizes))
+    width = 0.8 / max(len(strategies), 1)
+
+    size_to_idx = {size: idx for idx, size in enumerate(sizes)}
+
+    for idx, strat in enumerate(strategies):
         subset = [d for d in data if d["strategy"] == strat]
         if not subset:
             continue
-        x = [d["size"] for d in subset]
-        y = [d["avg_time_ms"] for d in subset]
-        e = [d["std_dev_ms"] for d in subset]
-        plt.errorbar(x, y, yerr=e, label=strat, marker="o", capsize=5, linewidth=2)
+        values = [0.0] * len(sizes)
+        for row in subset:
+            values[size_to_idx[row["size"]]] = row["avg_time_ms"]
+        offset = (idx - (len(strategies) - 1) / 2) * width
+        plt.bar(x + offset, values, width=width, label=strat)
 
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlabel("Number of subscriptions (data size)", fontsize=12)
-    plt.ylabel("Average execution time (ms)", fontsize=12)
-    plt.title("Performance of notify_subscribers_about_new_video()\nwith different indexing strategies", fontsize=14)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
-    plt.grid(True, which="both", linestyle="--", alpha=0.7)
+    plt.xticks(x, [f"{s:,}" for s in sizes], rotation=0)
+    plt.xlabel("Количество пользователей/подписок", fontsize=13)
+    plt.ylabel("Среднее время выполнения (мс)", fontsize=13)
+    plt.title(
+        f"Производительность notify_subscribers_about_new_video()\n"
+        f"(абсолютные значения, доля {target_fraction * 100:.1f}%)",
+        fontsize=14, fontweight="bold"
+    )
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+    plt.grid(True, axis="y", linestyle="--", alpha=0.6)
     plt.tight_layout()
-    plt.savefig("benchmark_plot.png", dpi=150)
-    print("\nResults saved to benchmark_results.csv and benchmark_plot.png")
+    suffix = fraction_to_suffix(target_fraction)
+    plt.savefig(f"benchmark_plot_{suffix}.png", dpi=150, bbox_inches="tight")
+    print(f"✓ Plot saved to benchmark_plot_{suffix}.png")
 
-def drop_strategy_indexes(cur):
-    # Удаляем только индексы из эксперимента, чтобы изоляция была корректной
-    for index_name in INDEX_NAMES:
-        cur.execute(f"DROP INDEX IF EXISTS {index_name};")
+
+def plot_relative_performance(data, target_fraction):
+    """Относительная диаграмма (нормализация 0..1)"""
+    plt.figure(figsize=(16, 8))
+    strategies = list(STRATEGIES.keys())
+    sizes = sorted(set(d["size"] for d in data))
+    x = np.arange(len(sizes))
+    width = 0.8 / max(len(strategies), 1)
+
+    by_size = {size: [] for size in sizes}
+    for row in data:
+        by_size[row["size"]].append(row)
+
+    size_to_max = {}
+    for size, rows in by_size.items():
+        if rows:
+            size_to_max[size] = max(r["avg_time_ms"] for r in rows)
+        else:
+            size_to_max[size] = 1.0
+
+    size_to_idx = {size: idx for idx, size in enumerate(sizes)}
+
+    for idx, strat in enumerate(strategies):
+        subset = [d for d in data if d["strategy"] == strat]
+        if not subset:
+            continue
+        values = [0.0] * len(sizes)
+        for row in subset:
+            denom = size_to_max[row["size"]] or 1.0
+            values[size_to_idx[row["size"]]] = row["avg_time_ms"] / denom
+        offset = (idx - (len(strategies) - 1) / 2) * width
+        plt.bar(x + offset, values, width=width, label=strat)
+
+    plt.ylim(0, 1.05)
+    plt.xticks(x, [f"{s:,}" for s in sizes], rotation=0)
+    plt.xlabel("Количество пользователей/подписок", fontsize=13)
+    plt.ylabel("Относительное время (доля от максимума)", fontsize=13)
+    plt.title(
+        f"Относительная производительность (0..1)\n"
+        f"(доля {target_fraction * 100:.1f}%)",
+        fontsize=14, fontweight="bold"
+    )
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+    plt.grid(True, axis="y", linestyle="--", alpha=0.6)
+    plt.tight_layout()
+    suffix = fraction_to_suffix(target_fraction)
+    plt.savefig(f"benchmark_relative_{suffix}.png", dpi=150, bbox_inches="tight")
+    print(f"✓ Relative performance plot saved to benchmark_relative_{suffix}.png")
+
+
+
+def fraction_to_suffix(value):
+    """Безопасный суффикс для имени файла (0.001 -> f0_001)"""
+    return f"f{str(value).replace('.', '_')}"
+
+
+def print_summary(data):
+    """Вывод итоговой таблицы"""
+    for target_fraction in TARGET_CHANNEL_FRACTIONS:
+        subset_fraction = [d for d in data if d.get("target_fraction") == target_fraction]
+        if not subset_fraction:
+            continue
+
+        print(f"\n{'='*100}")
+        print(f"PERFORMANCE SUMMARY (TARGET_CHANNEL_FRACTION={target_fraction})")
+        print(f"{'='*100}")
+
+        sizes = sorted(set(d["size"] for d in subset_fraction))
+
+        for size in sizes:
+            subset = [d for d in subset_fraction if d["size"] == size]
+            subset.sort(key=lambda x: x["avg_time_ms"])
+
+            best = subset[0]
+            worst = subset[-1]
+            improvement = ((worst["avg_time_ms"] - best["avg_time_ms"]) / worst["avg_time_ms"]) * 100
+
+            print(f"\nSize: {size:,} | Affected rows: {best['affected_rows']:,}")
+            print(f"  Best:  {best['strategy']:<45} {best['avg_time_ms']:.3f} ms")
+            print(f"  Worst: {worst['strategy']:<45} {worst['avg_time_ms']:.3f} ms")
+            print(f"  Improvement: {improvement:.1f}%")
+
+        print(f"\n{'='*100}")
+        print("GLOBAL RECOMMENDATION")
+        print(f"{'='*100}")
+
+        strategy_avg = {}
+        for strat in STRATEGIES.keys():
+            subset = [d for d in subset_fraction if d["strategy"] == strat]
+            if subset:
+                strategy_avg[strat] = np.mean([d["avg_time_ms"] for d in subset])
+
+        best_strategy = min(strategy_avg, key=strategy_avg.get)
+        print(f"\nBest overall strategy: {best_strategy}")
+        print(f"Average execution time: {strategy_avg[best_strategy]:.3f} ms")
+
 
 if __name__ == "__main__":
+    print("=" * 80)
+    print("POSTGRESQL INDEX BENCHMARK: notify_subscribers_about_new_video()")
+    print("=" * 80)
+    print(f"Test channel ID: {TEST_CHANNEL_ID}")
+    print(f"Target channel fractions: {TARGET_CHANNEL_FRACTIONS}")
+    print(f"Data sizes: {len(DATA_SIZES)} configurations")
+    print(f"Strategies: {len(STRATEGIES)}")
+    print(f"Warmup iterations: {WARMUP_ITERATIONS}")
+    print(f"Measurement iterations: {MEASURE_ITERATIONS}")
+    print(f"Stddev max ratio: {STDDEV_MAX_RATIO}")
+    print(f"Max stddev retries: {MAX_STDDEV_RETRIES}")
+    print("=" * 80)
+
+    start_time = time.time()
+
     run_benchmark()
+
+    with open("../../benchmark_results.csv", "r") as f:
+        reader = csv.DictReader(f)
+        data = list(reader)
+        for row in data:
+            row["size"] = int(row["size"])
+            row["avg_time_ms"] = float(row["avg_time_ms"])
+            row["std_dev_ms"] = float(row["std_dev_ms"])
+            row["median_time_ms"] = float(row["median_time_ms"])
+            row["min_time_ms"] = float(row["min_time_ms"])
+            row["max_time_ms"] = float(row["max_time_ms"])
+            row["affected_rows"] = int(row["affected_rows"])
+            row["target_fraction"] = float(row["target_fraction"])
+
+    print_summary(data)
+
+    elapsed = time.time() - start_time
+    print(f"\n{'='*80}")
+    print(f"Total benchmark time: {elapsed/60:.1f} minutes")
+    print(f"{'='*80}")
