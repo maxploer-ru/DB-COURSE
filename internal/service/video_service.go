@@ -13,11 +13,11 @@ type VideoService interface {
 	CreateVideo(ctx context.Context, channelID, userID int, title, description, fileKey string) (*domain.Video, error)
 	GetVideo(ctx context.Context, videoID int) (*domain.Video, error)
 	UpdateVideo(ctx context.Context, videoID, userID int, title, description *string) (*domain.Video, error)
-	DeleteVideo(ctx context.Context, videoID, userID int) error
+	DeleteVideo(ctx context.Context, videoID, userID int, role string) error
 	ListChannelVideos(ctx context.Context, channelID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
 	ListMyVideos(ctx context.Context, userID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
 	ListAllVideos(ctx context.Context, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error)
-	GetUploadPresignedURL(ctx context.Context, channelID, userID int, filename string) (url string, fileKey string, err error)
+	GetUploadPresignedURL(ctx context.Context, channelID, userID int, filename string) (string, string, error)
 	GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error)
 }
 
@@ -199,12 +199,13 @@ func (s *videoService) UpdateVideo(ctx context.Context, videoID, userID int, tit
 	return video, nil
 }
 
-func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int) error {
+func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int, role string) error {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoService"),
 		slog.String("operation", "DeleteVideo"),
 		slog.Int("video_id", videoID),
 		slog.Int("user_id", userID),
+		slog.String("role", role),
 	)
 
 	logger.DebugContext(ctx, "Fetching video for deletion")
@@ -219,15 +220,18 @@ func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int) err
 	}
 	logger = logger.With(slog.Int("channel_id", video.ChannelID), slog.String("filepath", video.Filepath))
 
-	logger.DebugContext(ctx, "Checking channel ownership")
-	isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to check channel ownership", slog.String("error", err.Error()))
-		return fmt.Errorf("check channel owner: %w", err)
-	}
-	if !isOwner {
-		logger.WarnContext(ctx, "User is not the channel owner")
-		return domain.ErrForbidden
+	allowed := role == "moderator" || role == "admin"
+	if !allowed {
+		logger.DebugContext(ctx, "Checking channel ownership")
+		isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to check channel ownership", slog.String("error", err.Error()))
+			return fmt.Errorf("check channel owner: %w", err)
+		}
+		if !isOwner {
+			logger.WarnContext(ctx, "User is not the channel owner")
+			return domain.ErrForbidden
+		}
 	}
 
 	logger.DebugContext(ctx, "Deleting video file from storage")

@@ -1,5 +1,4 @@
-CREATE OR REPLACE FUNCTION notify_subscribers_about_new_video(p_channel_id INT)
-RETURNS VOID
+CREATE OR REPLACE PROCEDURE notify_subscribers_about_new_video(p_channel_id INT)
 LANGUAGE plpgsql
 AS
 $$

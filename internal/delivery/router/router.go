@@ -90,7 +90,9 @@ func NewRouter(h *Handlers, authSvc service.AuthService, baseLogger domain.Logge
 			r.Use(middleware.RequireRole("admin"))
 			r.Post("/admin/users/{id}/ban", h.Admin.BanUser)
 			r.Post("/admin/users/{id}/unban", h.Admin.UnbanUser)
+			r.Patch("/admin/users/{id}/role", h.Admin.ChangeUserRole)
 		})
+
 	})
 
 	return r

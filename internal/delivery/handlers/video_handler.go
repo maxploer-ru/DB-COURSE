@@ -236,7 +236,7 @@ func (h *VideoHandler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
 
 	logger = logger.With(slog.Int("video_id", videoID))
 
-	if err := h.videoSvc.DeleteVideo(r.Context(), videoID, userCtx.UserID); err != nil {
+	if err := h.videoSvc.DeleteVideo(r.Context(), videoID, userCtx.UserID, userCtx.Role); err != nil {
 		logger.WarnContext(r.Context(), "Video deletion failed",
 			slog.String("error", err.Error()))
 

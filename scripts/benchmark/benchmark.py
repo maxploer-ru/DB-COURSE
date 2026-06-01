@@ -1,5 +1,7 @@
 import csv
 import time
+import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import psycopg2
@@ -61,6 +63,26 @@ ALL_INDEX_NAMES = [
     "idx_users_notif_id_btree",
     "idx_users_active_btree"
 ]
+
+plt.rcParams["hatch.linewidth"] = 1.2
+plt.rcParams["legend.handlelength"] = 3.5
+plt.rcParams["legend.handleheight"] = 1.2
+
+PLOT_COLORS = [
+    "#4C78A8",
+    "#F58518",
+    "#54A24B",
+    "#E45756",
+    "#72B7B2",
+    "#B279A2",
+    "#FF9DA6",
+    "#9D755D",
+    "#BAB0AC",
+]
+
+PLOT_HATCHES = ["/", "\\\\", "|", "-", "x", ".", "o"]
+
+OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "report", "images"))
 
 
 @contextmanager
@@ -276,11 +298,11 @@ def reset_counters(conn, channel_id):
 
 
 def benchmark_function(conn, channel_id):
-    """Измерение времени выполнения функции с реальным COMMIT"""
+    """Измерение времени выполнения процедуры с реальным COMMIT"""
     start = time.perf_counter()
 
     with conn.cursor() as cur:
-        cur.execute("SELECT notify_subscribers_about_new_video(%s);", (channel_id,))
+        cur.execute("CALL notify_subscribers_about_new_video(%s);", (channel_id,))
 
     conn.commit()
 
@@ -443,7 +465,16 @@ def plot_results(data, target_fraction):
         for row in subset:
             values[size_to_idx[row["size"]]] = row["avg_time_ms"]
         offset = (idx - (len(strategies) - 1) / 2) * width
-        plt.bar(x + offset, values, width=width, label=strat)
+        plt.bar(
+            x + offset,
+            values,
+            width=width,
+            label=strat,
+            color=PLOT_COLORS[idx % len(PLOT_COLORS)],
+            hatch=PLOT_HATCHES[idx % len(PLOT_HATCHES)],
+            edgecolor="black",
+            linewidth=0.6,
+        )
 
     plt.xticks(x, [f"{s:,}" for s in sizes], rotation=0)
     plt.xlabel("Количество пользователей/подписок", fontsize=13)
@@ -456,9 +487,13 @@ def plot_results(data, target_fraction):
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
     plt.grid(True, axis="y", linestyle="--", alpha=0.6)
     plt.tight_layout()
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     suffix = fraction_to_suffix(target_fraction)
-    plt.savefig(f"benchmark_plot_{suffix}.png", dpi=150, bbox_inches="tight")
-    print(f"✓ Plot saved to benchmark_plot_{suffix}.png")
+    png_path = os.path.join(OUTPUT_DIR, f"benchmark_plot_{suffix}.png")
+    pdf_path = os.path.join(OUTPUT_DIR, f"benchmark_plot_{suffix}.pdf")
+    plt.savefig(png_path, dpi=150, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
+    print(f"✓ Plot saved to {png_path}")
 
 
 def plot_relative_performance(data, target_fraction):
@@ -491,7 +526,16 @@ def plot_relative_performance(data, target_fraction):
             denom = size_to_max[row["size"]] or 1.0
             values[size_to_idx[row["size"]]] = row["avg_time_ms"] / denom
         offset = (idx - (len(strategies) - 1) / 2) * width
-        plt.bar(x + offset, values, width=width, label=strat)
+        plt.bar(
+            x + offset,
+            values,
+            width=width,
+            label=strat,
+            color=PLOT_COLORS[idx % len(PLOT_COLORS)],
+            hatch=PLOT_HATCHES[idx % len(PLOT_HATCHES)],
+            edgecolor="black",
+            linewidth=0.6,
+        )
 
     plt.ylim(0, 1.05)
     plt.xticks(x, [f"{s:,}" for s in sizes], rotation=0)
@@ -505,15 +549,35 @@ def plot_relative_performance(data, target_fraction):
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
     plt.grid(True, axis="y", linestyle="--", alpha=0.6)
     plt.tight_layout()
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     suffix = fraction_to_suffix(target_fraction)
-    plt.savefig(f"benchmark_relative_{suffix}.png", dpi=150, bbox_inches="tight")
-    print(f"✓ Relative performance plot saved to benchmark_relative_{suffix}.png")
+    png_path = os.path.join(OUTPUT_DIR, f"benchmark_relative_{suffix}.png")
+    pdf_path = os.path.join(OUTPUT_DIR, f"benchmark_relative_{suffix}.pdf")
+    plt.savefig(png_path, dpi=150, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
+    print(f"✓ Relative performance plot saved to {png_path}")
 
 
 
 def fraction_to_suffix(value):
-    """Безопасный суффикс для имени файла (0.001 -> f0_001)"""
-    return f"f{str(value).replace('.', '_')}"
+    """Безопасный суффикс для имени файла (0.001 -> 0_001)"""
+    return f"{str(value).replace('.', '_')}"
+
+
+def load_results(csv_path):
+    with open(csv_path, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        data = list(reader)
+    for row in data:
+        row["size"] = int(row["size"])
+        row["avg_time_ms"] = float(row["avg_time_ms"])
+        row["std_dev_ms"] = float(row["std_dev_ms"])
+        row["median_time_ms"] = float(row["median_time_ms"])
+        row["min_time_ms"] = float(row["min_time_ms"])
+        row["max_time_ms"] = float(row["max_time_ms"])
+        row["affected_rows"] = int(row["affected_rows"])
+        row["target_fraction"] = float(row["target_fraction"])
+    return data
 
 
 def print_summary(data):
@@ -558,6 +622,17 @@ def print_summary(data):
 
 
 if __name__ == "__main__":
+    if "--plot-only" in sys.argv:
+        csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "benchmark_results.csv"))
+        data = load_results(csv_path)
+        for target_fraction in TARGET_CHANNEL_FRACTIONS:
+            subset = [d for d in data if d.get("target_fraction") == target_fraction]
+            if not subset:
+                continue
+            plot_results(subset, target_fraction)
+            plot_relative_performance(subset, target_fraction)
+        sys.exit(0)
+
     print("=" * 80)
     print("POSTGRESQL INDEX BENCHMARK: notify_subscribers_about_new_video()")
     print("=" * 80)
@@ -575,18 +650,7 @@ if __name__ == "__main__":
 
     run_benchmark()
 
-    with open("../../benchmark_results.csv", "r") as f:
-        reader = csv.DictReader(f)
-        data = list(reader)
-        for row in data:
-            row["size"] = int(row["size"])
-            row["avg_time_ms"] = float(row["avg_time_ms"])
-            row["std_dev_ms"] = float(row["std_dev_ms"])
-            row["median_time_ms"] = float(row["median_time_ms"])
-            row["min_time_ms"] = float(row["min_time_ms"])
-            row["max_time_ms"] = float(row["max_time_ms"])
-            row["affected_rows"] = int(row["affected_rows"])
-            row["target_fraction"] = float(row["target_fraction"])
+    data = load_results(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "benchmark_results.csv")))
 
     print_summary(data)
 

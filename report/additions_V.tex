@@ -1,0 +1,110 @@
+\ssr{ПРИЛОЖЕНИЕ В}
+
+\renewcommand{\thetable}{В.\arabic{table}}
+\setcounter{table}{0}
+
+\begin{longtable}{|p{1.8cm}|p{7.2cm}|p{6.2cm}|}
+    \caption{Описание интерфейса доступа к базе данных}\label{tab:api_endpoints} \\
+    \hline
+    \textbf{Метод} & \textbf{Описание} & \textbf{Эндпоинт} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{l}{\textit{Продолжение таблицы~\ref{tab:api_endpoints}}} \\
+    \hline
+    \textbf{Метод} & \textbf{Описание} & \textbf{Эндпоинт} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    POST & Регистрация пользователя. & /register \\
+    \hline
+    POST & Авторизация пользователя. & /login \\
+    \hline
+    POST & Обновление access-токена. & /refresh \\
+    \hline
+    POST & Выход из системы. & /logout \\
+    \hline
+    GET & Получение данных текущего пользователя. & /me \\
+    \hline
+    PATCH & Обновление настроек уведомлений. & /me/notifications \\
+    \hline
+    POST & Создание канала. & /channels \\
+    \hline
+    GET & Получение канала по идентификатору. & /channels/{id} \\
+    \hline
+    GET & Получение канала текущего пользователя. & /channels/me \\
+    \hline
+    PATCH & Обновление канала. & /channels/{id} \\
+    \hline
+    DELETE & Удаление канала. & /channels/{id} \\
+    \hline
+    POST & Публикация видео. & /videos \\
+    \hline
+    GET & Получение видео по идентификатору. & /videos/{id} \\
+    \hline
+    PATCH & Обновление видео. & /videos/{id} \\
+    \hline
+    DELETE & Удаление видео. & /videos/{id} \\
+    \hline
+    GET & Получение списка видео. & /videos \\
+    \hline
+    GET & Получение списка видео текущего пользователя. & /videos/me \\
+    \hline
+    GET & Получение списка видео канала. & /channels/{channelID}/videos \\
+    \hline
+    POST & Получение presigned URL для загрузки. & /videos/upload-url \\
+    \hline
+    GET & Получение presigned URL для просмотра. & /videos/{id}/stream-url \\
+    \hline
+    POST & Лайк видео. & /videos/{id}/like \\
+    \hline
+    POST & Дизлайк видео. & /videos/{id}/dislike \\
+    \hline
+    DELETE & Удаление оценки видео. & /videos/{id}/rating \\
+    \hline
+    POST & Подписка на канал. & /channels/{id}/subscribe \\
+    \hline
+    DELETE & Отписка от канала. & /channels/{id}/subscribe \\
+    \hline
+    GET & Получение списка подписок. & /subscriptions \\
+    \hline
+    GET & Получение списка плейлистов канала. & /channels/{channelID}/playlists \\
+    \hline
+    POST & Создание плейлиста канала. & /channels/{channelID}/playlists \\
+    \hline
+    GET & Получение плейлиста по идентификатору. & /playlists/{id} \\
+    \hline
+    PATCH & Обновление плейлиста. & /playlists/{id} \\
+    \hline
+    DELETE & Удаление плейлиста. & /playlists/{id} \\
+    \hline
+    POST & Добавление видео в плейлист. & /playlists/{id}/videos/{videoID} \\
+    \hline
+    DELETE & Удаление видео из плейлиста. & /playlists/{id}/videos/{videoID} \\
+    \hline
+    POST & Создание комментария к видео. & /videos/{videoID}/comments \\
+    \hline
+    GET & Получение комментариев к видео. & /videos/{videoID}/comments \\
+    \hline
+    PATCH & Обновление комментария. & /comments/{id} \\
+    \hline
+    DELETE & Удаление комментария. & /comments/{id} \\
+    \hline
+    POST & Лайк комментария. & /comments/{id}/like \\
+    \hline
+    POST & Дизлайк комментария. & /comments/{id}/dislike \\
+    \hline
+    DELETE & Удаление оценки комментария. & /comments/{id}/rating \\
+    \hline
+    POST & Блокировка пользователя. & /admin/users/{id}/ban \\
+    \hline
+    POST & Разблокировка пользователя. & /admin/users/{id}/unban \\
+    \hline
+    PATCH & Изменение роли пользователя. & /admin/users/{id}/role \\
+    \hline
+\end{longtable}
+
+\clearpage
+
+\input{tables/benchmark_results_v}
+

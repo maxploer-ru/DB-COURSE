@@ -1,10 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useAuthStore } from '../features/auth/store'
 import { adminApi } from '../shared/api/endpoints'
 
 export function AdminPage() {
+  const { user } = useAuthStore()
   const [userId, setUserId] = useState('')
+  const [role, setRole] = useState('user')
   const [message, setMessage] = useState('')
 
   const banMutation = useMutation({
@@ -17,6 +20,11 @@ export function AdminPage() {
     onSuccess: (data) => setMessage(data.message),
   })
 
+  const roleMutation = useMutation({
+    mutationFn: (payload: { id: number; role: string }) => adminApi.changeUserRole(payload.id, { role: payload.role }),
+    onSuccess: (data) => setMessage(data.message),
+  })
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!userId) {
@@ -25,15 +33,34 @@ export function AdminPage() {
     banMutation.mutate(Number(userId))
   }
 
+  const changeRole = () => {
+    if (!userId) {
+      return
+    }
+    const id = Number(userId)
+    if (user && user.id === id) {
+      setMessage('Нельзя менять роль самому себе.')
+      return
+    }
+    roleMutation.mutate({ id, role })
+  }
+
   return (
     <section className="page page--narrow">
       <h1>Admin</h1>
-      <p className="page__lead">Раздел использует ручки `/admin/users/{'{id}'}/ban` и `/admin/users/{'{id}'}/unban`.</p>
       {message && <p className="video-card__meta">{message}</p>}
       <form className="form" onSubmit={submit}>
         <label className="form__label">
           ID пользователя
           <input className="form__input" value={userId} onChange={(event) => setUserId(event.target.value)} />
+        </label>
+        <label className="form__label">
+          Роль
+          <select className="form__input" value={role} onChange={(event) => setRole(event.target.value)}>
+            <option value="user">user</option>
+            <option value="moderator">moderator</option>
+            <option value="admin">admin</option>
+          </select>
         </label>
         <button className="app-button app-button--ghost" type="submit" disabled={banMutation.isPending}>
           Забанить
@@ -50,6 +77,14 @@ export function AdminPage() {
           }}
         >
           Разбанить
+        </button>
+        <button
+          className="app-button app-button--ghost"
+          type="button"
+          disabled={roleMutation.isPending}
+          onClick={changeRole}
+        >
+          Изменить роль
         </button>
       </form>
     </section>

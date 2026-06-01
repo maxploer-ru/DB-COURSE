@@ -85,7 +85,7 @@ func (r *SubscriptionRepository) GetUserSubscriptions(ctx context.Context, userI
 
 func (r *SubscriptionRepository) NotifySubscribersAboutNewVideo(ctx context.Context, channelID int) error {
 	if err := r.db.WithContext(ctx).
-		Exec("SELECT notify_subscribers_about_new_video(?)", channelID).Error; err != nil {
+		Exec("CALL notify_subscribers_about_new_video(?)", channelID).Error; err != nil {
 		return fmt.Errorf("notify subscribers failed: %w", err)
 	}
 	return nil

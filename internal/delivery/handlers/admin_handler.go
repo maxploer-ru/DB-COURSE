@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"ZVideo/internal/delivery/handlers/dto"
 	"ZVideo/internal/delivery/middleware"
 	"ZVideo/internal/delivery/response"
 	"ZVideo/internal/domain"
 	"ZVideo/internal/service"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -96,4 +98,53 @@ func (h *AdminHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User unbanned successfully"})
+}
+
+// ChangeUserRole changes a user's role.
+// @Summary Change user role
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Param request body dto.ChangeUserRoleRequest true "Change role request"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 403 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Router /admin/users/{id}/role [patch]
+func (h *AdminHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
+	logger := domain.GetLogger(r.Context()).With(slog.String("handler", "ChangeUserRole"))
+
+	userCtx, err := middleware.GetUserFromContext(r.Context())
+	if err != nil {
+		logger.WarnContext(r.Context(), "Unauthorized access to ChangeUserRole", slog.String("error", err.Error()))
+		response.RespondWithError(w, http.StatusUnauthorized, "UNAUTHORIZED", "user not authorized")
+		return
+	}
+	logger = logger.With(slog.Int("admin_id", userCtx.UserID))
+
+	targetID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		logger.WarnContext(r.Context(), "Invalid target user ID", slog.String("error", err.Error()))
+		response.RespondWithError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid user id")
+		return
+	}
+	logger = logger.With(slog.Int("target_user_id", targetID))
+
+	var req dto.ChangeUserRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.WarnContext(r.Context(), "Failed to decode ChangeUserRole request", slog.String("error", err.Error()))
+		response.RespondWithError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	if err := h.adminSvc.ChangeUserRole(r.Context(), userCtx.UserID, targetID, req.Role); err != nil {
+		logger.WarnContext(r.Context(), "Failed to change user role", slog.String("error", err.Error()))
+		response.HandleDomainError(w, err)
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User role updated successfully"})
 }

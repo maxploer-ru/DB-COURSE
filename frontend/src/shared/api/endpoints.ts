@@ -447,6 +447,10 @@ export const adminApi = {
     const { data } = await apiClient.post<MessageResponse>(`/admin/users/${userId}/unban`)
     return data
   },
+  changeUserRole: async (userId: number, payload: { role: string }) => {
+    const { data } = await apiClient.patch<MessageResponse>(`/admin/users/${userId}/role`, payload)
+    return data
+  },
 }
 
 

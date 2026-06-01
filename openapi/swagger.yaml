@@ -1,0 +1,1904 @@
+basePath: /api
+definitions:
+  ZVideo_internal_delivery_handlers_dto.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UserResponse'
+    type: object
+  ZVideo_internal_delivery_handlers_dto.ChangeUserRoleRequest:
+    properties:
+      role:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CommentListResponse:
+    properties:
+      comments:
+        items:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommentResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CommentResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      dislikes:
+        type: integer
+      id:
+        type: integer
+      likes:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+      video_id:
+        type: integer
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CommunityCommentResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      post_id:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CommunityPostResponse:
+    properties:
+      channel_id:
+        type: integer
+      comments:
+        items:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityCommentResponse'
+        type: array
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CommunityResponse:
+    properties:
+      channel:
+        $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.GetChannelResponse'
+      posts:
+        items:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityPostResponse'
+        type: array
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreateChannelRequest:
+    properties:
+      channel_name:
+        type: string
+      description:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreateCommentRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreateCommunityCommentRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreateCommunityPostRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreatePlaylistRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.CreateVideoRequest:
+    properties:
+      channel_id:
+        type: integer
+      description:
+        type: string
+      file_key:
+        type: string
+      title:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      details:
+        type: string
+      error:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.GetChannelResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      subscribers_count:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  ZVideo_internal_delivery_handlers_dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  ZVideo_internal_delivery_handlers_dto.MessageResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.NotificationsSettingsRequest:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+  ZVideo_internal_delivery_handlers_dto.PlaylistItemResponse:
+    properties:
+      number:
+        type: integer
+      video_id:
+        type: integer
+      video_title:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.PlaylistResponse:
+    properties:
+      channel_id:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.PlaylistItemResponse'
+        type: array
+      name:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    type: object
+  ZVideo_internal_delivery_handlers_dto.StreamingURLResponse:
+    properties:
+      url:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.SubscriptionChannelResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      new_videos_count:
+        type: integer
+      subscribed_at:
+        type: string
+      subscribers_count:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UpdateChannelRequest:
+    properties:
+      channel_name:
+        type: string
+      description:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UpdateCommentRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UpdateCommunityPostRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UpdatePlaylistRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UpdateVideoRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UploadPresignedURLRequest:
+    properties:
+      channel_id:
+        type: integer
+      filename:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UploadPresignedURLResponse:
+    properties:
+      file_key:
+        type: string
+      url:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      notifications_enabled:
+        type: boolean
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  ZVideo_internal_delivery_handlers_dto.VideoResponse:
+    properties:
+      channel_id:
+        type: integer
+      channel_name:
+        type: string
+      comments:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      dislikes:
+        type: integer
+      id:
+        type: integer
+      likes:
+        type: integer
+      title:
+        type: string
+      views:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: API specification generated from handlers (code-first).
+  title: ZVideo API
+  version: 1.0.0
+paths:
+  /admin/users/{id}/ban:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Ban user
+      tags:
+      - Admin
+  /admin/users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Change role request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ChangeUserRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change user role
+      tags:
+      - Admin
+  /admin/users/{id}/unban:
+    post:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unban user
+      tags:
+      - Admin
+  /channels:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create channel request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreateChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create channel
+      tags:
+      - Channels
+  /channels/{channelID}/community:
+    get:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get channel community
+      tags:
+      - Community
+  /channels/{channelID}/community/posts:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: integer
+      - description: Create post request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreateCommunityPostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityPostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create community post
+      tags:
+      - Community
+  /channels/{channelID}/playlists:
+    get:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.PlaylistResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List playlists by channel
+      tags:
+      - Playlists
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: integer
+      - description: Create playlist request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreatePlaylistRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.PlaylistResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create playlist
+      tags:
+      - Playlists
+  /channels/{channelID}/videos:
+    get:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Sort
+        enum:
+        - newest
+        - views
+        - rating
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List channel videos
+      tags:
+      - Videos
+  /channels/{id}:
+    delete:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete channel
+      tags:
+      - Channels
+    get:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.GetChannelResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get channel by ID
+      tags:
+      - Channels
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update channel request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdateChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update channel
+      tags:
+      - Channels
+  /channels/{id}/subscribe:
+    delete:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unsubscribe from channel
+      tags:
+      - Subscriptions
+    post:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Subscribe to channel
+      tags:
+      - Subscriptions
+  /channels/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.GetChannelResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my channel
+      tags:
+      - Channels
+  /channels/me/community:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my community
+      tags:
+      - Community
+  /comments/{id}:
+    delete:
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete comment
+      tags:
+      - Comments
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update comment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update comment
+      tags:
+      - Comments
+  /comments/{id}/dislike:
+    post:
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Dislike comment
+      tags:
+      - Comment Ratings
+  /comments/{id}/like:
+    post:
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Like comment
+      tags:
+      - Comment Ratings
+  /comments/{id}/rating:
+    delete:
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove comment rating
+      tags:
+      - Comment Ratings
+  /community/comments/{id}:
+    delete:
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete community comment
+      tags:
+      - Community
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update comment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityCommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update community comment
+      tags:
+      - Community
+  /community/posts/{postID}:
+    delete:
+      parameters:
+      - description: Post ID
+        in: path
+        name: postID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete community post
+      tags:
+      - Community
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Post ID
+        in: path
+        name: postID
+        required: true
+        type: integer
+      - description: Update post request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdateCommunityPostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityPostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update community post
+      tags:
+      - Community
+  /community/posts/{postID}/comments:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Post ID
+        in: path
+        name: postID
+        required: true
+        type: integer
+      - description: Create comment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreateCommunityCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommunityCommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create community comment
+      tags:
+      - Community
+  /login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      summary: Logout
+      tags:
+      - Auth
+  /me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - Auth
+  /me/notifications:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Notification settings
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.NotificationsSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update notification settings
+      tags:
+      - Auth
+  /playlists/{id}:
+    delete:
+      parameters:
+      - description: Playlist ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete playlist
+      tags:
+      - Playlists
+    get:
+      parameters:
+      - description: Playlist ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.PlaylistResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get playlist by ID
+      tags:
+      - Playlists
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Playlist ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update playlist request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdatePlaylistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.PlaylistResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update playlist
+      tags:
+      - Playlists
+  /playlists/{id}/videos/{videoID}:
+    delete:
+      parameters:
+      - description: Playlist ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove video from playlist
+      tags:
+      - Playlists
+    post:
+      parameters:
+      - description: Playlist ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add video to playlist
+      tags:
+      - Playlists
+  /refresh:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Register request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      summary: Register user
+      tags:
+      - Auth
+  /subscriptions:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.SubscriptionChannelResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List user subscriptions
+      tags:
+      - Subscriptions
+  /videos:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Sort
+        enum:
+        - newest
+        - views
+        - rating
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List videos
+      tags:
+      - Videos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Create video request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreateVideoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create video
+      tags:
+      - Videos
+  /videos/{id}:
+    delete:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete video
+      tags:
+      - Videos
+    get:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get video by ID
+      tags:
+      - Videos
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update video request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UpdateVideoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update video
+      tags:
+      - Videos
+  /videos/{id}/dislike:
+    post:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Dislike video
+      tags:
+      - Video Ratings
+  /videos/{id}/like:
+    post:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Like video
+      tags:
+      - Video Ratings
+  /videos/{id}/rating:
+    delete:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove video rating
+      tags:
+      - Video Ratings
+  /videos/{id}/stream-url:
+    get:
+      parameters:
+      - description: Video ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.StreamingURLResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get streaming URL
+      tags:
+      - Videos
+  /videos/{videoID}/comments:
+    get:
+      parameters:
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommentListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List video comments
+      tags:
+      - Comments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Video ID
+        in: path
+        name: videoID
+        required: true
+        type: integer
+      - description: Create comment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.CommentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create video comment
+      tags:
+      - Comments
+  /videos/me:
+    get:
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Sort
+        enum:
+        - newest
+        - views
+        - rating
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.VideoResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List my videos
+      tags:
+      - Videos
+  /videos/upload-url:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Upload presigned URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UploadPresignedURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.UploadPresignedURLResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ZVideo_internal_delivery_handlers_dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get upload presigned URL
+      tags:
+      - Videos
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

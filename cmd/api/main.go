@@ -151,7 +151,7 @@ func main() {
 	interactionService := service.NewVideoInteractionService(videoRatingRepository, viewingRepository, videoRepository, commentRepository, statsCache)
 	commentService := service.NewCommentService(commentRepository, videoRepository, statsCache, channelService)
 	commentInteractionService := service.NewCommentInteractionService(commentRatingRepository, commentRepository, commentStatsCache)
-	adminService := service.NewAdminService(userRepository)
+	adminService := service.NewAdminService(userRepository, roleRepository)
 
 	h := router.Handlers{
 		Auth:               handlers.NewAuthHandler(authService),

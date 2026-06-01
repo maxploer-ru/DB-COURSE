@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"ZVideo/internal/delivery/handlers/dto"
 	"ZVideo/internal/delivery/middleware"
 	"ZVideo/internal/delivery/response"
 	"ZVideo/internal/domain"
@@ -65,7 +66,7 @@ func (h *CommentInteractionHandler) Like(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "liked"})
+	response.RespondWithJSON(w, http.StatusOK, dto.MessageResponse{Message: "liked"})
 }
 
 // Dislike registers a dislike for a comment.
@@ -113,7 +114,7 @@ func (h *CommentInteractionHandler) Dislike(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "disliked"})
+	response.RespondWithJSON(w, http.StatusOK, dto.MessageResponse{Message: "disliked"})
 }
 
 // RemoveRating removes a rating for a comment.
@@ -159,5 +160,5 @@ func (h *CommentInteractionHandler) RemoveRating(w http.ResponseWriter, r *http.
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "rating removed"})
+	response.RespondWithJSON(w, http.StatusOK, dto.MessageResponse{Message: "rating removed"})
 }

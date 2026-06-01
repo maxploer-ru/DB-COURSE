@@ -103,6 +103,8 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 		RespondWithError(w, http.StatusNotFound, "RATING_NOT_FOUND", "Comment rating not found")
 	case errors.Is(err, domain.ErrInvalidNotificationSettings):
 		RespondWithError(w, http.StatusBadRequest, "INVALID_NOTIFICATION_SETTINGS", "Notification settings payload is invalid")
+	case errors.Is(err, domain.ErrRoleNotFound):
+		RespondWithError(w, http.StatusBadRequest, "ROLE_NOT_FOUND", "Role not found")
 
 	case errors.Is(err, domain.ErrInternalServer):
 		RespondWithError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")

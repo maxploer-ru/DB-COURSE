@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"ZVideo/internal/delivery/handlers/dto"
 	"ZVideo/internal/delivery/handlers/mappers"
 	"ZVideo/internal/delivery/middleware"
 	"ZVideo/internal/delivery/response"
@@ -73,7 +74,7 @@ func (h *SubscriptionHandler) Subscribe(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Subscribed successfully"})
+	response.RespondWithJSON(w, http.StatusOK, dto.MessageResponse{Message: "Subscribed successfully"})
 }
 
 // Unsubscribe removes a subscription from a channel.
@@ -121,7 +122,7 @@ func (h *SubscriptionHandler) Unsubscribe(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Unsubscribed successfully"})
+	response.RespondWithJSON(w, http.StatusOK, dto.MessageResponse{Message: "Unsubscribed successfully"})
 }
 
 // GetUserSubscriptions lists subscriptions for the current user.

@@ -1,0 +1,396 @@
+\begin{longtable}{|p{2.4cm}|p{9.9cm}|p{2.3cm}|}
+    \caption{Среднее время выполнения процедуры уведомления подписчиков при доле подписчиков 0.1\%}\label{tab:benchmark_avg_0_001} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{l}{\textit{Продолжение таблицы~\ref{tab:benchmark_avg_0_001}}} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    10\,000 & No Index & 4,0 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id) & 3,5 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id, user\_id) & 3,4 \\
+    \hline
+    10\,000 & B-Tree on users(notif\_enabled, id) & 4,0 \\
+    \hline
+    10\,000 & B-Tree partial users(id) WHERE notif\_enabled & 3,9 \\
+    \hline
+    10\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 3,4 \\
+    \hline
+    50\,000 & No Index & 6,2 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id) & 3,4 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id, user\_id) & 3,6 \\
+    \hline
+    50\,000 & B-Tree on users(notif\_enabled, id) & 6,5 \\
+    \hline
+    50\,000 & B-Tree partial users(id) WHERE notif\_enabled & 6,8 \\
+    \hline
+    50\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 3,4 \\
+    \hline
+    100\,000 & No Index & 9,6 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id) & 3,7 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id, user\_id) & 3,6 \\
+    \hline
+    100\,000 & B-Tree on users(notif\_enabled, id) & 9,7 \\
+    \hline
+    100\,000 & B-Tree partial users(id) WHERE notif\_enabled & 8,9 \\
+    \hline
+    100\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 3,3 \\
+    \hline
+    250\,000 & No Index & 8,7 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id) & 4,4 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id, user\_id) & 4,1 \\
+    \hline
+    250\,000 & B-Tree on users(notif\_enabled, id) & 7,6 \\
+    \hline
+    250\,000 & B-Tree partial users(id) WHERE notif\_enabled & 7,5 \\
+    \hline
+    250\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 3,9 \\
+    \hline
+    500\,000 & No Index & 11,7 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id) & 4,9 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id, user\_id) & 4,9 \\
+    \hline
+    500\,000 & B-Tree on users(notif\_enabled, id) & 11,9 \\
+    \hline
+    500\,000 & B-Tree partial users(id) WHERE notif\_enabled & 11,8 \\
+    \hline
+    500\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 4,9 \\
+    \hline
+    750\,000 & No Index & 16,8 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id) & 6,4 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id, user\_id) & 6,3 \\
+    \hline
+    750\,000 & B-Tree on users(notif\_enabled, id) & 15,7 \\
+    \hline
+    750\,000 & B-Tree partial users(id) WHERE notif\_enabled & 15,3 \\
+    \hline
+    750\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 6,1 \\
+    \hline
+    1\,000\,000 & No Index & 21,0 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id) & 7,4 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id, user\_id) & 7,5 \\
+    \hline
+    1\,000\,000 & B-Tree on users(notif\_enabled, id) & 19,8 \\
+    \hline
+    1\,000\,000 & B-Tree partial users(id) WHERE notif\_enabled & 19,2 \\
+    \hline
+    1\,000\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 7,5 \\
+    \hline
+\end{longtable}
+
+\begin{longtable}{|p{2.4cm}|p{9.9cm}|p{2.3cm}|}
+    \caption{Среднее время выполнения процедуры уведомления подписчиков при доле подписчиков 1\%}\label{tab:benchmark_avg_0_01} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{l}{\textit{Продолжение таблицы~\ref{tab:benchmark_avg_0_01}}} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    10\,000 & No Index & 4,0 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id) & 3,5 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id, user\_id) & 3,4 \\
+    \hline
+    10\,000 & B-Tree on users(notif\_enabled, id) & 4,0 \\
+    \hline
+    10\,000 & B-Tree partial users(id) WHERE notif\_enabled & 3,8 \\
+    \hline
+    10\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 3,3 \\
+    \hline
+    50\,000 & No Index & 5,6 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id) & 4,7 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id, user\_id) & 4,7 \\
+    \hline
+    50\,000 & B-Tree on users(notif\_enabled, id) & 5,5 \\
+    \hline
+    50\,000 & B-Tree partial users(id) WHERE notif\_enabled & 5,0 \\
+    \hline
+    50\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 4,4 \\
+    \hline
+    100\,000 & No Index & 8,4 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id) & 6,4 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id, user\_id) & 6,0 \\
+    \hline
+    100\,000 & B-Tree on users(notif\_enabled, id) & 8,0 \\
+    \hline
+    100\,000 & B-Tree partial users(id) WHERE notif\_enabled & 7,5 \\
+    \hline
+    100\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 6,1 \\
+    \hline
+    250\,000 & No Index & 22,9 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id) & 13,9 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id, user\_id) & 13,5 \\
+    \hline
+    250\,000 & B-Tree on users(notif\_enabled, id) & 16,2 \\
+    \hline
+    250\,000 & B-Tree partial users(id) WHERE notif\_enabled & 14,8 \\
+    \hline
+    250\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 12,3 \\
+    \hline
+    500\,000 & No Index & 39,3 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id) & 26,3 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id, user\_id) & 25,3 \\
+    \hline
+    500\,000 & B-Tree on users(notif\_enabled, id) & 28,9 \\
+    \hline
+    500\,000 & B-Tree partial users(id) WHERE notif\_enabled & 25,8 \\
+    \hline
+    500\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 23,7 \\
+    \hline
+    750\,000 & No Index & 58,6 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id) & 54,2 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id, user\_id) & 48,7 \\
+    \hline
+    750\,000 & B-Tree on users(notif\_enabled, id) & 42,1 \\
+    \hline
+    750\,000 & B-Tree partial users(id) WHERE notif\_enabled & 37,2 \\
+    \hline
+    750\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 34,0 \\
+    \hline
+    1\,000\,000 & No Index & 79,4 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id) & 74,7 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id, user\_id) & 70,3 \\
+    \hline
+    1\,000\,000 & B-Tree on users(notif\_enabled, id) & 56,9 \\
+    \hline
+    1\,000\,000 & B-Tree partial users(id) WHERE notif\_enabled & 49,6 \\
+    \hline
+    1\,000\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 44,0 \\
+    \hline
+\end{longtable}
+
+\begin{longtable}{|p{2.4cm}|p{9.9cm}|p{2.3cm}|}
+    \caption{Среднее время выполнения процедуры уведомления подписчиков при доле подписчиков 5\%}\label{tab:benchmark_avg_0_05} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{l}{\textit{Продолжение таблицы~\ref{tab:benchmark_avg_0_05}}} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    10\,000 & No Index & 5,3 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id) & 4,6 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id, user\_id) & 4,5 \\
+    \hline
+    10\,000 & B-Tree on users(notif\_enabled, id) & 5,0 \\
+    \hline
+    10\,000 & B-Tree partial users(id) WHERE notif\_enabled & 4,9 \\
+    \hline
+    10\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 4,5 \\
+    \hline
+    50\,000 & No Index & 15,5 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id) & 11,9 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id, user\_id) & 11,3 \\
+    \hline
+    50\,000 & B-Tree on users(notif\_enabled, id) & 12,2 \\
+    \hline
+    50\,000 & B-Tree partial users(id) WHERE notif\_enabled & 11,4 \\
+    \hline
+    50\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 11,6 \\
+    \hline
+    100\,000 & No Index & 29,7 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id) & 25,6 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id, user\_id) & 20,0 \\
+    \hline
+    100\,000 & B-Tree on users(notif\_enabled, id) & 20,4 \\
+    \hline
+    100\,000 & B-Tree partial users(id) WHERE notif\_enabled & 20,1 \\
+    \hline
+    100\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 18,2 \\
+    \hline
+    250\,000 & No Index & 70,8 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id) & 72,3 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id, user\_id) & 77,8 \\
+    \hline
+    250\,000 & B-Tree on users(notif\_enabled, id) & 45,2 \\
+    \hline
+    250\,000 & B-Tree partial users(id) WHERE notif\_enabled & 43,1 \\
+    \hline
+    250\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 44,2 \\
+    \hline
+    500\,000 & No Index & 137,4 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id) & 157,9 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id, user\_id) & 178,2 \\
+    \hline
+    500\,000 & B-Tree on users(notif\_enabled, id) & 115,2 \\
+    \hline
+    500\,000 & B-Tree partial users(id) WHERE notif\_enabled & 96,3 \\
+    \hline
+    500\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 104,1 \\
+    \hline
+    750\,000 & No Index & 225,7 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id) & 253,9 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id, user\_id) & 313,0 \\
+    \hline
+    750\,000 & B-Tree on users(notif\_enabled, id) & 178,1 \\
+    \hline
+    750\,000 & B-Tree partial users(id) WHERE notif\_enabled & 148,9 \\
+    \hline
+    750\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 172,5 \\
+    \hline
+    1\,000\,000 & No Index & 282,7 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id) & 313,6 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id, user\_id) & 393,3 \\
+    \hline
+    1\,000\,000 & B-Tree on users(notif\_enabled, id) & 232,5 \\
+    \hline
+    1\,000\,000 & B-Tree partial users(id) WHERE notif\_enabled & 203,0 \\
+    \hline
+    1\,000\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 235,8 \\
+    \hline
+\end{longtable}
+
+\begin{longtable}{|p{2.4cm}|p{9.9cm}|p{2.3cm}|}
+    \caption{Среднее время выполнения процедуры уведомления подписчиков при доле подписчиков 10\%}\label{tab:benchmark_avg_0_1} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endfirsthead
+    \multicolumn{3}{l}{\textit{Продолжение таблицы~\ref{tab:benchmark_avg_0_1}}} \\
+    \hline
+    \textbf{Размер выборки} & \textbf{Стратегия индексирования} & \textbf{Среднее время, мс} \\
+    \hline
+    \endhead
+    \endfoot
+    \endlastfoot
+    10\,000 & No Index & 6,5 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id) & 6,2 \\
+    \hline
+    10\,000 & B-Tree on sub(channel\_id, user\_id) & 6,5 \\
+    \hline
+    10\,000 & B-Tree on users(notif\_enabled, id) & 6,6 \\
+    \hline
+    10\,000 & B-Tree partial users(id) WHERE notif\_enabled & 6,4 \\
+    \hline
+    10\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 6,3 \\
+    \hline
+    50\,000 & No Index & 27,3 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id) & 23,1 \\
+    \hline
+    50\,000 & B-Tree on sub(channel\_id, user\_id) & 18,8 \\
+    \hline
+    50\,000 & B-Tree on users(notif\_enabled, id) & 19,6 \\
+    \hline
+    50\,000 & B-Tree partial users(id) WHERE notif\_enabled & 18,3 \\
+    \hline
+    50\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 17,8 \\
+    \hline
+    100\,000 & No Index & 47,1 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id) & 39,7 \\
+    \hline
+    100\,000 & B-Tree on sub(channel\_id, user\_id) & 35,3 \\
+    \hline
+    100\,000 & B-Tree on users(notif\_enabled, id) & 36,6 \\
+    \hline
+    100\,000 & B-Tree partial users(id) WHERE notif\_enabled & 34,8 \\
+    \hline
+    100\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 34,4 \\
+    \hline
+    250\,000 & No Index & 120,1 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id) & 127,0 \\
+    \hline
+    250\,000 & B-Tree on sub(channel\_id, user\_id) & 137,3 \\
+    \hline
+    250\,000 & B-Tree on users(notif\_enabled, id) & 95,8 \\
+    \hline
+    250\,000 & B-Tree partial users(id) WHERE notif\_enabled & 86,3 \\
+    \hline
+    250\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 91,1 \\
+    \hline
+    500\,000 & No Index & 247,5 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id) & 280,9 \\
+    \hline
+    500\,000 & B-Tree on sub(channel\_id, user\_id) & 378,6 \\
+    \hline
+    500\,000 & B-Tree on users(notif\_enabled, id) & 222,1 \\
+    \hline
+    500\,000 & B-Tree partial users(id) WHERE notif\_enabled & 201,1 \\
+    \hline
+    500\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 224,6 \\
+    \hline
+    750\,000 & No Index & 394,0 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id) & 443,7 \\
+    \hline
+    750\,000 & B-Tree on sub(channel\_id, user\_id) & 576,3 \\
+    \hline
+    750\,000 & B-Tree on users(notif\_enabled, id) & 319,4 \\
+    \hline
+    750\,000 & B-Tree partial users(id) WHERE notif\_enabled & 287,3 \\
+    \hline
+    750\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 340,6 \\
+    \hline
+    1\,000\,000 & No Index & 501,3 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id) & 608,2 \\
+    \hline
+    1\,000\,000 & B-Tree on sub(channel\_id, user\_id) & 811,8 \\
+    \hline
+    1\,000\,000 & B-Tree on users(notif\_enabled, id) & 438,9 \\
+    \hline
+    1\,000\,000 & B-Tree partial users(id) WHERE notif\_enabled & 409,1 \\
+    \hline
+    1\,000\,000 & Combined: sub(channel\_id) + users(notif\_enabled, id) & 481,0 \\
+    \hline
+\end{longtable}
+

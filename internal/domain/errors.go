@@ -40,5 +40,6 @@ var (
 	ErrCommunityPostContentEmpty    = errors.New("community post content cannot be empty")
 	ErrCommunityCommentContentEmpty = errors.New("community comment content cannot be empty")
 
-	ErrForbidden = errors.New("forbidden")
+	ErrForbidden    = errors.New("forbidden")
+	ErrRoleNotFound = errors.New("role not found")
 )

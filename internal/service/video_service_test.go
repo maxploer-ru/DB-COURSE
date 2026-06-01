@@ -95,7 +95,7 @@ func TestVideoService_DeleteVideo(t *testing.T) {
 	videoRepo.On("Delete", ctx, 4).Return(nil)
 
 	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	err := svc.DeleteVideo(ctx, 4, 5)
+	err := svc.DeleteVideo(ctx, 4, 5, "user")
 	require.NoError(t, err)
 }
 
