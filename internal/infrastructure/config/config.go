@@ -97,7 +97,7 @@ func LoadConfig() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		DatabaseDriver: getEnv("DB_DRIVER", "mongo"),
+		DatabaseDriver: getEnv("DB_DRIVER", "postgres"),
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnvAsInt("DB_PORT", 5432),
@@ -147,7 +147,7 @@ func LoadConfig() *Config {
 			},
 		},
 		Minio: MinioConfig{
-			Endpoint:         getEnv("MINIO_ENDPOINT", "minio:9000"),
+			Endpoint:         getEnv("MINIO_ENDPOINT", "localhost:9000"),
 			ExternalEndpoint: getEnv("MINIO_EXTERNAL_ENDPOINT", "localhost:9000"),
 			AccessKey:        getEnv("MINIO_ROOT_USER", "minioadmin"),
 			SecretKey:        getEnv("MINIO_ROOT_PASSWORD", "minioadmin"),
