@@ -23,7 +23,7 @@ func NewRefreshSessionCache(client *redis.Client) *RefreshSessionCache {
 func (c *RefreshSessionCache) Save(ctx context.Context, tokenID string, userID int, expiresAt time.Time) error {
 	ttl := time.Until(expiresAt)
 	if ttl <= 0 {
-		return fmt.Errorf("refresh session ttl is not positive")
+		return fmt.Errorf("refresh session ttl is already expired")
 	}
 	return c.client.Set(ctx, refreshSessionKeyPrefix+tokenID, strconv.Itoa(userID), ttl).Err()
 }
@@ -43,26 +43,31 @@ func (c *RefreshSessionCache) GetUserID(ctx context.Context, tokenID string) (in
 	return userID, true, nil
 }
 
+var rotateSessionLua = redis.NewScript(`
+if redis.call('EXISTS', KEYS[1]) == 0 then
+    return 0
+end
+redis.call('DEL', KEYS[1])
+redis.call('SETEX', KEYS[2], tonumber(ARGV[2]), ARGV[1])
+return 1
+`)
+
 func (c *RefreshSessionCache) Rotate(ctx context.Context, oldTokenID, newTokenID string, userID int, expiresAt time.Time) (bool, error) {
 	ttlSeconds := int64(time.Until(expiresAt).Seconds())
 	if ttlSeconds <= 0 {
 		return false, nil
 	}
-	const lua = `
-local oldKey = KEYS[1]
-local newKey = KEYS[2]
-if redis.call('EXISTS', oldKey) == 0 then
-  return 0
-end
-redis.call('DEL', oldKey)
-redis.call('SETEX', newKey, ARGV[2], ARGV[1])
-return 1
-`
-	res, err := c.client.Eval(ctx, lua,
+
+	res, err := rotateSessionLua.Run(ctx, c.client,
 		[]string{refreshSessionKeyPrefix + oldTokenID, refreshSessionKeyPrefix + newTokenID},
-		strconv.Itoa(userID), ttlSeconds,
+		strconv.Itoa(userID),
+		ttlSeconds,
 	).Int()
+
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return false, nil
+		}
 		return false, err
 	}
 	return res == 1, nil

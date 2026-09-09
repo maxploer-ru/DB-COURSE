@@ -427,7 +427,7 @@ def run_benchmark():
 
 def save_results(data):
     """Сохранение результатов в CSV и построение графиков"""
-    csv_file = "../../benchmark_results.csv"
+    csv_file = "benchmark_results.csv"
     with open(csv_file, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
             "size", "strategy", "avg_time_ms", "std_dev_ms",
