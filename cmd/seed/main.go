@@ -1,11 +1,8 @@
 package main
 
 import (
-	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/auth"
 	"ZVideo/internal/infrastructure/config"
-	"ZVideo/internal/infrastructure/db/mongo"
-	"ZVideo/internal/infrastructure/db/mongo/repository"
 	"ZVideo/internal/infrastructure/db/postgres"
 	pgmodels "ZVideo/internal/infrastructure/db/postgres/models"
 	"ZVideo/internal/infrastructure/storage"
@@ -23,7 +20,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type seedOptions struct {
@@ -75,10 +71,6 @@ func main() {
 	cancel()
 
 	switch strings.ToLower(cfg.DatabaseDriver) {
-	case "mongo", "mongodb":
-		if err := seedMongo(cfg, minioClient, assets, opts.Count); err != nil {
-			panic(err)
-		}
 	case "postgres", "pg":
 		if err := seedPostgres(cfg, minioClient, assets, opts.Count); err != nil {
 			panic(err)
@@ -92,7 +84,6 @@ func parseFlags() seedOptions {
 	var opts seedOptions
 	flag.IntVar(&opts.Count, "count", 1000, "records per table")
 	flag.StringVar(&opts.VideoDir, "video-dir", "", "path to directory with .mp4 files")
-	flag.StringVar(&opts.Driver, "driver", "", "override DB_DRIVER (mongo/postgres)")
 	flag.Int64Var(&opts.Seed, "seed", time.Now().UnixNano(), "random seed")
 	flag.Parse()
 	return opts
@@ -122,248 +113,6 @@ func collectVideoFiles(root string) ([]string, error) {
 	return files, nil
 }
 
-func seedMongo(cfg *config.Config, minioClient *minio.Client, assets seedAssets, count int) error {
-	mongoConn, err := mongo.NewConnection(cfg.Mongo)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = mongoConn.Close(context.Background())
-	}()
-
-	roleRepo := repository.NewRoleRepository(mongoConn.DB)
-	userRepo := repository.NewUserRepository(mongoConn.DB)
-	channelRepo := repository.NewChannelRepository(mongoConn.DB)
-	videoRepo := repository.NewVideoRepository(mongoConn.DB)
-	playlistRepo := repository.NewPlaylistRepository(mongoConn.DB)
-	viewingRepo := repository.NewViewingRepository(mongoConn.DB)
-	commentRepo := repository.NewCommentRepository(mongoConn.DB)
-	videoRatingRepo := repository.NewVideoRatingRepository(mongoConn.DB)
-	commentRatingRepo := repository.NewCommentRatingRepository(mongoConn.DB)
-	subscriptionRepo := repository.NewSubscriptionRepository(mongoConn.DB)
-
-	defaultRole, err := ensureMongoRoles(roleRepo, count)
-	if err != nil {
-		return err
-	}
-
-	pwdSvc := auth.NewBcryptPasswordService(0)
-	passwordHash, err := pwdSvc.HashPassword(context.Background(), "Password123!")
-	if err != nil {
-		return err
-	}
-
-	users := make([]*domain.User, 0, count)
-	for i := 0; i < count; i++ {
-		username := uniqueName("user", i)
-		email := fmt.Sprintf("%s_%d@example.com", username, i)
-		user := &domain.User{
-			Username:             username,
-			Email:                email,
-			PasswordHash:         passwordHash,
-			IsActive:             true,
-			NotificationsEnabled: assets.Rng.Intn(10) != 0,
-			Role:                 defaultRole,
-		}
-		if err := userRepo.Create(context.Background(), user); err != nil {
-			return err
-		}
-		users = append(users, user)
-	}
-
-	channels := make([]*domain.Channel, 0, count)
-	channelOwner := make(map[int]int, count)
-	for i := 0; i < count; i++ {
-		owner := users[i]
-		channel := &domain.Channel{
-			UserID:      owner.ID,
-			Name:        fmt.Sprintf("%s_channel", owner.Username),
-			Description: gofakeit.Sentence(10),
-			CreatedAt:   randomTime(assets.Rng),
-		}
-		if err := channelRepo.Create(context.Background(), channel); err != nil {
-			return err
-		}
-		channels = append(channels, channel)
-		channelOwner[channel.ID] = owner.ID
-	}
-
-	videos := make([]*domain.Video, 0, count)
-	for i := 0; i < count; i++ {
-		channel := channels[assets.Rng.Intn(len(channels))]
-		fileKey, err := uploadRandomVideo(minioClient, cfg.Minio.Bucket, assets, channel.ID)
-		if err != nil {
-			return err
-		}
-		video := &domain.Video{
-			ChannelID:   channel.ID,
-			Title:       gofakeit.Sentence(4),
-			Description: gofakeit.Paragraph(1, 3, 10, " "),
-			Filepath:    fileKey,
-			CreatedAt:   randomTime(assets.Rng),
-		}
-		if err := videoRepo.Create(context.Background(), video); err != nil {
-			return err
-		}
-		videos = append(videos, video)
-	}
-
-	playlists := make([]*domain.Playlist, 0, count)
-	for i := 0; i < count; i++ {
-		channel := channels[assets.Rng.Intn(len(channels))]
-		playlist := &domain.Playlist{
-			ChannelID:   channel.ID,
-			Name:        gofakeit.BuzzWord() + " Mix",
-			Description: gofakeit.Sentence(8),
-			CreatedAt:   randomTime(assets.Rng),
-		}
-		if err := playlistRepo.Create(context.Background(), playlist); err != nil {
-			return err
-		}
-		playlists = append(playlists, playlist)
-	}
-	for i := 0; i < count; i++ {
-		playlist := playlists[i]
-		video := videos[assets.Rng.Intn(len(videos))]
-		if err := playlistRepo.AddVideo(context.Background(), playlist.ID, video.ID); err != nil {
-			return err
-		}
-	}
-
-	comments := make([]*domain.Comment, 0, count)
-	for i := 0; i < count; i++ {
-		user := users[assets.Rng.Intn(len(users))]
-		video := videos[assets.Rng.Intn(len(videos))]
-		comment := &domain.Comment{
-			UserID:    user.ID,
-			VideoID:   video.ID,
-			Content:   gofakeit.Sentence(12),
-			CreatedAt: randomTime(assets.Rng),
-		}
-		if err := commentRepo.Create(context.Background(), comment); err != nil {
-			return err
-		}
-		comments = append(comments, comment)
-	}
-
-	if err := seedMongoViewings(viewingRepo, users, videos, assets, count); err != nil {
-		return err
-	}
-	if err := seedMongoVideoRatings(videoRatingRepo, users, videos, assets, count); err != nil {
-		return err
-	}
-	if err := seedMongoCommentRatings(commentRatingRepo, users, comments, assets, count); err != nil {
-		return err
-	}
-	if err := seedMongoSubscriptions(subscriptionRepo, channelOwner, users, assets, count); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func ensureMongoRoles(roleRepo *repository.RoleRepository, count int) (*domain.Role, error) {
-	ctx := context.Background()
-	defaultRole, err := roleRepo.GetDefaultRole(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if defaultRole == nil {
-		role := &domain.Role{Name: "user", IsDefault: true}
-		if err := roleRepo.Create(ctx, role); err != nil {
-			return nil, err
-		}
-		defaultRole = role
-	}
-
-	seedRoles := []domain.Role{{Name: "admin"}, {Name: "moderator"}}
-	for _, role := range seedRoles {
-		r := role
-		r.IsDefault = false
-		_ = roleRepo.Create(ctx, &r)
-	}
-
-	for i := 0; i < max(0, count-3); i++ {
-		role := &domain.Role{Name: uniqueName("role", i)}
-		if err := roleRepo.Create(ctx, role); err != nil {
-			return nil, err
-		}
-	}
-	return defaultRole, nil
-}
-
-func seedMongoViewings(viewingRepo *repository.ViewingRepository, users []*domain.User, videos []*domain.Video, assets seedAssets, count int) error {
-	for i := 0; i < count; i++ {
-		user := users[assets.Rng.Intn(len(users))]
-		video := videos[assets.Rng.Intn(len(videos))]
-		viewing := &domain.Viewing{
-			UserID:    user.ID,
-			VideoID:   video.ID,
-			WatchedAt: randomTime(assets.Rng),
-		}
-		if err := viewingRepo.Create(context.Background(), viewing); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func seedMongoVideoRatings(videoRatingRepo *repository.VideoRatingRepository, users []*domain.User, videos []*domain.Video, assets seedAssets, count int) error {
-	used := make(map[string]struct{}, count)
-	for len(used) < count {
-		user := users[assets.Rng.Intn(len(users))]
-		video := videos[assets.Rng.Intn(len(videos))]
-		key := fmt.Sprintf("%d:%d", user.ID, video.ID)
-		if _, ok := used[key]; ok {
-			continue
-		}
-		used[key] = struct{}{}
-		rating := &domain.VideoRating{UserID: user.ID, VideoID: video.ID, Liked: assets.Rng.Intn(2) == 0}
-		if err := videoRatingRepo.Create(context.Background(), rating); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func seedMongoCommentRatings(commentRatingRepo *repository.CommentRatingRepository, users []*domain.User, comments []*domain.Comment, assets seedAssets, count int) error {
-	used := make(map[string]struct{}, count)
-	for len(used) < count {
-		user := users[assets.Rng.Intn(len(users))]
-		comment := comments[assets.Rng.Intn(len(comments))]
-		key := fmt.Sprintf("%d:%d", user.ID, comment.ID)
-		if _, ok := used[key]; ok {
-			continue
-		}
-		used[key] = struct{}{}
-		rating := &domain.CommentRating{UserID: user.ID, CommentID: comment.ID, Liked: assets.Rng.Intn(2) == 0}
-		if err := commentRatingRepo.Create(context.Background(), rating); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func seedMongoSubscriptions(subscriptionRepo *repository.SubscriptionRepository, channelOwner map[int]int, users []*domain.User, assets seedAssets, count int) error {
-	used := make(map[string]struct{}, count)
-	for len(used) < count {
-		user := users[assets.Rng.Intn(len(users))]
-		channelID := pickRandomChannel(channelOwner, assets)
-		if channelOwner[channelID] == user.ID {
-			continue
-		}
-		key := fmt.Sprintf("%d:%d", user.ID, channelID)
-		if _, ok := used[key]; ok {
-			continue
-		}
-		used[key] = struct{}{}
-		if _, err := subscriptionRepo.Subscribe(context.Background(), user.ID, channelID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAssets, count int) error {
 	pgDB, err := postgres.NewConnection(cfg.Database)
 	if err != nil {
@@ -381,6 +130,8 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		return err
 	}
 
+	const batchSize = 1000 // безопасный размер пачки для любого числа полей
+
 	users := make([]pgmodels.User, 0, count)
 	for i := 0; i < count; i++ {
 		username := uniqueName("user", i)
@@ -396,7 +147,7 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			UpdatedAt:            randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&users).Error; err != nil {
+	if err := pgDB.CreateInBatches(users, batchSize).Error; err != nil {
 		return err
 	}
 
@@ -411,7 +162,7 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		}
 		channels = append(channels, channel)
 	}
-	if err := pgDB.Create(&channels).Error; err != nil {
+	if err := pgDB.CreateInBatches(channels, batchSize).Error; err != nil {
 		return err
 	}
 	for i := range channels {
@@ -433,7 +184,7 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			CreatedAt:   randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&videos).Error; err != nil {
+	if err := pgDB.CreateInBatches(videos, batchSize).Error; err != nil {
 		return err
 	}
 
@@ -447,7 +198,7 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			CreatedAt:   randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&playlists).Error; err != nil {
+	if err := pgDB.CreateInBatches(playlists, batchSize).Error; err != nil {
 		return err
 	}
 
@@ -468,12 +219,12 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			AddedAt:    randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&playlistItems).Error; err != nil {
+	if err := pgDB.CreateInBatches(playlistItems, batchSize).Error; err != nil {
 		return err
 	}
 
-	viewings := make([]pgmodels.Viewing, 0, count)
-	for i := 0; i < count; i++ {
+	viewings := make([]pgmodels.Viewing, 0, count*65)
+	for i := 0; i < count*65; i++ {
 		user := users[assets.Rng.Intn(len(users))]
 		video := videos[assets.Rng.Intn(len(videos))]
 		viewings = append(viewings, pgmodels.Viewing{
@@ -482,12 +233,12 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			WatchedAt: randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&viewings).Error; err != nil {
+	if err := pgDB.CreateInBatches(viewings, batchSize).Error; err != nil {
 		return err
 	}
 
-	comments := make([]pgmodels.Comment, 0, count)
-	for i := 0; i < count; i++ {
+	comments := make([]pgmodels.Comment, 0, count*65)
+	for i := 0; i < count*65; i++ {
 		user := users[assets.Rng.Intn(len(users))]
 		video := videos[assets.Rng.Intn(len(videos))]
 		comments = append(comments, pgmodels.Comment{
@@ -497,13 +248,13 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			CreatedAt: randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&comments).Error; err != nil {
+	if err := pgDB.CreateInBatches(comments, batchSize).Error; err != nil {
 		return err
 	}
 
-	videoRatings := make([]pgmodels.VideoRating, 0, count)
+	videoRatings := make([]pgmodels.VideoRating, 0, count*65)
 	usedVideoPairs := map[string]struct{}{}
-	for len(videoRatings) < count {
+	for len(videoRatings) < count*65 {
 		user := users[assets.Rng.Intn(len(users))]
 		video := videos[assets.Rng.Intn(len(videos))]
 		key := fmt.Sprintf("%d:%d", user.ID, video.ID)
@@ -518,13 +269,13 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			RatedAt: randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&videoRatings).Error; err != nil {
+	if err := pgDB.CreateInBatches(videoRatings, batchSize).Error; err != nil {
 		return err
 	}
 
-	commentRatings := make([]pgmodels.CommentRating, 0, count)
+	commentRatings := make([]pgmodels.CommentRating, 0, count*65)
 	usedCommentPairs := map[string]struct{}{}
-	for len(commentRatings) < count {
+	for len(commentRatings) < count*65 {
 		user := users[assets.Rng.Intn(len(users))]
 		comment := comments[assets.Rng.Intn(len(comments))]
 		key := fmt.Sprintf("%d:%d", user.ID, comment.ID)
@@ -539,13 +290,13 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			RatedAt:   randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&commentRatings).Error; err != nil {
+	if err := pgDB.CreateInBatches(commentRatings, batchSize).Error; err != nil {
 		return err
 	}
 
-	subscriptions := make([]pgmodels.Subscription, 0, count)
+	subscriptions := make([]pgmodels.Subscription, 0, count*10)
 	usedSubPairs := map[string]struct{}{}
-	for len(subscriptions) < count {
+	for len(subscriptions) < count*10 {
 		user := users[assets.Rng.Intn(len(users))]
 		channelID := pickRandomChannel(channelOwner, assets)
 		if channelOwner[channelID] == user.ID {
@@ -563,7 +314,7 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 			SubscribedAt:   randomTime(assets.Rng),
 		})
 	}
-	if err := pgDB.Create(&subscriptions).Error; err != nil {
+	if err := pgDB.CreateInBatches(subscriptions, batchSize).Error; err != nil {
 		return err
 	}
 
@@ -571,25 +322,25 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 }
 
 func ensurePostgresRoles(db *gorm.DB, count int) (*pgmodels.Role, error) {
-	seedRoles := []pgmodels.Role{{Name: "admin"}, {Name: "moderator"}, {Name: "user", IsDefault: true}}
-	if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&seedRoles).Error; err != nil {
-		return nil, err
-	}
+	//seedRoles := []pgmodels.Role{{Name: "admin"}, {Name: "moderator"}, {Name: "user", IsDefault: true}}
+	//if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&seedRoles).Error; err != nil {
+	//	return nil, err
+	//}
 
 	var defaultRole pgmodels.Role
 	if err := db.Where("is_default = ?", true).First(&defaultRole).Error; err != nil {
 		return nil, err
 	}
 
-	extraRoles := make([]pgmodels.Role, 0, max(0, count-3))
-	for i := 0; i < count-3; i++ {
-		extraRoles = append(extraRoles, pgmodels.Role{Name: uniqueName("role", i)})
-	}
-	if len(extraRoles) > 0 {
-		if err := db.Create(&extraRoles).Error; err != nil {
-			return nil, err
-		}
-	}
+	//extraRoles := make([]pgmodels.Role, 0, max(0, count-3))
+	//for i := 0; i < count-3; i++ {
+	//	extraRoles = append(extraRoles, pgmodels.Role{Name: uniqueName("role", i)})
+	//}
+	//if len(extraRoles) > 0 {
+	//	if err := db.Create(&extraRoles).Error; err != nil {
+	//		return nil, err
+	//	}
+	//}
 	return &defaultRole, nil
 }
 
