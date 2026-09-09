@@ -93,7 +93,7 @@ func main() {
 		viewingRepository = mongorepo.NewViewingRepository(mongoConn.DB)
 		commentRepository = mongorepo.NewCommentRepository(mongoConn.DB)
 		commentRatingRepository = mongorepo.NewCommentRatingRepository(mongoConn.DB)
-		playlistRepository = mongorepo.NewPlaylistRepository(mongoConn.DB)
+		//playlistRepository = mongorepo.NewPlaylistRepository(mongoConn.DB)
 	case "postgres", "pg":
 		pgDB, err := postgres.NewConnection(cfg.Database)
 		if err != nil {

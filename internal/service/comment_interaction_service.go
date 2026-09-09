@@ -188,13 +188,13 @@ func (s *commentInteractionService) GetStats(ctx context.Context, commentID int)
 	)
 
 	logger.DebugContext(ctx, "Trying to get stats from cache")
-	likes, dislikes, hit, err := s.statsCache.GetStats(ctx, commentID)
-	if err == nil && hit {
+	likes, dislikes, hit, cacheErr := s.statsCache.GetStats(ctx, commentID)
+	if cacheErr == nil && hit {
 		logger.DebugContext(ctx, "Stats retrieved from cache", slog.Int64("likes", likes), slog.Int64("dislikes", dislikes))
 		return likes, dislikes, nil
 	}
-	if err != nil {
-		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", err.Error()))
+	if cacheErr != nil {
+		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", cacheErr.Error()))
 	}
 
 	logger.DebugContext(ctx, "Fetching stats from database")
@@ -203,7 +203,10 @@ func (s *commentInteractionService) GetStats(ctx context.Context, commentID int)
 		logger.ErrorContext(ctx, "Failed to get stats from database", slog.String("error", err.Error()))
 		return 0, 0, fmt.Errorf("get stats from db: %w", err)
 	}
-	_ = s.statsCache.SetStats(ctx, commentID, likes, dislikes)
+	if cacheErr == nil {
+		_ = s.statsCache.SetStats(ctx, commentID, likes, dislikes)
+	}
+
 	logger.DebugContext(ctx, "Stats retrieved from DB and cached", slog.Int64("likes", likes), slog.Int64("dislikes", dislikes))
 	return likes, dislikes, nil
 }

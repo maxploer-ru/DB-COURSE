@@ -217,8 +217,8 @@ func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (st
 	)
 
 	logger.DebugContext(ctx, "Trying to get stats from cache")
-	stats, hit, err := s.statsCache.GetStats(ctx, videoID)
-	if err == nil && hit {
+	stats, hit, cacheErr := s.statsCache.GetStats(ctx, videoID)
+	if cacheErr == nil && hit {
 		logger.DebugContext(ctx, "Stats retrieved from cache",
 			slog.Int("views", stats.Views),
 			slog.Int("likes", stats.Likes),
@@ -226,8 +226,8 @@ func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (st
 			slog.Int("comments", stats.Comments))
 		return stats, nil
 	}
-	if err != nil {
-		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", err.Error()))
+	if cacheErr != nil {
+		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", cacheErr.Error()))
 	}
 
 	logger.DebugContext(ctx, "Fetching stats from database")
@@ -259,6 +259,8 @@ func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (st
 		Dislikes: dislikes,
 		Comments: int(comments),
 	}
-	_ = s.statsCache.SetStats(ctx, videoID, stats)
+	if cacheErr == nil {
+		_ = s.statsCache.SetStats(ctx, videoID, stats)
+	}
 	return stats, nil
 }

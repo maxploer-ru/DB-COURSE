@@ -275,3 +275,76 @@ func (h *PlaylistHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	response.RespondWithJSON(w, http.StatusOK, mappers.ToPlaylistResponse(playlist))
 }
+
+// GetMyPlaylists returns playlists for the currently authenticated user.
+// @Summary Get my playlists
+// @Tags Playlists
+// @Produce json
+// @Security BearerAuth
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} dto.PlaylistResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /playlists/me [get]
+func (h *PlaylistHandler) GetMyPlaylists(w http.ResponseWriter, r *http.Request) {
+	userCtx, err := middleware.GetUserFromContext(r.Context())
+	if err != nil {
+		response.RespondWithError(w, http.StatusUnauthorized, "UNAUTHORIZED", "user not authorized")
+		return
+	}
+
+	limit, offset := parsePagination(r.URL.Query().Get("limit"), r.URL.Query().Get("offset"))
+	playlists, err := h.playlistSvc.GetMyPlaylists(r.Context(), userCtx.UserID, limit, offset)
+	if err != nil {
+		response.HandleDomainError(w, err)
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, mappers.ToPlaylistListResponse(playlists))
+}
+
+// UpdateVideoPosition updates the position (order) of a video in a playlist.
+// @Summary Update video position in playlist
+// @Tags Playlists
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Playlist ID"
+// @Param videoID path int true "Video ID"
+// @Param request body dto.UpdateVideoPositionRequest true "Update video position request"
+// @Success 200 {object} dto.MessageResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Router /playlists/{id}/videos/{videoID}/position [patch]
+func (h *PlaylistHandler) UpdateVideoPosition(w http.ResponseWriter, r *http.Request) {
+	userCtx, err := middleware.GetUserFromContext(r.Context())
+	if err != nil {
+		response.RespondWithError(w, http.StatusUnauthorized, "UNAUTHORIZED", "user not authorized")
+		return
+	}
+
+	playlistID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		response.RespondWithError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid playlist id")
+		return
+	}
+
+	videoID, err := strconv.Atoi(chi.URLParam(r, "videoID"))
+	if err != nil {
+		response.RespondWithError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid video id")
+		return
+	}
+
+	var req dto.UpdateVideoPositionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.RespondWithError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	if err := h.playlistSvc.UpdateVideoPosition(r.Context(), playlistID, videoID, userCtx.UserID, req.Position); err != nil {
+		response.HandleDomainError(w, err)
+		return
+	}
+
+	response.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Video position updated successfully"})
+}

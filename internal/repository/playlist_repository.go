@@ -13,4 +13,5 @@ type PlaylistRepository interface {
 	Delete(ctx context.Context, playlistID int) error
 	AddVideo(ctx context.Context, playlistID, videoID int) error
 	RemoveVideo(ctx context.Context, playlistID, videoID int) error
+	UpdateVideoPosition(ctx context.Context, playlistID, videoID, newPosition int) error
 }

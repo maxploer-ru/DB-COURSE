@@ -76,6 +76,8 @@ func NewRouter(h *Handlers, authSvc service.AuthService, baseLogger domain.Logge
 		r.Delete("/playlists/{id}", h.Playlist.Delete)
 		r.Post("/playlists/{id}/videos/{videoID}", h.Playlist.AddVideo)
 		r.Delete("/playlists/{id}/videos/{videoID}", h.Playlist.RemoveVideo)
+		r.Get("/playlists/me", h.Playlist.GetMyPlaylists)
+		r.Patch("/playlists/{id}/videos/{videoID}/position", h.Playlist.UpdateVideoPosition)
 
 		r.Post("/videos/{videoID}/comments", h.Comment.Create)
 		r.Get("/videos/{videoID}/comments", h.Comment.List)

@@ -121,13 +121,13 @@ func (s *subscriptionService) GetSubscribersCount(ctx context.Context, channelID
 	)
 
 	logger.DebugContext(ctx, "Trying to get subscriber count from cache")
-	cnt, hit, err := s.counter.Get(ctx, channelID)
-	if err == nil && hit {
+	cnt, hit, cacheErr := s.counter.Get(ctx, channelID)
+	if cacheErr == nil && hit {
 		logger.DebugContext(ctx, "Subscriber count retrieved from cache", slog.Int("count", cnt))
 		return cnt, nil
 	}
-	if err != nil {
-		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", err.Error()))
+	if cacheErr != nil {
+		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", cacheErr.Error()))
 	}
 
 	logger.DebugContext(ctx, "Fetching subscriber count from database")
@@ -137,7 +137,10 @@ func (s *subscriptionService) GetSubscribersCount(ctx context.Context, channelID
 		return 0, err
 	}
 
-	_ = s.counter.Set(ctx, channelID, realCnt)
+	if cacheErr == nil {
+		_ = s.counter.Set(ctx, channelID, realCnt)
+	}
+
 	logger.DebugContext(ctx, "Subscriber count retrieved from DB and cache populated", slog.Int("count", realCnt))
 	return realCnt, nil
 }

@@ -26,3 +26,7 @@ type PlaylistResponse struct {
 	CreatedAt   time.Time              `json:"created_at"`
 	Items       []PlaylistItemResponse `json:"items"`
 }
+
+type UpdateVideoPositionRequest struct {
+	Position int `json:"position"`
+}

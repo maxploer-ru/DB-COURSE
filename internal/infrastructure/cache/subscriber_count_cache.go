@@ -53,7 +53,9 @@ func (r *SubscriberCounter) Decrement(ctx context.Context, channelID int) error 
 }
 
 func (r *SubscriberCounter) Get(ctx context.Context, channelID int) (int, bool, error) {
-	val, err := r.client.Get(ctx, subKey(channelID)).Result()
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	val, err := r.client.Get(redisCtx, subKey(channelID)).Result()
 	if errors.Is(err, redis.Nil) {
 		return 0, false, nil
 	}
@@ -101,7 +103,10 @@ func (r *SubscriberCounter) LoadAll(ctx context.Context) (map[int]int, error) {
 }
 
 func (r *SubscriberCounter) Set(ctx context.Context, channelID int, count int) error {
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := subKey(channelID)
 
-	return r.client.Set(ctx, key, count, subscriberCountTTL).Err()
+	return r.client.Set(redisCtx, key, count, subscriberCountTTL).Err()
 }

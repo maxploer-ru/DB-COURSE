@@ -132,3 +132,42 @@ func (r *PlaylistRepository) RemoveVideo(ctx context.Context, playlistID, videoI
 	}
 	return nil
 }
+
+func (r *PlaylistRepository) UpdateVideoPosition(ctx context.Context, playlistID, videoID, newPosition int) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var currentItem models.PlaylistItem
+		if err := tx.Where("playlist_id = ? AND video_id = ?", playlistID, videoID).First(&currentItem).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrVideoNotFound
+			}
+			return fmt.Errorf("get current item position: %w", err)
+		}
+
+		oldPos := currentItem.Number
+		if oldPos == newPosition {
+			return nil
+		}
+
+		if newPosition < oldPos {
+			if err := tx.Model(&models.PlaylistItem{}).
+				Where("playlist_id = ? AND number >= ? AND number < ?", playlistID, newPosition, oldPos).
+				UpdateColumn("number", gorm.Expr("number + 1")).Error; err != nil {
+				return fmt.Errorf("shift items down: %w", err)
+			}
+		} else {
+			if err := tx.Model(&models.PlaylistItem{}).
+				Where("playlist_id = ? AND number > ? AND number <= ?", playlistID, oldPos, newPosition).
+				UpdateColumn("number", gorm.Expr("number - 1")).Error; err != nil {
+				return fmt.Errorf("shift items up: %w", err)
+			}
+		}
+
+		if err := tx.Model(&models.PlaylistItem{}).
+			Where("playlist_id = ? AND video_id = ?", playlistID, videoID).
+			UpdateColumn("number", newPosition).Error; err != nil {
+			return fmt.Errorf("update target item position: %w", err)
+		}
+
+		return nil
+	})
+}

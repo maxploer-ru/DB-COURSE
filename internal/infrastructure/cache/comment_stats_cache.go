@@ -61,9 +61,12 @@ func (c *CommentStatsCache) DecrDislikes(ctx context.Context, commentID int) err
 }
 
 func (c *CommentStatsCache) GetStats(ctx context.Context, commentID int) (likes, dislikes int64, hit bool, err error) {
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := commentKey(commentID)
 
-	data, err := c.client.HGetAll(ctx, key).Result()
+	data, err := c.client.HGetAll(redisCtx, key).Result()
 	if err != nil {
 		return 0, 0, false, err
 	}
@@ -78,9 +81,12 @@ func (c *CommentStatsCache) GetStats(ctx context.Context, commentID int) (likes,
 }
 
 func (c *CommentStatsCache) SetStats(ctx context.Context, commentID int, likes, dislikes int64) error {
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := commentKey(commentID)
 	pipe := c.client.Pipeline()
-	pipe.HSet(ctx, key, map[string]interface{}{
+	pipe.HSet(redisCtx, key, map[string]interface{}{
 		"likes":    likes,
 		"dislikes": dislikes,
 	})
