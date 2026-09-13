@@ -56,7 +56,6 @@ func (s *UserRepositoryTestSuite) TestCreate_Negative() {
 	user1 := s.mother.ValidActiveUser()
 	user1.ID = 0
 	_ = s.repo.Create(ctx, user1)
-
 	user2 := s.mother.ValidActiveUser()
 	user2.ID = 0
 	user2.Username = "another_name"
@@ -89,6 +88,124 @@ func (s *UserRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(foundUser)
 }
 
+func (s *UserRepositoryTestSuite) TestListUsers_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	list, err := s.repo.ListUsers(ctx, 10, 0)
+
+	s.NoError(err)
+	s.GreaterOrEqual(len(list), 1)
+}
+
+func (s *UserRepositoryTestSuite) TestListUsers_Negative() {
+	ctx := context.Background()
+
+	list, err := s.repo.ListUsers(ctx, 10, 999)
+
+	s.NoError(err)
+	s.Len(list, 0)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByIDs_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	foundUsers, err := s.repo.GetByIDs(ctx, []int{user.ID})
+
+	s.NoError(err)
+	s.Len(foundUsers, 1)
+	s.Equal(user.Username, foundUsers[0].Username)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByIDs_Negative() {
+	ctx := context.Background()
+
+	foundUsers, err := s.repo.GetByIDs(ctx, []int{999})
+
+	s.NoError(err)
+	s.Len(foundUsers, 0)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByUsername_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	foundUser, err := s.repo.GetByUsername(ctx, user.Username)
+
+	s.NoError(err)
+	s.NotNil(foundUser)
+	s.Equal(user.ID, foundUser.ID)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByUsername_Negative() {
+	ctx := context.Background()
+
+	foundUser, err := s.repo.GetByUsername(ctx, "unknown")
+
+	s.NoError(err)
+	s.Nil(foundUser)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByEmail_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	foundUser, err := s.repo.GetByEmail(ctx, user.Email)
+
+	s.NoError(err)
+	s.NotNil(foundUser)
+	s.Equal(user.ID, foundUser.ID)
+}
+
+func (s *UserRepositoryTestSuite) TestGetByEmail_Negative() {
+	ctx := context.Background()
+
+	foundUser, err := s.repo.GetByEmail(ctx, "unknown@test.com")
+
+	s.NoError(err)
+	s.Nil(foundUser)
+}
+
+func (s *UserRepositoryTestSuite) TestUpdate_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+	user.Username = "updated_name"
+
+	err := s.repo.Update(ctx, user)
+
+	s.NoError(err)
+	foundUser, _ := s.repo.GetByID(ctx, user.ID)
+	s.Equal("updated_name", foundUser.Username)
+}
+
+func (s *UserRepositoryTestSuite) TestUpdate_Negative() {
+	ctx := context.Background()
+	user1 := s.mother.ValidActiveUser()
+	user1.ID = 0
+	_ = s.repo.Create(ctx, user1)
+	user2 := s.mother.ValidActiveUser()
+	user2.ID = 0
+	user2.Email = "another@test.com"
+	user2.Username = "another"
+	_ = s.repo.Create(ctx, user2)
+	user2.Email = user1.Email
+
+	err := s.repo.Update(ctx, user2)
+
+	s.Error(err)
+}
+
 func (s *UserRepositoryTestSuite) TestDelete_Positive() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
@@ -98,7 +215,6 @@ func (s *UserRepositoryTestSuite) TestDelete_Positive() {
 	err := s.repo.Delete(ctx, user.ID)
 
 	s.NoError(err)
-
 	var count int64
 	s.tx.Model(&models.User{}).Where("id = ?", user.ID).Count(&count)
 	s.Equal(int64(0), count)
@@ -108,6 +224,111 @@ func (s *UserRepositoryTestSuite) TestDelete_Negative() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrUserNotFound)
+}
+
+func (s *UserRepositoryTestSuite) TestExistsByEmail_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	exists, err := s.repo.ExistsByEmail(ctx, user.Email)
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *UserRepositoryTestSuite) TestExistsByEmail_Negative() {
+	ctx := context.Background()
+
+	exists, err := s.repo.ExistsByEmail(ctx, "unknown@test.com")
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *UserRepositoryTestSuite) TestExistsByUsername_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	exists, err := s.repo.ExistsByUsername(ctx, user.Username)
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *UserRepositoryTestSuite) TestExistsByUsername_Negative() {
+	ctx := context.Background()
+
+	exists, err := s.repo.ExistsByUsername(ctx, "unknown")
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *UserRepositoryTestSuite) TestBan_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	err := s.repo.Ban(ctx, user.ID)
+
+	s.NoError(err)
+	found, _ := s.repo.GetByID(ctx, user.ID)
+	s.False(found.IsActive)
+}
+
+func (s *UserRepositoryTestSuite) TestBan_Negative() {
+	ctx := context.Background()
+
+	err := s.repo.Ban(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrUserNotFound)
+}
+
+func (s *UserRepositoryTestSuite) TestUnban_Positive() {
+	ctx := context.Background()
+	user := s.mother.BannedUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	err := s.repo.Unban(ctx, user.ID)
+
+	s.NoError(err)
+	found, _ := s.repo.GetByID(ctx, user.ID)
+	s.True(found.IsActive)
+}
+
+func (s *UserRepositoryTestSuite) TestUnban_Negative() {
+	ctx := context.Background()
+
+	err := s.repo.Unban(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrUserNotFound)
+}
+
+func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
+
+	err := s.repo.SetNotificationsEnabled(ctx, user.ID, false)
+
+	s.NoError(err)
+	found, _ := s.repo.GetByID(ctx, user.ID)
+	s.False(found.NotificationsEnabled)
+}
+
+func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Negative() {
+	ctx := context.Background()
+
+	err := s.repo.SetNotificationsEnabled(ctx, 999, false)
 
 	s.ErrorIs(err, domain.ErrUserNotFound)
 }

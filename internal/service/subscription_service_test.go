@@ -6,6 +6,7 @@ import (
 	"ZVideo/internal/testing/mocks"
 	"ZVideo/internal/testing/mother"
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -25,14 +26,12 @@ func (s *SubscriptionServiceTestSuite) SetupTest() {
 	s.mockSubRepo = mocks.NewSubscriptionRepository(s.T())
 	s.mockChannelRepo = mocks.NewChannelRepository(s.T())
 	s.mockCounter = mocks.NewSubscriberCounter(s.T())
-
 	s.service = service.NewSubscriptionService(s.mockSubRepo, s.mockChannelRepo, s.mockCounter)
 	s.mother = mother.SubscriptionMother{}
 	s.chanMother = mother.ChannelMother{}
 }
 
 func (s *SubscriptionServiceTestSuite) TestSubscribe_Positive_NewSubscription() {
-
 	ctx := context.Background()
 	sub := s.mother.ValidSubscription()
 	channel := s.chanMother.ValidChannel()
@@ -63,6 +62,158 @@ func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_SelfSubscription()
 
 	s.ErrorIs(err, domain.ErrSelfSubscription)
 	s.mockSubRepo.AssertNotCalled(s.T(), "Subscribe")
+}
+
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_ChannelNotFound() {
+	ctx := context.Background()
+
+	s.mockChannelRepo.On("GetByID", ctx, 999).Return(nil, nil)
+
+	err := s.service.Subscribe(ctx, 1, 999)
+
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+}
+
+func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Positive() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("Unsubscribe", ctx, 1, 2).Return(true, nil)
+	s.mockCounter.On("Decrement", ctx, 2).Return(nil)
+
+	err := s.service.Unsubscribe(ctx, 1, 2)
+
+	s.NoError(err)
+}
+
+func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Negative() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("Unsubscribe", ctx, 1, 2).Return(false, errors.New("db error"))
+
+	err := s.service.Unsubscribe(ctx, 1, 2)
+
+	s.Error(err)
+}
+
+func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Positive() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("IsSubscribed", ctx, 1, 2).Return(true, nil)
+
+	ok, err := s.service.IsSubscribed(ctx, 1, 2)
+
+	s.NoError(err)
+	s.True(ok)
+}
+
+func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Negative() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("IsSubscribed", ctx, 1, 2).Return(false, errors.New("db error"))
+
+	ok, err := s.service.IsSubscribed(ctx, 1, 2)
+
+	s.Error(err)
+	s.False(ok)
+}
+
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_CacheHit() {
+	ctx := context.Background()
+
+	s.mockCounter.On("Get", ctx, 1).Return(42, true, nil)
+
+	count, err := s.service.GetSubscribersCount(ctx, 1)
+
+	s.NoError(err)
+	s.Equal(42, count)
+}
+
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_DBFallback() {
+	ctx := context.Background()
+
+	s.mockCounter.On("Get", ctx, 1).Return(0, false, nil)
+	s.mockSubRepo.On("GetSubscribersCount", ctx, 1).Return(15, nil)
+	s.mockCounter.On("Set", ctx, 1, 15).Return(nil)
+
+	count, err := s.service.GetSubscribersCount(ctx, 1)
+
+	s.NoError(err)
+	s.Equal(15, count)
+}
+
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Negative() {
+	ctx := context.Background()
+
+	s.mockCounter.On("Get", ctx, 1).Return(0, false, nil)
+	s.mockSubRepo.On("GetSubscribersCount", ctx, 1).Return(0, errors.New("db error"))
+
+	count, err := s.service.GetSubscribersCount(ctx, 1)
+
+	s.Error(err)
+	s.Equal(0, count)
+}
+
+func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Positive() {
+	ctx := context.Background()
+	expected := []*domain.Subscription{s.mother.ValidSubscription()}
+
+	s.mockSubRepo.On("GetUserSubscriptions", ctx, 1, 10, 0).Return(expected, nil)
+
+	subs, err := s.service.GetUserSubscriptions(ctx, 1, 10, 0)
+
+	s.NoError(err)
+	s.Len(subs, 1)
+}
+
+func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Negative() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("GetUserSubscriptions", ctx, 1, 10, 0).Return(nil, errors.New("db error"))
+
+	subs, err := s.service.GetUserSubscriptions(ctx, 1, 10, 0)
+
+	s.Error(err)
+	s.Nil(subs)
+}
+
+func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Positive() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("ResetNewVideosCount", ctx, 1, 2).Return(nil)
+
+	err := s.service.ResetNewVideosCount(ctx, 1, 2)
+
+	s.NoError(err)
+}
+
+func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Negative() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("ResetNewVideosCount", ctx, 1, 2).Return(errors.New("db error"))
+
+	err := s.service.ResetNewVideosCount(ctx, 1, 2)
+
+	s.Error(err)
+}
+
+func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Positive() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("NotifySubscribersAboutNewVideo", ctx, 1).Return(nil)
+
+	err := s.service.NotifyAboutNewVideo(ctx, 1)
+
+	s.NoError(err)
+}
+
+func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Negative() {
+	ctx := context.Background()
+
+	s.mockSubRepo.On("NotifySubscribersAboutNewVideo", ctx, 1).Return(errors.New("db error"))
+
+	err := s.service.NotifyAboutNewVideo(ctx, 1)
+
+	s.Error(err)
 }
 
 func TestSubscriptionServiceSuite(t *testing.T) {
