@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -36,9 +37,7 @@ func NewPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		postgres.WithUsername("testuser"),
 		postgres.WithPassword("testpass"),
 		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(3*time.Minute),
+			wait.ForListeningPort("5432/tcp").WithStartupTimeout(2*time.Minute),
 		),
 	)
 	if err != nil {
@@ -50,11 +49,24 @@ func NewPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		return nil, err
 	}
 
-	db, err := gorm.Open(driver.Open(connStr), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
+	var db *gorm.DB
+	maxRetries := 15
+	for i := 0; i < maxRetries; i++ {
+		db, err = gorm.Open(driver.Open(connStr), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
+		})
+		if err == nil {
+			sqlDB, sqlErr := db.DB()
+			if sqlErr == nil {
+				if pingErr := sqlDB.Ping(); pingErr == nil {
+					break
+				}
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to postgres after retries: %w", err)
 	}
 
 	return &PostgresContainer{

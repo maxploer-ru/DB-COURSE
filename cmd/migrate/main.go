@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -14,10 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"ZVideo/internal/infrastructure/config"
-	"ZVideo/internal/infrastructure/db/mongo"
-	"ZVideo/internal/infrastructure/db/mongo/migrate"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -50,10 +45,6 @@ func main() {
 	switch driver {
 	case "postgres":
 		if err := migratePostgres(migrationsPath, direction, steps); err != nil {
-			log.Fatal("Migration failed:", err)
-		}
-	case "mongo":
-		if err := migrateMongo(direction, steps); err != nil {
 			log.Fatal("Migration failed:", err)
 		}
 	default:
@@ -101,37 +92,6 @@ func migratePostgres(migrationsPath, direction string, steps int) error {
 	}
 
 	return applyPgMigrations(db, files, direction, steps)
-}
-
-func migrateMongo(direction string, steps int) error {
-	cfg := config.MongoConfig{
-		URI:                    getEnv("MONGO_URI", ""),
-		Host:                   getEnv("MONGO_HOST", "localhost"),
-		Port:                   getEnvAsInt("MONGO_PORT", 27017),
-		User:                   getEnv("MONGO_USER", ""),
-		Password:               getEnv("MONGO_PASSWORD", ""),
-		Database:               getEnv("MONGO_DB", "zvideo"),
-		AuthSource:             getEnv("MONGO_AUTH_SOURCE", "zvideo"),
-		ConnectTimeout:         getEnvAsDuration("MONGO_CONNECT_TIMEOUT", 10*time.Second),
-		ServerSelectionTimeout: getEnvAsDuration("MONGO_SERVER_SELECTION_TIMEOUT", 5*time.Second),
-		MaxPoolSize:            uint64(getEnvAsInt("MONGO_MAX_POOL_SIZE", 50)),
-		MinPoolSize:            uint64(getEnvAsInt("MONGO_MIN_POOL_SIZE", 0)),
-	} // TODO: refactor
-
-	log.Println("Connecting to MongoDB...")
-	conn, err := mongo.NewConnection(cfg)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close(context.Background())
-	}()
-
-	log.Println("Connected successfully!")
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	return migrate.Apply(ctx, conn.DB, direction, steps, migrate.DefaultMigrations())
 }
 
 type pgMigrationFile struct {

@@ -4,10 +4,11 @@ mocks:
 	mockery --all --dir=./internal --output=./internal/testing/mocks --outpkg=mocks
 
 test:
-	go test -v -shuffle=on ./internal/service/... ./internal/infrastructure/db/postgres/repository/...
+	go test -v -shuffle=on ./...
 
 test-coverage:
 	go test -shuffle=on -coverprofile=coverage.out -covermode=atomic ./internal/...
+	awk -i inplace '!/(testing|delivery|logger|config|cache|mappers)/' coverage.out
 	go tool cover -func=coverage.out
 	@echo "Для просмотра покрытия по строкам в браузере выполните: go tool cover -html=coverage.out"
 
