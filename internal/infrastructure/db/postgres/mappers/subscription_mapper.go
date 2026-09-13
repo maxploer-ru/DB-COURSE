@@ -12,6 +12,7 @@ func ToDomainSubscription(model *models.Subscription) *domain.Subscription {
 	return &domain.Subscription{
 		UserID:         model.UserID,
 		ChannelID:      model.ChannelID,
+		ChannelName:    model.Channel.Name,
 		NewVideosCount: model.NewVideosCount,
 		SubscribedAt:   model.SubscribedAt,
 	}

@@ -9,8 +9,10 @@ type Channel struct {
 	Description string
 	CreatedAt   time.Time `gorm:"not null;default:current_timestamp"`
 
-	Videos    []Video    `gorm:"foreignkey:ChannelID"`
-	Playlists []Playlist `gorm:"foreignkey:ChannelID"`
+	User User `gorm:"foreignKey:UserID"`
 
-	UserChannelSubscriptions []Subscription `gorm:"foreignkey:ChannelID"`
+	Videos    []Video    `gorm:"foreignKey:ChannelID"`
+	Playlists []Playlist `gorm:"foreignKey:ChannelID"`
+
+	UserChannelSubscriptions []Subscription `gorm:"foreignKey:ChannelID"`
 }

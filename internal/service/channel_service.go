@@ -17,27 +17,17 @@ type ChannelService interface {
 	DeleteChannel(ctx context.Context, channelID, userID int) error
 	Exists(ctx context.Context, channelID int) (bool, error)
 	IsOwner(ctx context.Context, channelID, userID int) (bool, error)
-}
 
-type channelVideoFilepathRepository interface {
-	ListFilepathsByChannel(ctx context.Context, channelID int) ([]string, error)
+	ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error)
 }
 
 type channelService struct {
 	channelRepo repository.ChannelRepository
-	videoRepo   channelVideoFilepathRepository
-	storageSvc  StorageService
 }
 
-func NewChannelService(
-	channelRepo repository.ChannelRepository,
-	videoRepo channelVideoFilepathRepository,
-	storageSvc StorageService,
-) ChannelService {
+func NewChannelService(channelRepo repository.ChannelRepository) ChannelService {
 	return &channelService{
 		channelRepo: channelRepo,
-		videoRepo:   videoRepo,
-		storageSvc:  storageSvc,
 	}
 }
 
@@ -220,60 +210,42 @@ func (s *channelService) DeleteChannel(ctx context.Context, channelID, userID in
 		slog.Int("user_id", userID),
 	)
 
-	logger.DebugContext(ctx, "Fetching channel for deletion")
 	ch, err := s.channelRepo.GetByID(ctx, channelID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get channel", slog.String("error", err.Error()))
 		return fmt.Errorf("get channel failed: %w", err)
 	}
 	if ch == nil {
-		logger.WarnContext(ctx, "Channel not found")
 		return domain.ErrChannelNotFound
 	}
 
 	if ch.UserID != userID {
-		logger.WarnContext(ctx, "User is not the channel owner")
 		return domain.ErrForbidden
 	}
 
-	logger.DebugContext(ctx, "Fetching channel video filepaths for storage cleanup")
-	filepaths, err := s.videoRepo.ListFilepathsByChannel(ctx, channelID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to fetch channel videos for storage cleanup", slog.String("error", err.Error()))
-		return fmt.Errorf("list channel video filepaths failed: %w", err)
-	}
-
-	if len(filepaths) > 0 {
-		logger.DebugContext(ctx, "Deleting channel videos from storage", slog.Int("video_count", len(filepaths)))
-		failedDeletes := 0
-		for _, filepath := range filepaths {
-			if filepath == "" {
-				continue
-			}
-			if err := s.storageSvc.DeleteObject(ctx, filepath); err != nil {
-				failedDeletes++
-				logger.WarnContext(ctx, "Failed to delete video file from storage",
-					slog.String("filepath", filepath),
-					slog.String("error", err.Error()),
-				)
-			}
-		}
-		if failedDeletes > 0 {
-			logger.ErrorContext(ctx, "Channel deletion cancelled: some video files were not deleted from storage",
-				slog.Int("failed_count", failedDeletes),
-			)
-			return fmt.Errorf("delete channel video files from storage failed: %d object(s)", failedDeletes)
-		}
-	}
-
-	logger.DebugContext(ctx, "Deleting channel from repository")
 	if err := s.channelRepo.Delete(ctx, channelID); err != nil {
-		logger.ErrorContext(ctx, "Failed to delete channel", slog.String("error", err.Error()))
+		logger.ErrorContext(ctx, "Failed to delete channel from DB", slog.String("error", err.Error()))
 		return fmt.Errorf("delete channel failed: %w", err)
 	}
 
-	logger.InfoContext(ctx, "Channel deleted successfully")
+	logger.InfoContext(ctx, "Channel deleted successfully, cascading deletion handled by DB")
 	return nil
+}
+
+func (s *channelService) ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error) {
+	logger := domain.GetLogger(ctx).With(
+		slog.String("service", "ChannelService"),
+		slog.String("operation", "ListChannels"),
+		slog.Int("limit", limit),
+		slog.Int("offset", offset),
+	)
+
+	channels, err := s.channelRepo.ListChannels(ctx, limit, offset)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to list channels", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("list channels failed: %w", err)
+	}
+
+	return channels, nil
 }
 
 func (s *channelService) Exists(ctx context.Context, channelID int) (bool, error) {

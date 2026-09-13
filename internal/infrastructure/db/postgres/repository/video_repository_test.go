@@ -1,161 +1,193 @@
-package repository
+package repository_test
 
 import (
 	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestVideoRepository_CreateAndGetByID(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
-
-	roleID := insertRole(t, "role_video_a", false)
-	userID := insertUser(t, roleID, "user_video_a")
-	channelID := insertChannel(t, userID, "channel_video_a")
-
-	video := &domain.Video{ChannelID: channelID, Title: "title_a", Description: "desc", Filepath: "a.mp4"}
-	err := repo.Create(context.Background(), video)
-	require.NoError(t, err)
-	require.NotZero(t, video.ID)
-
-	loaded, err := repo.GetByID(context.Background(), video.ID)
-	require.NoError(t, err)
-	require.Equal(t, video.ID, loaded.ID)
-	require.Equal(t, "title_a", loaded.Title)
-	require.Equal(t, channelID, loaded.ChannelID)
+type VideoRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.VideoRepository
+	userRepo    *repository.UserRepository
+	chanRepo    *repository.ChannelRepository
+	userMother  mother.UserMother
+	chanMother  mother.ChannelMother
+	vidMother   mother.VideoMother
+	testUser    *domain.User
+	testChannel *domain.Channel
 }
 
-func TestVideoRepository_Update(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
-
-	roleID := insertRole(t, "role_video_b", false)
-	userID := insertUser(t, roleID, "user_video_b")
-	channelID := insertChannel(t, userID, "channel_video_b")
-
-	video := &domain.Video{ChannelID: channelID, Title: "old", Description: "desc", Filepath: "old.mp4"}
-	err := repo.Create(context.Background(), video)
-	require.NoError(t, err)
-
-	video.Title = "new"
-	video.Description = "new-desc"
-	video.Filepath = "new.mp4"
-	err = repo.Update(context.Background(), video)
-	require.NoError(t, err)
-
-	updated, err := repo.GetByID(context.Background(), video.ID)
-	require.NoError(t, err)
-	require.Equal(t, "new", updated.Title)
-	require.Equal(t, "new.mp4", updated.Filepath)
+func (s *VideoRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
 }
 
-func TestVideoRepository_Delete(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
+func (s *VideoRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewVideoRepository(s.tx)
+	s.userRepo = repository.NewUserRepository(s.tx)
+	s.chanRepo = repository.NewChannelRepository(s.tx)
+	s.userMother = mother.UserMother{}
+	s.chanMother = mother.ChannelMother{}
+	s.vidMother = mother.VideoMother{}
 
-	roleID := insertRole(t, "role_video_c", false)
-	userID := insertUser(t, roleID, "user_video_c")
-	channelID := insertChannel(t, userID, "channel_video_c")
+	u := s.userMother.ValidActiveUser()
+	u.ID = 0
+	err := s.userRepo.Create(context.Background(), u)
+	s.Require().NoError(err)
+	s.testUser = u
 
-	video := &domain.Video{ChannelID: channelID, Title: "title_c", Description: "desc", Filepath: "c.mp4"}
-	err := repo.Create(context.Background(), video)
-	require.NoError(t, err)
-
-	err = repo.Delete(context.Background(), video.ID)
-	require.NoError(t, err)
-
-	loaded, err := repo.GetByID(context.Background(), video.ID)
-	require.NoError(t, err)
-	require.Nil(t, loaded)
+	c := s.chanMother.ChannelForUser(s.testUser.ID)
+	c.ID = 0
+	err = s.chanRepo.Create(context.Background(), c)
+	s.Require().NoError(err)
+	s.testChannel = c
 }
 
-func TestVideoRepository_ListAndListByChannel(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
-
-	roleID := insertRole(t, "role_video_d", false)
-	userID := insertUser(t, roleID, "user_video_d")
-	channelA := insertChannel(t, userID, "channel_video_d1")
-	channelB := insertChannel(t, userID, "channel_video_d2")
-
-	_ = insertVideo(t, channelA, "video_d1")
-	_ = insertVideo(t, channelA, "video_d2")
-	_ = insertVideo(t, channelB, "video_d3")
-
-	all, err := repo.List(context.Background(), 10, 0, domain.VideoSortNewest)
-	require.NoError(t, err)
-	require.Len(t, all, 3)
-
-	byChannel, err := repo.ListByChannel(context.Background(), channelA, 10, 0, domain.VideoSortNewest)
-	require.NoError(t, err)
-	require.Len(t, byChannel, 2)
+func (s *VideoRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
 }
 
-func TestVideoRepository_ListSortViews(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
+func (s *VideoRepositoryTestSuite) TestCreate_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
 
-	roleID := insertRole(t, "role_video_e", false)
-	userID := insertUser(t, roleID, "user_video_e")
-	channelID := insertChannel(t, userID, "channel_video_e")
+	err := s.repo.Create(ctx, vid)
 
-	videoA := insertVideo(t, channelID, "video_e1")
-	videoB := insertVideo(t, channelID, "video_e2")
-	insertViewing(t, userID, videoA)
-	insertViewing(t, userID, videoA)
-
-	videos, err := repo.List(context.Background(), 10, 0, domain.VideoSortViews)
-	require.NoError(t, err)
-	require.Len(t, videos, 2)
-	require.Equal(t, videoA, videos[0].ID)
-	require.Equal(t, videoB, videos[1].ID)
+	s.NoError(err)
+	s.NotZero(vid.ID)
 }
 
-func TestVideoRepository_ListSortRating(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
+func (s *VideoRepositoryTestSuite) TestCreate_Negative() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(999999)
+	vid.ID = 0
 
-	roleID := insertRole(t, "role_video_f", false)
-	userID := insertUser(t, roleID, "user_video_f")
-	channelID := insertChannel(t, userID, "channel_video_f")
+	err := s.repo.Create(ctx, vid)
 
-	videoA := insertVideo(t, channelID, "video_f1")
-	videoB := insertVideo(t, channelID, "video_f2")
-	insertVideoRating(t, userID, videoA, true)
-	insertVideoRating(t, userID, videoB, false)
-
-	videos, err := repo.List(context.Background(), 10, 0, domain.VideoSortRating)
-	require.NoError(t, err)
-	require.Len(t, videos, 2)
-	require.Equal(t, videoA, videos[0].ID)
-	require.Equal(t, videoB, videos[1].ID)
+	s.Error(err)
 }
 
-func TestVideoRepository_ListFilepathsByChannel(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRepository(db)
+func (s *VideoRepositoryTestSuite) TestGetByID_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
+	_ = s.repo.Create(ctx, vid)
 
-	roleID := insertRole(t, "role_video_g", false)
-	userID := insertUser(t, roleID, "user_video_g")
-	channelID := insertChannel(t, userID, "channel_video_g")
+	found, err := s.repo.GetByID(ctx, vid.ID)
 
-	videoA := &domain.Video{ChannelID: channelID, Title: "title_g1", Description: "desc", Filepath: "g1.mp4"}
-	videoB := &domain.Video{ChannelID: channelID, Title: "title_g2", Description: "desc", Filepath: "g2.mp4"}
-	require.NoError(t, repo.Create(context.Background(), videoA))
-	require.NoError(t, repo.Create(context.Background(), videoB))
+	s.NoError(err)
+	s.NotNil(found)
+	s.Equal(vid.Title, found.Title)
+	s.Equal(s.testChannel.Name, found.ChannelName)
+}
 
-	paths, err := repo.ListFilepathsByChannel(context.Background(), channelID)
-	require.NoError(t, err)
-	require.Len(t, paths, 2)
-	require.ElementsMatch(t, []string{"g1.mp4", "g2.mp4"}, paths)
+func (s *VideoRepositoryTestSuite) TestGetByID_Negative() {
+	ctx := context.Background()
+
+	found, err := s.repo.GetByID(ctx, 999)
+
+	s.NoError(err)
+	s.Nil(found)
+}
+
+func (s *VideoRepositoryTestSuite) TestUpdate_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
+	_ = s.repo.Create(ctx, vid)
+	vid.Title = "Updated Title"
+
+	err := s.repo.Update(ctx, vid)
+
+	s.NoError(err)
+	found, _ := s.repo.GetByID(ctx, vid.ID)
+	s.Equal("Updated Title", found.Title)
+}
+
+func (s *VideoRepositoryTestSuite) TestUpdate_Negative() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 999999
+
+	err := s.repo.Update(ctx, vid)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+}
+
+func (s *VideoRepositoryTestSuite) TestDelete_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
+	_ = s.repo.Create(ctx, vid)
+
+	err := s.repo.Delete(ctx, vid.ID)
+
+	s.NoError(err)
+	found, _ := s.repo.GetByID(ctx, vid.ID)
+	s.Nil(found)
+}
+
+func (s *VideoRepositoryTestSuite) TestDelete_Negative() {
+	ctx := context.Background()
+
+	err := s.repo.Delete(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+}
+
+func (s *VideoRepositoryTestSuite) TestList_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
+	_ = s.repo.Create(ctx, vid)
+
+	list, err := s.repo.List(ctx, 10, 0)
+
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
+func (s *VideoRepositoryTestSuite) TestList_Negative() {
+	ctx := context.Background()
+
+	list, err := s.repo.List(ctx, 10, 999)
+
+	s.NoError(err)
+	s.Len(list, 0)
+}
+
+func (s *VideoRepositoryTestSuite) TestListByChannel_Positive() {
+	ctx := context.Background()
+	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	vid.ID = 0
+	_ = s.repo.Create(ctx, vid)
+
+	list, err := s.repo.ListByChannel(ctx, s.testChannel.ID, 10, 0)
+
+	s.NoError(err)
+	s.Len(list, 1)
+}
+
+func (s *VideoRepositoryTestSuite) TestListByChannel_Negative() {
+	ctx := context.Background()
+
+	list, err := s.repo.ListByChannel(ctx, 999, 10, 0)
+
+	s.NoError(err)
+	s.Len(list, 0)
+}
+
+func TestVideoRepositorySuite(t *testing.T) {
+	suite.Run(t, new(VideoRepositoryTestSuite))
 }

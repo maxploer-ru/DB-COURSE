@@ -8,6 +8,6 @@ type PlaylistItem struct {
 	Number     int       `gorm:"not null"`
 	AddedAt    time.Time `gorm:"not null;default:current_timestamp"`
 
-	Playlist Playlist `gorm:"foreignkey:PlaylistID"`
-	Video    Video    `gorm:"foreignkey:VideoID"`
+	Playlist Playlist `gorm:"foreignKey:PlaylistID"`
+	Video    Video    `gorm:"foreignKey:VideoID"`
 }

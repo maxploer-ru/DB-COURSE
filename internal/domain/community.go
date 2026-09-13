@@ -20,12 +20,7 @@ type CommunityComment struct {
 	CreatedAt time.Time
 }
 
-type CommunityPostWithComments struct {
-	Post     *CommunityPost
-	Comments []*CommunityComment
-}
-
 type Community struct {
 	Channel *Channel
-	Posts   []*CommunityPostWithComments
+	Posts   []*CommunityPost
 }

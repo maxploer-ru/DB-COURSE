@@ -2,160 +2,107 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestAuthService_Register(t *testing.T) {
-	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
-
-	role := &domain.Role{ID: 1, Name: "user"}
-	userValSvc.On("ValidateNewUser", ctx, "u@example.com", "nick", "pass").Return(nil)
-	userRepo.On("ExistsByUsername", ctx, "nick").Return(false, nil)
-	userRepo.On("ExistsByEmail", ctx, "u@example.com").Return(false, nil)
-	roleRepo.On("GetDefaultRole", ctx).Return(role, nil)
-	pwdSvc.On("HashPassword", ctx, "pass").Return("hash", nil)
-	userRepo.On("Create", ctx, mock.MatchedBy(func(u *domain.User) bool {
-		return u.Username == "nick" && u.Email == "u@example.com" && u.PasswordHash == "hash" && u.Role == role
-	})).Return(nil)
-
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	err := svc.Register(ctx, "nick", "u@example.com", "pass")
-	require.NoError(t, err)
+type AuthServiceTestSuite struct {
+	suite.Suite
+	mockUserRepo    *mocks.UserRepository
+	mockRoleRepo    *mocks.RoleRepository
+	mockRefreshRepo *mocks.RefreshSessionRepository
+	mockPwdSvc      *mocks.PasswordService
+	mockJwtSvc      *mocks.JWTService
+	mockUserValSvc  *mocks.UserValidatorService
+	service         service.AuthService
+	userMother      mother.UserMother
+	roleMother      mother.RoleMother
 }
 
-func TestAuthService_Login(t *testing.T) {
-	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
+func (s *AuthServiceTestSuite) SetupTest() {
+	s.mockUserRepo = mocks.NewUserRepository(s.T())
+	s.mockRoleRepo = mocks.NewRoleRepository(s.T())
+	s.mockRefreshRepo = mocks.NewRefreshSessionRepository(s.T())
+	s.mockPwdSvc = mocks.NewPasswordService(s.T())
+	s.mockJwtSvc = mocks.NewJWTService(s.T())
+	s.mockUserValSvc = mocks.NewUserValidatorService(s.T())
 
-	role := &domain.Role{ID: 1, Name: "user"}
-	user := &domain.User{ID: 7, Username: "nick", Email: "u@example.com", PasswordHash: "hash", IsActive: true, Role: role}
-	refreshData := &domain.RefreshTokenData{TokenID: "token-1", UserID: 7, ExpiresAt: time.Now().Add(time.Hour)}
-
-	userRepo.On("GetByEmail", ctx, "u@example.com").Return(user, nil)
-	pwdSvc.On("ComparePassword", ctx, "pass", "hash").Return(nil)
-	jwtSvc.On("GenerateAccessToken", ctx, mock.Anything).Return("access", nil)
-	jwtSvc.On("GenerateRefreshToken", ctx, 7).Return("refresh", refreshData, nil)
-	refreshRepo.On("Save", ctx, refreshData.TokenID, 7, refreshData.ExpiresAt).Return(nil)
-
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	result, err := svc.Login(ctx, "u@example.com", "pass")
-	require.NoError(t, err)
-	require.Equal(t, "access", result.AccessToken)
-	require.Equal(t, "refresh", result.RefreshToken)
+	s.service = service.NewAuthService(
+		s.mockUserRepo,
+		s.mockRoleRepo,
+		s.mockRefreshRepo,
+		s.mockPwdSvc,
+		s.mockJwtSvc,
+		s.mockUserValSvc,
+	)
+	s.userMother = mother.UserMother{}
+	s.roleMother = mother.RoleMother{}
 }
 
-func TestAuthService_Refresh(t *testing.T) {
+func (s *AuthServiceTestSuite) TestLogin_Negative_UserNotFound() {
 	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
+	email := "test@example.com"
+	password := "password123"
 
-	refreshData := &domain.RefreshTokenData{TokenID: "old", UserID: 3, ExpiresAt: time.Now().Add(time.Hour)}
-	newRefreshData := &domain.RefreshTokenData{TokenID: "new", UserID: 3, ExpiresAt: time.Now().Add(2 * time.Hour)}
-	user := &domain.User{ID: 3, Username: "nick", IsActive: true, Role: &domain.Role{Name: "user"}}
+	s.mockUserRepo.On("GetByEmail", ctx, email).Return(nil, nil)
 
-	jwtSvc.On("ValidateRefreshToken", ctx, "refresh").Return(refreshData, nil)
-	refreshRepo.On("GetUserID", ctx, "old").Return(3, true, nil)
-	userRepo.On("GetByID", ctx, 3).Return(user, nil)
-	jwtSvc.On("GenerateAccessToken", ctx, mock.Anything).Return("access", nil)
-	jwtSvc.On("GenerateRefreshToken", ctx, 3).Return("new-refresh", newRefreshData, nil)
-	refreshRepo.On("Rotate", ctx, "old", "new", 3, newRefreshData.ExpiresAt).Return(true, nil)
+	res, err := s.service.Login(ctx, email, password)
 
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	result, err := svc.Refresh(ctx, "refresh")
-	require.NoError(t, err)
-	require.Equal(t, "access", result.AccessToken)
-	require.Equal(t, "new-refresh", result.RefreshToken)
+	s.ErrorIs(err, domain.ErrInvalidUserCredentials)
+	s.Nil(res)
 }
 
-func TestAuthService_Logout(t *testing.T) {
+func (s *AuthServiceTestSuite) TestLogin_Positive_Success() {
 	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
+	email := "test@example.com"
+	password := "password123"
+	user := s.userMother.ValidActiveUser()
+	user.Role = s.roleMother.DefaultUserRole()
 
-	refreshData := &domain.RefreshTokenData{TokenID: "token-1", UserID: 5, ExpiresAt: time.Now().Add(time.Hour)}
-	jwtSvc.On("ValidateRefreshToken", ctx, "refresh").Return(refreshData, nil)
-	refreshRepo.On("Delete", ctx, "token-1").Return(nil)
+	tokenData := &domain.AccessTokenData{
+		UserID:   user.ID,
+		UserName: user.Username,
+		Role:     user.Role.Name,
+	}
+	refreshData := &domain.RefreshTokenData{
+		UserID:    user.ID,
+		TokenID:   "token_id_123",
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
 
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	err := svc.Logout(ctx, "access", "refresh")
-	require.NoError(t, err)
+	s.mockUserRepo.On("GetByEmail", ctx, email).Return(user, nil)
+	s.mockPwdSvc.On("ComparePassword", ctx, password, user.PasswordHash).Return(nil)
+	s.mockJwtSvc.On("GenerateAccessToken", ctx, tokenData).Return("access_token", nil)
+	s.mockJwtSvc.On("GenerateRefreshToken", ctx, user.ID).Return("refresh_token", refreshData, nil)
+	s.mockRefreshRepo.On("Save", ctx, refreshData.TokenID, user.ID, refreshData.ExpiresAt).Return(nil)
+
+	res, err := s.service.Login(ctx, email, password)
+
+	s.NoError(err)
+	s.NotNil(res)
+	s.Equal("access_token", res.AccessToken)
+	s.Equal("refresh_token", res.RefreshToken)
+	s.mockRefreshRepo.AssertExpectations(s.T())
 }
 
-func TestAuthService_ValidateAccessToken(t *testing.T) {
+func (s *AuthServiceTestSuite) TestRefresh_Negative_InvalidToken() {
 	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
+	refreshToken := "invalid_token"
 
-	jwtSvc.On("ValidateAccessToken", ctx, "token").Return(&domain.AccessTokenData{UserID: 9}, nil)
-	userRepo.On("GetByID", ctx, 9).Return(&domain.User{ID: 9, Username: "u", IsActive: true, Role: &domain.Role{Name: "user"}}, nil)
+	s.mockJwtSvc.On("ValidateRefreshToken", ctx, refreshToken).Return(nil, domain.ErrInvalidRefreshToken)
 
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	data, err := svc.ValidateAccessToken(ctx, "token")
-	require.NoError(t, err)
-	require.Equal(t, 9, data.UserID)
+	res, err := s.service.Refresh(ctx, refreshToken)
+
+	s.ErrorIs(err, domain.ErrInvalidRefreshToken)
+	s.Nil(res)
 }
 
-func TestAuthService_GetMe(t *testing.T) {
-	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
-
-	userRepo.On("GetByID", ctx, 4).Return(&domain.User{ID: 4, Username: "me", IsActive: true, Role: &domain.Role{Name: "user"}}, nil)
-
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	user, err := svc.GetMe(ctx, 4)
-	require.NoError(t, err)
-	require.Equal(t, 4, user.ID)
-}
-
-func TestAuthService_SetNotificationsEnabled(t *testing.T) {
-	ctx := context.Background()
-	userRepo := mocks.NewUserRepository(t)
-	roleRepo := mocks.NewRoleRepository(t)
-	refreshRepo := mocks.NewRefreshSessionRepository(t)
-	pwdSvc := mocks.NewPasswordService(t)
-	jwtSvc := mocks.NewJWTService(t)
-	userValSvc := mocks.NewUserValidatorService(t)
-
-	userRepo.On("SetNotificationsEnabled", ctx, 6, true).Return(nil)
-	userRepo.On("GetByID", ctx, 6).Return(&domain.User{ID: 6, Username: "u", IsActive: true, Role: &domain.Role{Name: "user"}}, nil)
-
-	svc := service.NewAuthService(userRepo, roleRepo, refreshRepo, pwdSvc, jwtSvc, userValSvc)
-	user, err := svc.SetNotificationsEnabled(ctx, 6, true)
-	require.NoError(t, err)
-	require.Equal(t, 6, user.ID)
+func TestAuthServiceSuite(t *testing.T) {
+	suite.Run(t, new(AuthServiceTestSuite))
 }

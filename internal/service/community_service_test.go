@@ -2,153 +2,218 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestCommunityService_GetChannelCommunity(t *testing.T) {
-	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
-
-	channel := &domain.Channel{ID: 1, Name: "c"}
-	post := &domain.CommunityPost{ID: 2, ChannelID: 1, UserID: 10, Content: "post"}
-	comment := &domain.CommunityComment{ID: 3, PostID: 2, UserID: 11, Content: "comment"}
-
-	channelSvc.On("GetChannel", ctx, 1).Return(channel, nil)
-	communityRepo.On("ListPostsByChannel", ctx, 1, 100, 0).Return([]*domain.CommunityPost{post}, nil)
-	communityRepo.On("ListCommentsByPost", ctx, 2, 100, 0).Return([]*domain.CommunityComment{comment}, nil)
-	userRepo.On("GetByID", ctx, 10).Return(&domain.User{ID: 10, Username: "u10"}, nil)
-	userRepo.On("GetByID", ctx, 11).Return(&domain.User{ID: 11, Username: "u11"}, nil)
-
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	community, err := svc.GetChannelCommunity(ctx, 1)
-	require.NoError(t, err)
-	require.Equal(t, "u10", community.Posts[0].Post.Username)
-	require.Equal(t, "u11", community.Posts[0].Comments[0].Username)
+type CommunityServiceTestSuite struct {
+	suite.Suite
+	mockRepo    *mocks.CommunityRepository
+	mockChanSvc *mocks.ChannelService
+	service     service.CommunityService
+	mother      mother.CommunityMother
+	chanMother  mother.ChannelMother
 }
 
-func TestCommunityService_GetMyCommunity(t *testing.T) {
-	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
-
-	channel := &domain.Channel{ID: 2, UserID: 5}
-	channelSvc.On("GetChannelByUserID", ctx, 5).Return(channel, nil)
-	channelSvc.On("GetChannel", ctx, 2).Return(channel, nil)
-	communityRepo.On("ListPostsByChannel", ctx, 2, 100, 0).Return([]*domain.CommunityPost{}, nil)
-
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	community, err := svc.GetMyCommunity(ctx, 5)
-	require.NoError(t, err)
-	require.Equal(t, 2, community.Channel.ID)
+func (s *CommunityServiceTestSuite) SetupTest() {
+	s.mockRepo = mocks.NewCommunityRepository(s.T())
+	s.mockChanSvc = mocks.NewChannelService(s.T())
+	s.service = service.NewCommunityService(s.mockRepo, s.mockChanSvc)
+	s.mother = mother.CommunityMother{}
+	s.chanMother = mother.ChannelMother{}
 }
 
-func TestCommunityService_CreatePost(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
+	ch := s.chanMother.ChannelForUser(1)
+	expectedPosts := []*domain.CommunityPost{s.mother.PostForChannel(ch.ID, 1)}
 
-	channelSvc.On("IsOwner", ctx, 1, 7).Return(true, nil)
-	communityRepo.On("CreatePost", ctx, mock.MatchedBy(func(p *domain.CommunityPost) bool {
-		return p.ChannelID == 1 && p.UserID == 7 && p.Content == "post"
-	})).Return(nil)
-	userRepo.On("GetByID", ctx, 7).Return(&domain.User{ID: 7, Username: "u"}, nil)
+	s.mockChanSvc.On("GetChannel", ctx, ch.ID).Return(ch, nil)
+	s.mockRepo.On("ListPostsByChannel", ctx, ch.ID, 10, 0).Return(expectedPosts, nil)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	post, err := svc.CreatePost(ctx, 1, 7, "post")
-	require.NoError(t, err)
-	require.Equal(t, "u", post.Username)
+	community, err := s.service.GetChannelCommunity(ctx, ch.ID, 10, 0)
+
+	s.NoError(err)
+	s.NotNil(community)
+	s.Equal(ch.ID, community.Channel.ID)
+	s.Len(community.Posts, 1)
 }
 
-func TestCommunityService_UpdatePost(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
 
-	post := &domain.CommunityPost{ID: 3, ChannelID: 1, UserID: 7, Content: "old"}
-	communityRepo.On("GetPostByID", ctx, 3).Return(post, nil)
-	channelSvc.On("IsOwner", ctx, 1, 7).Return(true, nil)
-	communityRepo.On("UpdatePost", ctx, post).Return(nil)
-	userRepo.On("GetByID", ctx, 7).Return(&domain.User{ID: 7, Username: "u"}, nil)
+	s.mockChanSvc.On("GetChannel", ctx, 999).Return(nil, domain.ErrChannelNotFound)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	updated, err := svc.UpdatePost(ctx, 3, 7, "new")
-	require.NoError(t, err)
-	require.Equal(t, "new", updated.Content)
+	community, err := s.service.GetChannelCommunity(ctx, 999, 10, 0)
+
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(community)
 }
 
-func TestCommunityService_DeletePost(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestCreatePost_Positive() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
 
-	post := &domain.CommunityPost{ID: 4, ChannelID: 1, UserID: 7}
-	communityRepo.On("GetPostByID", ctx, 4).Return(post, nil)
-	channelSvc.On("IsOwner", ctx, 1, 7).Return(true, nil)
-	communityRepo.On("DeletePost", ctx, 4).Return(nil)
+	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
+	s.mockRepo.On("CreatePost", ctx, mock.AnythingOfType("*domain.CommunityPost")).Return(nil)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	err := svc.DeletePost(ctx, 4, 7)
-	require.NoError(t, err)
+	post, err := s.service.CreatePost(ctx, 1, 1, "Content")
+
+	s.NoError(err)
+	s.NotNil(post)
+	s.Equal("Content", post.Content)
 }
 
-func TestCommunityService_CreateComment(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestCreatePost_Negative_Forbidden() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
 
-	communityRepo.On("GetPostByID", ctx, 5).Return(&domain.CommunityPost{ID: 5}, nil)
-	communityRepo.On("CreateComment", ctx, mock.MatchedBy(func(c *domain.CommunityComment) bool {
-		return c.PostID == 5 && c.UserID == 9 && c.Content == "comment"
-	})).Return(nil)
-	userRepo.On("GetByID", ctx, 9).Return(&domain.User{ID: 9, Username: "u"}, nil)
+	s.mockChanSvc.On("IsOwner", ctx, 1, 999).Return(false, nil)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	comment, err := svc.CreateComment(ctx, 5, 9, "comment")
-	require.NoError(t, err)
-	require.Equal(t, "u", comment.Username)
+	post, err := s.service.CreatePost(ctx, 1, 999, "Content")
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(post)
 }
 
-func TestCommunityService_UpdateComment(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestCreatePost_Negative_EmptyContent() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
 
-	comment := &domain.CommunityComment{ID: 6, PostID: 5, UserID: 9, Content: "old"}
-	communityRepo.On("GetCommentByID", ctx, 6).Return(comment, nil)
-	communityRepo.On("UpdateComment", ctx, comment).Return(nil)
-	userRepo.On("GetByID", ctx, 9).Return(&domain.User{ID: 9, Username: "u"}, nil)
+	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	updated, err := svc.UpdateComment(ctx, 6, 9, "new")
-	require.NoError(t, err)
-	require.Equal(t, "new", updated.Content)
+	post, err := s.service.CreatePost(ctx, 1, 1, "   ")
+
+	s.ErrorIs(err, domain.ErrCommunityPostContentEmpty)
+	s.Nil(post)
 }
 
-func TestCommunityService_DeleteComment(t *testing.T) {
+func (s *CommunityServiceTestSuite) TestUpdatePost_Positive() {
 	ctx := context.Background()
-	communityRepo := mocks.NewCommunityRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	userRepo := mocks.NewUserRepository(t)
+	post := s.mother.PostForChannel(1, 1)
 
-	comment := &domain.CommunityComment{ID: 7, PostID: 5, UserID: 9}
-	communityRepo.On("GetCommentByID", ctx, 7).Return(comment, nil)
-	communityRepo.On("DeleteComment", ctx, 7).Return(nil)
+	s.mockRepo.On("GetPostByID", ctx, post.ID).Return(post, nil)
+	s.mockChanSvc.On("IsOwner", ctx, post.ChannelID, 1).Return(true, nil)
+	s.mockRepo.On("UpdatePost", ctx, post).Return(nil)
 
-	svc := service.NewCommunityService(communityRepo, channelSvc, userRepo)
-	err := svc.DeleteComment(ctx, 7, 9)
-	require.NoError(t, err)
+	updated, err := s.service.UpdatePost(ctx, post.ID, 1, "New Content")
+
+	s.NoError(err)
+	s.Equal("New Content", updated.Content)
+}
+
+func (s *CommunityServiceTestSuite) TestUpdatePost_Negative() {
+	ctx := context.Background()
+	post := s.mother.PostForChannel(1, 1)
+
+	s.mockRepo.On("GetPostByID", ctx, post.ID).Return(post, nil)
+	s.mockChanSvc.On("IsOwner", ctx, post.ChannelID, 999).Return(false, nil)
+
+	updated, err := s.service.UpdatePost(ctx, post.ID, 999, "New Content")
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(updated)
+}
+
+func (s *CommunityServiceTestSuite) TestDeletePost_Positive() {
+	ctx := context.Background()
+	post := s.mother.PostForChannel(1, 1)
+
+	s.mockRepo.On("GetPostByID", ctx, post.ID).Return(post, nil)
+	s.mockChanSvc.On("IsOwner", ctx, post.ChannelID, 1).Return(true, nil)
+	s.mockRepo.On("DeletePost", ctx, post.ID).Return(nil)
+
+	err := s.service.DeletePost(ctx, post.ID, 1)
+
+	s.NoError(err)
+}
+
+func (s *CommunityServiceTestSuite) TestDeletePost_Negative() {
+	ctx := context.Background()
+
+	s.mockRepo.On("GetPostByID", ctx, 999).Return(nil, nil)
+
+	err := s.service.DeletePost(ctx, 999, 1)
+
+	s.ErrorIs(err, domain.ErrCommunityPostNotFound)
+}
+
+func (s *CommunityServiceTestSuite) TestCreateComment_Positive() {
+	ctx := context.Background()
+	post := s.mother.PostForChannel(1, 1)
+
+	s.mockRepo.On("GetPostByID", ctx, post.ID).Return(post, nil)
+	s.mockRepo.On("CreateComment", ctx, mock.AnythingOfType("*domain.CommunityComment")).Return(nil)
+
+	comment, err := s.service.CreateComment(ctx, post.ID, 2, "Comment Content")
+
+	s.NoError(err)
+	s.NotNil(comment)
+	s.Equal("Comment Content", comment.Content)
+}
+
+func (s *CommunityServiceTestSuite) TestCreateComment_Negative() {
+	ctx := context.Background()
+
+	s.mockRepo.On("GetPostByID", ctx, 999).Return(nil, nil)
+
+	comment, err := s.service.CreateComment(ctx, 999, 2, "Comment Content")
+
+	s.ErrorIs(err, domain.ErrCommunityPostNotFound)
+	s.Nil(comment)
+}
+
+func (s *CommunityServiceTestSuite) TestUpdateComment_Positive() {
+	ctx := context.Background()
+	comment := s.mother.CommentForPost(1, 2)
+
+	s.mockRepo.On("GetCommentByID", ctx, comment.ID).Return(comment, nil)
+	s.mockRepo.On("UpdateComment", ctx, comment).Return(nil)
+
+	updated, err := s.service.UpdateComment(ctx, comment.ID, 2, "New Content")
+
+	s.NoError(err)
+	s.Equal("New Content", updated.Content)
+}
+
+func (s *CommunityServiceTestSuite) TestUpdateComment_Negative() {
+	ctx := context.Background()
+	comment := s.mother.CommentForPost(1, 2)
+
+	s.mockRepo.On("GetCommentByID", ctx, comment.ID).Return(comment, nil)
+
+	updated, err := s.service.UpdateComment(ctx, comment.ID, 999, "New Content")
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(updated)
+}
+
+func (s *CommunityServiceTestSuite) TestDeleteComment_Positive() {
+	ctx := context.Background()
+	comment := s.mother.CommentForPost(1, 2)
+
+	s.mockRepo.On("GetCommentByID", ctx, comment.ID).Return(comment, nil)
+	s.mockRepo.On("DeleteComment", ctx, comment.ID).Return(nil)
+
+	err := s.service.DeleteComment(ctx, comment.ID, 2)
+
+	s.NoError(err)
+}
+
+func (s *CommunityServiceTestSuite) TestDeleteComment_Negative() {
+	ctx := context.Background()
+	comment := s.mother.CommentForPost(1, 2)
+
+	s.mockRepo.On("GetCommentByID", ctx, comment.ID).Return(comment, nil)
+
+	err := s.service.DeleteComment(ctx, comment.ID, 999)
+
+	s.ErrorIs(err, domain.ErrForbidden)
+}
+
+func TestCommunityServiceSuite(t *testing.T) {
+	suite.Run(t, new(CommunityServiceTestSuite))
 }

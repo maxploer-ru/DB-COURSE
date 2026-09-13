@@ -11,8 +11,9 @@ import (
 )
 
 type CommunityService interface {
-	GetChannelCommunity(ctx context.Context, channelID int) (*domain.Community, error)
-	GetMyCommunity(ctx context.Context, userID int) (*domain.Community, error)
+	GetChannelCommunity(ctx context.Context, channelID int, limit, offset int) (*domain.Community, error)
+	GetMyCommunity(ctx context.Context, userID int, limit, offset int) (*domain.Community, error)
+	GetPostComments(ctx context.Context, postID int, limit, offset int) ([]*domain.CommunityComment, error)
 	CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error)
 	UpdatePost(ctx context.Context, postID, userID int, content string) (*domain.CommunityPost, error)
 	DeletePost(ctx context.Context, postID, userID int) error
@@ -24,120 +25,56 @@ type CommunityService interface {
 type communityService struct {
 	communityRepo repository.CommunityRepository
 	channelSvc    ChannelService
-	userRepo      repository.UserRepository
 }
 
-func NewCommunityService(communityRepo repository.CommunityRepository, channelSvc ChannelService, userRepo repository.UserRepository) CommunityService {
-	return &communityService{communityRepo: communityRepo, channelSvc: channelSvc, userRepo: userRepo}
+func NewCommunityService(communityRepo repository.CommunityRepository, channelSvc ChannelService) CommunityService {
+	return &communityService{
+		communityRepo: communityRepo,
+		channelSvc:    channelSvc,
+	}
 }
 
-func (s *communityService) resolveUsername(ctx context.Context, userID int, usernameCache map[int]string) string {
-	if usernameCache == nil {
-		usernameCache = map[int]string{}
-	}
-	if username, ok := usernameCache[userID]; ok {
-		return username
-	}
-
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil || user == nil || user.Username == "" {
-		username := fmt.Sprintf("Пользователь #%d", userID)
-		usernameCache[userID] = username
-		return username
-	}
-
-	usernameCache[userID] = user.Username
-	return user.Username
-}
-
-func (s *communityService) enrichPostAuthor(ctx context.Context, post *domain.CommunityPost, usernameCache map[int]string) {
-	if post == nil {
-		return
-	}
-	post.Username = s.resolveUsername(ctx, post.UserID, usernameCache)
-}
-
-func (s *communityService) enrichCommentAuthor(ctx context.Context, comment *domain.CommunityComment, usernameCache map[int]string) {
-	if comment == nil {
-		return
-	}
-	comment.Username = s.resolveUsername(ctx, comment.UserID, usernameCache)
-}
-
-func (s *communityService) GetChannelCommunity(ctx context.Context, channelID int) (*domain.Community, error) {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "CommunityService"),
-		slog.String("operation", "GetChannelCommunity"),
-		slog.Int("channel_id", channelID),
-	)
-
+func (s *communityService) GetChannelCommunity(ctx context.Context, channelID int, limit, offset int) (*domain.Community, error) {
 	channel, err := s.channelSvc.GetChannel(ctx, channelID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get channel", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("get channel: %w", err)
 	}
 
-	posts, err := s.communityRepo.ListPostsByChannel(ctx, channelID, 100, 0)
+	posts, err := s.communityRepo.ListPostsByChannel(ctx, channelID, limit, offset)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to list community posts", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("list community posts: %w", err)
 	}
 
-	community := &domain.Community{Channel: channel, Posts: make([]*domain.CommunityPostWithComments, 0, len(posts))}
-	usernameCache := make(map[int]string)
-	for _, post := range posts {
-		comments, err := s.communityRepo.ListCommentsByPost(ctx, post.ID, 100, 0)
-		if err != nil {
-			logger.ErrorContext(ctx, "Failed to list comments for post", slog.Int("post_id", post.ID), slog.String("error", err.Error()))
-			return nil, fmt.Errorf("list community comments: %w", err)
-		}
-		s.enrichPostAuthor(ctx, post, usernameCache)
-		for _, comment := range comments {
-			s.enrichCommentAuthor(ctx, comment, usernameCache)
-		}
-		community.Posts = append(community.Posts, &domain.CommunityPostWithComments{Post: post, Comments: comments})
-	}
-
-	return community, nil
+	return &domain.Community{
+		Channel: channel,
+		Posts:   posts,
+	}, nil
 }
 
-func (s *communityService) GetMyCommunity(ctx context.Context, userID int) (*domain.Community, error) {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "CommunityService"),
-		slog.String("operation", "GetMyCommunity"),
-		slog.Int("user_id", userID),
-	)
-
+func (s *communityService) GetMyCommunity(ctx context.Context, userID int, limit, offset int) (*domain.Community, error) {
 	channel, err := s.channelSvc.GetChannelByUserID(ctx, userID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get channel by user", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("get channel by user: %w", err)
 	}
+	return s.GetChannelCommunity(ctx, channel.ID, limit, offset)
+}
 
-	return s.GetChannelCommunity(ctx, channel.ID)
+func (s *communityService) GetPostComments(ctx context.Context, postID int, limit, offset int) ([]*domain.CommunityComment, error) {
+	comments, err := s.communityRepo.ListCommentsByPost(ctx, postID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list comments: %w", err)
+	}
+	return comments, nil
 }
 
 func (s *communityService) CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error) {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "CommunityService"),
-		slog.String("operation", "CreatePost"),
-		slog.Int("channel_id", channelID),
-		slog.Int("user_id", userID),
-	)
-
 	isOwner, err := s.channelSvc.IsOwner(ctx, channelID, userID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to check channel ownership", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("check channel owner: %w", err)
-	}
-	if !isOwner {
-		logger.WarnContext(ctx, "User is not the channel owner")
+	if err != nil || !isOwner {
 		return nil, domain.ErrForbidden
 	}
 
 	content = strings.TrimSpace(content)
 	if content == "" {
-		logger.WarnContext(ctx, "Community post content is empty")
 		return nil, domain.ErrCommunityPostContentEmpty
 	}
 
@@ -149,12 +86,9 @@ func (s *communityService) CreatePost(ctx context.Context, channelID, userID int
 	}
 
 	if err := s.communityRepo.CreatePost(ctx, post); err != nil {
-		logger.ErrorContext(ctx, "Failed to create community post", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("create community post: %w", err)
 	}
-	s.enrichPostAuthor(ctx, post, map[int]string{})
 
-	logger.InfoContext(ctx, "Community post created successfully", slog.Int("post_id", post.ID))
 	return post, nil
 }
 
@@ -197,7 +131,6 @@ func (s *communityService) UpdatePost(ctx context.Context, postID, userID int, c
 		logger.ErrorContext(ctx, "Failed to update community post", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("update community post: %w", err)
 	}
-	s.enrichPostAuthor(ctx, post, map[int]string{})
 
 	logger.InfoContext(ctx, "Community post updated successfully")
 	return post, nil
@@ -275,7 +208,6 @@ func (s *communityService) CreateComment(ctx context.Context, postID, userID int
 		logger.ErrorContext(ctx, "Failed to create community comment", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("create community comment: %w", err)
 	}
-	s.enrichCommentAuthor(ctx, comment, map[int]string{})
 
 	logger.InfoContext(ctx, "Community comment created successfully", slog.Int("comment_id", comment.ID))
 	return comment, nil
@@ -315,7 +247,6 @@ func (s *communityService) UpdateComment(ctx context.Context, commentID, userID 
 		logger.ErrorContext(ctx, "Failed to update community comment", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("update community comment: %w", err)
 	}
-	s.enrichCommentAuthor(ctx, comment, map[int]string{})
 
 	logger.InfoContext(ctx, "Community comment updated successfully")
 	return comment, nil

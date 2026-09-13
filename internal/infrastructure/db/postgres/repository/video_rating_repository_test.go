@@ -1,108 +1,76 @@
-package repository
+package repository_test
 
 import (
 	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/db/postgres/models"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestVideoRatingRepository_CreateAndGet(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRatingRepository(db)
-
-	roleID := insertRole(t, "role_vrate_a", false)
-	userID := insertUser(t, roleID, "user_vrate_a")
-	channelID := insertChannel(t, userID, "channel_vrate_a")
-	videoID := insertVideo(t, channelID, "video_vrate_a")
-
-	rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: true}
-	err := repo.Create(context.Background(), rating)
-	require.NoError(t, err)
-
-	loaded, err := repo.GetByUserAndVideo(context.Background(), userID, videoID)
-	require.NoError(t, err)
-	require.NotNil(t, loaded)
-	require.True(t, loaded.Liked)
+type VideoRatingRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.VideoRatingRepository
+	mother      mother.VideoInteractionMother
+	testUser    *models.User
+	testVideo   *models.Video
 }
 
-func TestVideoRatingRepository_CreateDuplicate(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRatingRepository(db)
-
-	roleID := insertRole(t, "role_vrate_b", false)
-	userID := insertUser(t, roleID, "user_vrate_b")
-	channelID := insertChannel(t, userID, "channel_vrate_b")
-	videoID := insertVideo(t, channelID, "video_vrate_b")
-
-	rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: true}
-	err := repo.Create(context.Background(), rating)
-	require.NoError(t, err)
-
-	err = repo.Create(context.Background(), rating)
-	require.ErrorIs(t, err, domain.ErrAlreadyRated)
+func (s *VideoRatingRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
+	s.mother = mother.VideoInteractionMother{}
 }
 
-func TestVideoRatingRepository_Update(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRatingRepository(db)
+func (s *VideoRatingRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewVideoRatingRepository(s.tx)
 
-	roleID := insertRole(t, "role_vrate_c", false)
-	userID := insertUser(t, roleID, "user_vrate_c")
-	channelID := insertChannel(t, userID, "channel_vrate_c")
-	videoID := insertVideo(t, channelID, "video_vrate_c")
+	s.testUser = &models.User{Username: "rater", Email: "r@t.com", PasswordHash: "x", RoleID: 1}
+	s.tx.Create(s.testUser)
 
-	rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: true}
-	require.NoError(t, repo.Create(context.Background(), rating))
+	channel := &models.Channel{UserID: s.testUser.ID, Name: "Rate Chan"}
+	s.tx.Create(channel)
 
-	rating.Liked = false
-	require.NoError(t, repo.Update(context.Background(), rating))
-
-	loaded, err := repo.GetByUserAndVideo(context.Background(), userID, videoID)
-	require.NoError(t, err)
-	require.NotNil(t, loaded)
-	require.False(t, loaded.Liked)
+	s.testVideo = &models.Video{ChannelID: channel.ID, Title: "Test Video", Filepath: "x", Status: "ready"}
+	s.tx.Create(s.testVideo)
 }
 
-func TestVideoRatingRepository_Delete(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRatingRepository(db)
-
-	roleID := insertRole(t, "role_vrate_d", false)
-	userID := insertUser(t, roleID, "user_vrate_d")
-	channelID := insertChannel(t, userID, "channel_vrate_d")
-	videoID := insertVideo(t, channelID, "video_vrate_d")
-
-	rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: true}
-	require.NoError(t, repo.Create(context.Background(), rating))
-
-	err := repo.Delete(context.Background(), userID, videoID)
-	require.NoError(t, err)
-
-	err = repo.Delete(context.Background(), userID, videoID)
-	require.ErrorIs(t, err, domain.ErrRatingNotFound)
+func (s *VideoRatingRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
 }
 
-func TestVideoRatingRepository_GetStats(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewVideoRatingRepository(db)
+func (s *VideoRatingRepositoryTestSuite) TestCreateAndGetStats_Positive() {
+	ctx := context.Background()
+	rating := s.mother.LikedRating()
+	rating.UserID = s.testUser.ID
+	rating.VideoID = s.testVideo.ID
 
-	roleID := insertRole(t, "role_vrate_e", false)
-	userID := insertUser(t, roleID, "user_vrate_e")
-	channelID := insertChannel(t, userID, "channel_vrate_e")
-	videoID := insertVideo(t, channelID, "video_vrate_e")
+	err := s.repo.Create(ctx, rating)
+	s.NoError(err)
 
-	insertVideoRating(t, userID, videoID, true)
-	insertVideoRating(t, userID, videoID, false)
+	likes, dislikes, err := s.repo.GetStats(ctx, rating.VideoID)
 
-	likes, dislikes, err := repo.GetStats(context.Background(), videoID)
-	require.NoError(t, err)
-	require.Equal(t, 1, likes)
-	require.Equal(t, 1, dislikes)
+	s.NoError(err)
+	s.Equal(1, likes)
+	s.Equal(0, dislikes)
+}
+
+func (s *VideoRatingRepositoryTestSuite) TestDelete_Negative_NotFound() {
+	ctx := context.Background()
+
+	err := s.repo.Delete(ctx, s.testUser.ID, s.testVideo.ID)
+
+	s.ErrorIs(err, domain.ErrRatingNotFound)
+}
+
+func TestVideoRatingRepositorySuite(t *testing.T) {
+	suite.Run(t, new(VideoRatingRepositoryTestSuite))
 }

@@ -5,19 +5,6 @@ import (
 	"ZVideo/internal/infrastructure/db/postgres/models"
 )
 
-func ToDomainCommunityPost(model *models.CommunityPost) *domain.CommunityPost {
-	if model == nil {
-		return nil
-	}
-	return &domain.CommunityPost{
-		ID:        model.ID,
-		ChannelID: model.ChannelID,
-		UserID:    model.UserID,
-		Content:   model.Content,
-		CreatedAt: model.CreatedAt,
-	}
-}
-
 func FromDomainCommunityPost(post *domain.CommunityPost) *models.CommunityPost {
 	if post == nil {
 		return nil
@@ -39,19 +26,6 @@ func ToDomainCommunityPostList(items []models.CommunityPost) []*domain.Community
 	return posts
 }
 
-func ToDomainCommunityComment(model *models.CommunityComment) *domain.CommunityComment {
-	if model == nil {
-		return nil
-	}
-	return &domain.CommunityComment{
-		ID:        model.ID,
-		PostID:    model.PostID,
-		UserID:    model.UserID,
-		Content:   model.Content,
-		CreatedAt: model.CreatedAt,
-	}
-}
-
 func FromDomainCommunityComment(comment *domain.CommunityComment) *models.CommunityComment {
 	if comment == nil {
 		return nil
@@ -71,4 +45,32 @@ func ToDomainCommunityCommentList(items []models.CommunityComment) []*domain.Com
 		comments[i] = ToDomainCommunityComment(&item)
 	}
 	return comments
+}
+
+func ToDomainCommunityPost(model *models.CommunityPost) *domain.CommunityPost {
+	if model == nil {
+		return nil
+	}
+	return &domain.CommunityPost{
+		ID:        model.ID,
+		ChannelID: model.ChannelID,
+		UserID:    model.UserID,
+		Username:  model.User.Username, // ДОБАВЛЕНО
+		Content:   model.Content,
+		CreatedAt: model.CreatedAt,
+	}
+}
+
+func ToDomainCommunityComment(model *models.CommunityComment) *domain.CommunityComment {
+	if model == nil {
+		return nil
+	}
+	return &domain.CommunityComment{
+		ID:        model.ID,
+		PostID:    model.PostID,
+		UserID:    model.UserID,
+		Username:  model.User.Username, // ДОБАВЛЕНО
+		Content:   model.Content,
+		CreatedAt: model.CreatedAt,
+	}
 }

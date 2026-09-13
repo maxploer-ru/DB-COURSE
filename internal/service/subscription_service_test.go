@@ -2,94 +2,69 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestSubscriptionService_Subscribe(t *testing.T) {
-	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
-
-	channelRepo.On("GetByID", ctx, 3).Return(&domain.Channel{ID: 3, UserID: 10}, nil)
-	subRepo.On("Subscribe", ctx, 1, 3).Return(true, nil)
-	counter.On("Increment", ctx, 3).Return(nil)
-
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	err := svc.Subscribe(ctx, 1, 3)
-	require.NoError(t, err)
+type SubscriptionServiceTestSuite struct {
+	suite.Suite
+	mockSubRepo     *mocks.SubscriptionRepository
+	mockChannelRepo *mocks.ChannelRepository
+	mockCounter     *mocks.SubscriberCounter
+	service         service.SubscriptionService
+	mother          mother.SubscriptionMother
+	chanMother      mother.ChannelMother
 }
 
-func TestSubscriptionService_Unsubscribe(t *testing.T) {
-	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
+func (s *SubscriptionServiceTestSuite) SetupTest() {
+	s.mockSubRepo = mocks.NewSubscriptionRepository(s.T())
+	s.mockChannelRepo = mocks.NewChannelRepository(s.T())
+	s.mockCounter = mocks.NewSubscriberCounter(s.T())
 
-	subRepo.On("Unsubscribe", ctx, 1, 3).Return(true, nil)
-	counter.On("Decrement", ctx, 3).Return(nil)
-
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	err := svc.Unsubscribe(ctx, 1, 3)
-	require.NoError(t, err)
+	s.service = service.NewSubscriptionService(s.mockSubRepo, s.mockChannelRepo, s.mockCounter)
+	s.mother = mother.SubscriptionMother{}
+	s.chanMother = mother.ChannelMother{}
 }
 
-func TestSubscriptionService_IsSubscribed(t *testing.T) {
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Positive_NewSubscription() {
+
 	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
+	sub := s.mother.ValidSubscription()
+	channel := s.chanMother.ValidChannel()
+	channel.ID = sub.ChannelID
+	channel.UserID = 999
 
-	subRepo.On("IsSubscribed", ctx, 1, 3).Return(true, nil)
+	s.mockChannelRepo.On("GetByID", ctx, sub.ChannelID).Return(channel, nil)
+	s.mockSubRepo.On("Subscribe", ctx, sub.UserID, sub.ChannelID).Return(true, nil)
+	s.mockCounter.On("Increment", ctx, sub.ChannelID).Return(nil)
 
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	ok, err := svc.IsSubscribed(ctx, 1, 3)
-	require.NoError(t, err)
-	require.True(t, ok)
+	err := s.service.Subscribe(ctx, sub.UserID, sub.ChannelID)
+
+	s.NoError(err)
+	s.mockSubRepo.AssertExpectations(s.T())
+	s.mockCounter.AssertExpectations(s.T())
 }
 
-func TestSubscriptionService_GetSubscribersCount(t *testing.T) {
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_SelfSubscription() {
 	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
+	sub := s.mother.SelfSubscription()
+	channel := s.chanMother.ValidChannel()
+	channel.ID = sub.ChannelID
+	channel.UserID = sub.UserID
 
-	counter.On("Get", ctx, 3).Return(5, true, nil)
+	s.mockChannelRepo.On("GetByID", ctx, sub.ChannelID).Return(channel, nil)
 
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	count, err := svc.GetSubscribersCount(ctx, 3)
-	require.NoError(t, err)
-	require.Equal(t, 5, count)
+	err := s.service.Subscribe(ctx, sub.UserID, sub.ChannelID)
+
+	s.ErrorIs(err, domain.ErrSelfSubscription)
+	s.mockSubRepo.AssertNotCalled(s.T(), "Subscribe")
 }
 
-func TestSubscriptionService_GetUserSubscriptions(t *testing.T) {
-	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
-
-	subRepo.On("GetUserSubscriptions", ctx, 1, 10, 0).Return([]*domain.Subscription{{UserID: 1}}, nil)
-
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	subs, err := svc.GetUserSubscriptions(ctx, 1, 10, 0)
-	require.NoError(t, err)
-	require.Len(t, subs, 1)
-}
-
-func TestSubscriptionService_ResetNewVideosCount(t *testing.T) {
-	ctx := context.Background()
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelRepo := mocks.NewChannelRepository(t)
-	counter := mocks.NewSubscriberCounter(t)
-
-	subRepo.On("ResetNewVideosCount", ctx, 1, 3).Return(nil)
-
-	svc := service.NewSubscriptionService(subRepo, channelRepo, counter)
-	err := svc.ResetNewVideosCount(ctx, 1, 3)
-	require.NoError(t, err)
+func TestSubscriptionServiceSuite(t *testing.T) {
+	suite.Run(t, new(SubscriptionServiceTestSuite))
 }

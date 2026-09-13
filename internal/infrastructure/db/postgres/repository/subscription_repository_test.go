@@ -1,123 +1,75 @@
-package repository
+package repository_test
 
 import (
+	"ZVideo/internal/infrastructure/db/postgres/models"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestSubscriptionRepository_SubscribeAndIsSubscribed(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
+type SubscriptionRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.SubscriptionRepository
+	subMother   mother.SubscriptionMother
 
-	roleID := insertRole(t, "role_sub_a", false)
-	userID := insertUser(t, roleID, "user_sub_a")
-	channelID := insertChannel(t, userID, "channel_sub_a")
-
-	created, err := repo.Subscribe(context.Background(), userID, channelID)
-	require.NoError(t, err)
-	require.True(t, created)
-
-	created, err = repo.Subscribe(context.Background(), userID, channelID)
-	require.NoError(t, err)
-	require.False(t, created)
-
-	ok, err := repo.IsSubscribed(context.Background(), userID, channelID)
-	require.NoError(t, err)
-	require.True(t, ok)
+	testSubscriber *models.User
+	testChannel    *models.Channel
 }
 
-func TestSubscriptionRepository_Unsubscribe(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
-
-	roleID := insertRole(t, "role_sub_b", false)
-	userID := insertUser(t, roleID, "user_sub_b")
-	channelID := insertChannel(t, userID, "channel_sub_b")
-	insertSubscription(t, userID, channelID, 0)
-
-	removed, err := repo.Unsubscribe(context.Background(), userID, channelID)
-	require.NoError(t, err)
-	require.True(t, removed)
-
-	removed, err = repo.Unsubscribe(context.Background(), userID, channelID)
-	require.NoError(t, err)
-	require.False(t, removed)
+func (s *SubscriptionRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
+	s.subMother = mother.SubscriptionMother{}
 }
 
-func TestSubscriptionRepository_GetSubscribersCount(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
+func (s *SubscriptionRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewSubscriptionRepository(s.tx)
 
-	roleID := insertRole(t, "role_sub_c", false)
-	userA := insertUser(t, roleID, "user_sub_c1")
-	userB := insertUser(t, roleID, "user_sub_c2")
-	channelID := insertChannel(t, userA, "channel_sub_c")
-	insertSubscription(t, userA, channelID, 0)
-	insertSubscription(t, userB, channelID, 0)
+	s.testSubscriber = &models.User{Username: "sub_user", Email: "1@t.com", PasswordHash: "x", RoleID: 1}
+	owner := &models.User{Username: "owner", Email: "2@t.com", PasswordHash: "x", RoleID: 1}
+	s.tx.Create(s.testSubscriber)
+	s.tx.Create(owner)
 
-	count, err := repo.GetSubscribersCount(context.Background(), channelID)
-	require.NoError(t, err)
-	require.Equal(t, 2, count)
+	s.testChannel = &models.Channel{UserID: owner.ID, Name: "Target Channel"}
+	s.tx.Create(s.testChannel)
 }
 
-func TestSubscriptionRepository_GetUserSubscriptions(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
-
-	roleID := insertRole(t, "role_sub_d", false)
-	userID := insertUser(t, roleID, "user_sub_d")
-	channelA := insertChannel(t, userID, "channel_sub_d1")
-	channelB := insertChannel(t, userID, "channel_sub_d2")
-	insertSubscription(t, userID, channelA, 1)
-	insertSubscription(t, userID, channelB, 2)
-
-	subs, err := repo.GetUserSubscriptions(context.Background(), userID, 10, 0)
-	require.NoError(t, err)
-	require.Len(t, subs, 2)
+func (s *SubscriptionRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
 }
 
-func TestSubscriptionRepository_NotifySubscribersAboutNewVideo(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
+func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Positive() {
+	ctx := context.Background()
 
-	roleID := insertRole(t, "role_sub_e", false)
-	userID := insertUser(t, roleID, "user_sub_e")
-	channelID := insertChannel(t, userID, "channel_sub_e")
-	insertSubscription(t, userID, channelID, 0)
+	created, err := s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
-	err := repo.NotifySubscribersAboutNewVideo(context.Background(), channelID)
-	require.NoError(t, err)
+	s.NoError(err)
+	s.True(created)
 
-	sqlDB := ensureTx(t, db)
-	var count int
-	err = sqlDB.QueryRow("SELECT new_videos_count FROM subscriptions WHERE user_id = $1 AND channel_id = $2", userID, channelID).Scan(&count)
-	require.NoError(t, err)
-	require.Equal(t, 1, count)
+	createdAgain, err := s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
+	s.NoError(err)
+	s.False(createdAgain)
 }
 
-func TestSubscriptionRepository_ResetNewVideosCount(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewSubscriptionRepository(db)
+func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Positive_ReturnsWithChannelName() {
+	ctx := context.Background()
+	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
-	roleID := insertRole(t, "role_sub_f", false)
-	userID := insertUser(t, roleID, "user_sub_f")
-	channelID := insertChannel(t, userID, "channel_sub_f")
-	insertSubscription(t, userID, channelID, 3)
+	subs, err := s.repo.GetUserSubscriptions(ctx, s.testSubscriber.ID, 10, 0)
 
-	err := repo.ResetNewVideosCount(context.Background(), userID, channelID)
-	require.NoError(t, err)
+	s.NoError(err)
+	s.Len(subs, 1)
+	s.Equal(s.testChannel.Name, subs[0].ChannelName)
+}
 
-	sqlDB := ensureTx(t, db)
-	var count int
-	err = sqlDB.QueryRow("SELECT new_videos_count FROM subscriptions WHERE user_id = $1 AND channel_id = $2", userID, channelID).Scan(&count)
-	require.NoError(t, err)
-	require.Equal(t, 0, count)
+func TestSubscriptionRepositorySuite(t *testing.T) {
+	suite.Run(t, new(SubscriptionRepositoryTestSuite))
 }

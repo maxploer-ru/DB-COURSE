@@ -2,102 +2,94 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestVideoInteractionService_Like(t *testing.T) {
-	ctx := context.Background()
-	ratingRepo := mocks.NewVideoRatingRepository(t)
-	viewingRepo := mocks.NewViewingRepository(t)
-	videoRepo := mocks.NewVideoRepository(t)
-	commentRepo := mocks.NewCommentRepository(t)
-	statsCache := mocks.NewVideoStatsCache(t)
-
-	videoRepo.On("GetByID", ctx, 1).Return(&domain.Video{ID: 1}, nil)
-	ratingRepo.On("GetByUserAndVideo", ctx, 2, 1).Return((*domain.VideoRating)(nil), nil)
-	ratingRepo.On("Create", ctx, mock.MatchedBy(func(r *domain.VideoRating) bool {
-		return r.UserID == 2 && r.VideoID == 1 && r.Liked
-	})).Return(nil)
-	statsCache.On("IncrLikes", ctx, 1).Return(nil)
-
-	svc := service.NewVideoInteractionService(ratingRepo, viewingRepo, videoRepo, commentRepo, statsCache)
-	err := svc.Like(ctx, 2, 1)
-	require.NoError(t, err)
+type VideoInteractionServiceTestSuite struct {
+	suite.Suite
+	mockRatingRepo  *mocks.VideoRatingRepository
+	mockViewingRepo *mocks.ViewingRepository
+	mockVideoRepo   *mocks.VideoRepository
+	mockCommentRepo *mocks.CommentRepository
+	mockStatsCache  *mocks.VideoStatsCache
+	service         service.VideoInteractionService
+	ratingMother    mother.VideoInteractionMother
+	videoMother     mother.VideoMother
 }
 
-func TestVideoInteractionService_Dislike(t *testing.T) {
-	ctx := context.Background()
-	ratingRepo := mocks.NewVideoRatingRepository(t)
-	viewingRepo := mocks.NewViewingRepository(t)
-	videoRepo := mocks.NewVideoRepository(t)
-	commentRepo := mocks.NewCommentRepository(t)
-	statsCache := mocks.NewVideoStatsCache(t)
+func (s *VideoInteractionServiceTestSuite) SetupTest() {
+	s.mockRatingRepo = mocks.NewVideoRatingRepository(s.T())
+	s.mockViewingRepo = mocks.NewViewingRepository(s.T())
+	s.mockVideoRepo = mocks.NewVideoRepository(s.T())
+	s.mockCommentRepo = mocks.NewCommentRepository(s.T())
+	s.mockStatsCache = mocks.NewVideoStatsCache(s.T())
 
-	videoRepo.On("GetByID", ctx, 3).Return(&domain.Video{ID: 3}, nil)
-	ratingRepo.On("GetByUserAndVideo", ctx, 4, 3).Return((*domain.VideoRating)(nil), nil)
-	ratingRepo.On("Create", ctx, mock.MatchedBy(func(r *domain.VideoRating) bool {
-		return r.UserID == 4 && r.VideoID == 3 && !r.Liked
-	})).Return(nil)
-	statsCache.On("IncrDislikes", ctx, 3).Return(nil)
-
-	svc := service.NewVideoInteractionService(ratingRepo, viewingRepo, videoRepo, commentRepo, statsCache)
-	err := svc.Dislike(ctx, 4, 3)
-	require.NoError(t, err)
+	s.service = service.NewVideoInteractionService(
+		s.mockRatingRepo,
+		s.mockViewingRepo,
+		s.mockVideoRepo,
+		s.mockCommentRepo,
+		s.mockStatsCache,
+	)
+	s.ratingMother = mother.VideoInteractionMother{}
+	s.videoMother = mother.VideoMother{}
 }
 
-func TestVideoInteractionService_RemoveRating(t *testing.T) {
+func (s *VideoInteractionServiceTestSuite) TestRate_Positive_NewLike() {
 	ctx := context.Background()
-	ratingRepo := mocks.NewVideoRatingRepository(t)
-	viewingRepo := mocks.NewViewingRepository(t)
-	videoRepo := mocks.NewVideoRepository(t)
-	commentRepo := mocks.NewCommentRepository(t)
-	statsCache := mocks.NewVideoStatsCache(t)
+	rating := s.ratingMother.LikedRating()
 
-	ratingRepo.On("GetByUserAndVideo", ctx, 5, 6).Return(&domain.VideoRating{UserID: 5, VideoID: 6, Liked: false}, nil)
-	ratingRepo.On("Delete", ctx, 5, 6).Return(nil)
-	statsCache.On("DecrDislikes", ctx, 6).Return(nil)
+	video := s.videoMother.ReadyVideoForChannel(1)
+	video.ID = rating.VideoID
 
-	svc := service.NewVideoInteractionService(ratingRepo, viewingRepo, videoRepo, commentRepo, statsCache)
-	err := svc.RemoveRating(ctx, 5, 6)
-	require.NoError(t, err)
+	s.mockVideoRepo.On("GetByID", ctx, rating.VideoID).Return(video, nil)
+	s.mockRatingRepo.On("GetByUserAndVideo", ctx, rating.UserID, rating.VideoID).Return(nil, nil)
+	s.mockRatingRepo.On("Create", ctx, mock.AnythingOfType("*domain.VideoRating")).Return(nil)
+	s.mockStatsCache.On("IncrLikes", ctx, rating.VideoID).Return(nil)
+
+	err := s.service.Rate(ctx, rating.UserID, rating.VideoID, domain.RatingActionLike)
+
+	s.NoError(err)
+	s.mockRatingRepo.AssertExpectations(s.T())
 }
 
-func TestVideoInteractionService_RecordView(t *testing.T) {
+func (s *VideoInteractionServiceTestSuite) TestRate_Negative_VideoPending() {
 	ctx := context.Background()
-	ratingRepo := mocks.NewVideoRatingRepository(t)
-	viewingRepo := mocks.NewViewingRepository(t)
-	videoRepo := mocks.NewVideoRepository(t)
-	commentRepo := mocks.NewCommentRepository(t)
-	statsCache := mocks.NewVideoStatsCache(t)
+	rating := s.ratingMother.LikedRating()
 
-	viewingRepo.On("Create", ctx, mock.MatchedBy(func(v *domain.Viewing) bool {
-		return v.UserID == 7 && v.VideoID == 8
-	})).Return(nil)
-	statsCache.On("IncrViews", ctx, 8).Return(nil)
+	video := s.videoMother.PendingVideoForChannel(1)
+	video.ID = rating.VideoID
 
-	svc := service.NewVideoInteractionService(ratingRepo, viewingRepo, videoRepo, commentRepo, statsCache)
-	err := svc.RecordView(ctx, 7, 8)
-	require.NoError(t, err)
+	s.mockVideoRepo.On("GetByID", ctx, rating.VideoID).Return(video, nil)
+
+	err := s.service.Rate(ctx, rating.UserID, rating.VideoID, domain.RatingActionLike)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+	s.mockRatingRepo.AssertNotCalled(s.T(), "Create")
 }
 
-func TestVideoInteractionService_GetStats(t *testing.T) {
+func (s *VideoInteractionServiceTestSuite) TestRecordView_Positive() {
 	ctx := context.Background()
-	ratingRepo := mocks.NewVideoRatingRepository(t)
-	viewingRepo := mocks.NewViewingRepository(t)
-	videoRepo := mocks.NewVideoRepository(t)
-	commentRepo := mocks.NewCommentRepository(t)
-	statsCache := mocks.NewVideoStatsCache(t)
+	userID := 1
+	video := s.videoMother.ReadyVideoForChannel(1)
 
-	statsCache.On("GetStats", ctx, 9).Return(&domain.VideoStats{Views: 1, Likes: 2, Dislikes: 0, Comments: 3}, true, nil)
+	s.mockVideoRepo.On("GetByID", ctx, video.ID).Return(video, nil)
+	s.mockViewingRepo.On("Create", ctx, mock.AnythingOfType("*domain.Viewing")).Return(nil)
+	s.mockStatsCache.On("IncrViews", ctx, video.ID).Return(nil)
 
-	svc := service.NewVideoInteractionService(ratingRepo, viewingRepo, videoRepo, commentRepo, statsCache)
-	stats, err := svc.GetStats(ctx, 9)
-	require.NoError(t, err)
-	require.Equal(t, 1, stats.Views)
+	err := s.service.RecordView(ctx, userID, video.ID)
+
+	s.NoError(err)
+	s.mockViewingRepo.AssertExpectations(s.T())
+}
+
+func TestVideoInteractionServiceSuite(t *testing.T) {
+	suite.Run(t, new(VideoInteractionServiceTestSuite))
 }

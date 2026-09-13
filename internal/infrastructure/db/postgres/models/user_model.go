@@ -3,7 +3,7 @@ package models
 import "time"
 
 type User struct {
-	ID                   int       `gorm:"type:serial;primary_key'"`
+	ID                   int       `gorm:"type:serial;primaryKey"`
 	RoleID               int       `gorm:"not null"`
 	Username             string    `gorm:"type:varchar(32);unique;not null"`
 	Email                string    `gorm:"type:varchar(64);unique;not null"`
@@ -13,13 +13,13 @@ type User struct {
 	CreatedAt            time.Time `gorm:"not null;autoCreateTime"`
 	UpdatedAt            time.Time `gorm:"not null;autoUpdateTime"`
 
-	Role Role `gorm:"foreignkey:RoleID"`
+	Role Role `gorm:"foreignKey:RoleID"`
 
-	Channels     []Channel `gorm:"foreignkey:UserID"`
-	WatchHistory []Viewing `gorm:"foreignkey:UserID"`
-	Comments     []Comment `gorm:"foreignkey:UserID"`
+	Channels     []Channel `gorm:"foreignKey:UserID"`
+	WatchHistory []Viewing `gorm:"foreignKey:UserID"`
+	Comments     []Comment `gorm:"foreignKey:UserID"`
 
-	UserChannelSubscriptions []Subscription  `gorm:"foreignkey:UserID"`
-	UserVideoRatings         []VideoRating   `gorm:"foreignkey:UserID"`
-	UserCommentRatings       []CommentRating `gorm:"foreignkey:UserID"`
+	UserChannelSubscriptions []Subscription  `gorm:"foreignKey:UserID"`
+	UserVideoRatings         []VideoRating   `gorm:"foreignKey:UserID"`
+	UserCommentRatings       []CommentRating `gorm:"foreignKey:UserID"`
 }

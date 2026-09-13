@@ -22,12 +22,16 @@ func NewChannelRepository(db *gorm.DB) *ChannelRepository {
 
 func (r *ChannelRepository) Create(ctx context.Context, channel *domain.Channel) error {
 	model := mappers.FromDomainChannel(channel)
-	return r.db.WithContext(ctx).Create(model).Error
+	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
+		return err
+	}
+	channel.ID = model.ID
+	return nil
 }
 
 func (r *ChannelRepository) GetByID(ctx context.Context, id int) (*domain.Channel, error) {
 	var model models.Channel
-	err := r.db.WithContext(ctx).First(&model, id).Error
+	err := r.db.WithContext(ctx).Preload("User").First(&model, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -40,6 +44,7 @@ func (r *ChannelRepository) GetByID(ctx context.Context, id int) (*domain.Channe
 func (r *ChannelRepository) GetByUserID(ctx context.Context, userID int) (*domain.Channel, error) {
 	var model models.Channel
 	err := r.db.WithContext(ctx).
+		Preload("User").
 		Where("user_id = ?", userID).
 		First(&model).Error
 	if err != nil {
@@ -52,15 +57,15 @@ func (r *ChannelRepository) GetByUserID(ctx context.Context, userID int) (*domai
 }
 
 func (r *ChannelRepository) GetByName(ctx context.Context, name string) (*domain.Channel, error) {
-	var channel models.Channel
-	err := r.db.WithContext(ctx).Where("name = ?", name).First(&channel).Error
+	var model models.Channel
+	err := r.db.WithContext(ctx).Preload("User").Where("name = ?", name).First(&model).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return mappers.ToDomainChannel(&channel), nil
+	return mappers.ToDomainChannel(&model), nil
 }
 
 func (r *ChannelRepository) Update(ctx context.Context, channel *domain.Channel) error {
@@ -75,4 +80,18 @@ func (r *ChannelRepository) ExistsByName(ctx context.Context, name string) (bool
 	var count int64
 	err := r.db.WithContext(ctx).Model(&models.Channel{}).Where("name = ?", name).Count(&count).Error
 	return count > 0, err
+}
+
+func (r *ChannelRepository) ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error) {
+	var dbModels []*models.Channel
+	err := r.db.WithContext(ctx).
+		Preload("User").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&dbModels).Error
+	if err != nil {
+		return nil, err
+	}
+	return mappers.ToDomainChannelList(dbModels), nil
 }

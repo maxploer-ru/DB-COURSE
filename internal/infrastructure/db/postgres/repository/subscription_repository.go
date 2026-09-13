@@ -76,6 +76,7 @@ func (r *SubscriptionRepository) GetUserSubscriptions(ctx context.Context, userI
 		Order("subscribed_at DESC").
 		Limit(limit).
 		Offset(offset).
+		Preload("Channel").
 		Find(&subs).Error
 	if err != nil {
 		return nil, err

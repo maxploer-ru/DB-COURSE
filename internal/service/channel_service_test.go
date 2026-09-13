@@ -2,133 +2,240 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestChannelService_CreateChannel(t *testing.T) {
-	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
-
-	channelRepo.On("GetByUserID", ctx, 1).Return((*domain.Channel)(nil), nil)
-	channelRepo.On("ExistsByName", ctx, "name").Return(false, nil)
-	channelRepo.On("Create", ctx, mock.MatchedBy(func(ch *domain.Channel) bool {
-		return ch.UserID == 1 && ch.Name == "name"
-	})).Return(nil)
-
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ch, err := svc.CreateChannel(ctx, 1, "name", "desc")
-	require.NoError(t, err)
-	require.Equal(t, 1, ch.UserID)
-	channelRepo.AssertExpectations(t)
+type ChannelServiceTestSuite struct {
+	suite.Suite
+	mockRepo *mocks.ChannelRepository
+	service  service.ChannelService
+	mother   mother.ChannelMother
 }
 
-func TestChannelService_GetChannel(t *testing.T) {
-	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
-
-	channelRepo.On("GetByID", ctx, 2).Return(&domain.Channel{ID: 2}, nil)
-
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ch, err := svc.GetChannel(ctx, 2)
-	require.NoError(t, err)
-	require.Equal(t, 2, ch.ID)
+func (s *ChannelServiceTestSuite) SetupTest() {
+	s.mockRepo = mocks.NewChannelRepository(s.T())
+	s.service = service.NewChannelService(s.mockRepo)
+	s.mother = mother.ChannelMother{}
 }
 
-func TestChannelService_GetChannelByName(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestCreateChannel_Positive() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	userID := 1
+	name := "new_channel"
+	desc := "desc"
 
-	channelRepo.On("GetByName", ctx, "n").Return(&domain.Channel{ID: 3, Name: "n"}, nil)
+	s.mockRepo.On("GetByUserID", ctx, userID).Return(nil, nil)
+	s.mockRepo.On("ExistsByName", ctx, name).Return(false, nil)
+	s.mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Channel")).Return(nil)
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ch, err := svc.GetChannelByName(ctx, "n")
-	require.NoError(t, err)
-	require.Equal(t, "n", ch.Name)
+	ch, err := s.service.CreateChannel(ctx, userID, name, desc)
+
+	s.NoError(err)
+	s.NotNil(ch)
+	s.Equal(name, ch.Name)
+	s.mockRepo.AssertExpectations(s.T())
 }
 
-func TestChannelService_GetChannelByUserID(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestCreateChannel_Negative() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	existingChannel := s.mother.ValidChannel()
 
-	channelRepo.On("GetByUserID", ctx, 10).Return(&domain.Channel{ID: 4, UserID: 10}, nil)
+	s.mockRepo.On("GetByUserID", ctx, existingChannel.UserID).Return(existingChannel, nil)
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ch, err := svc.GetChannelByUserID(ctx, 10)
-	require.NoError(t, err)
-	require.Equal(t, 10, ch.UserID)
+	ch, err := s.service.CreateChannel(ctx, existingChannel.UserID, "name", "desc")
+
+	s.ErrorIs(err, domain.ErrChannelAlreadyExists)
+	s.Nil(ch)
 }
 
-func TestChannelService_UpdateChannel(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestGetChannel_Positive() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	expected := s.mother.ValidChannel()
+	s.mockRepo.On("GetByID", ctx, expected.ID).Return(expected, nil)
 
-	name := "new"
-	ch := &domain.Channel{ID: 5, UserID: 11, Name: "old"}
-	channelRepo.On("GetByID", ctx, 5).Return(ch, nil)
-	channelRepo.On("ExistsByName", ctx, "new").Return(false, nil)
-	channelRepo.On("Update", ctx, ch).Return(nil)
+	ch, err := s.service.GetChannel(ctx, expected.ID)
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	updated, err := svc.UpdateChannel(ctx, 5, 11, &name, nil)
-	require.NoError(t, err)
-	require.Equal(t, "new", updated.Name)
+	s.NoError(err)
+	s.Equal(expected.ID, ch.ID)
 }
 
-func TestChannelService_DeleteChannel(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestGetChannel_Negative() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	s.mockRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
-	channelRepo.On("GetByID", ctx, 6).Return(&domain.Channel{ID: 6, UserID: 1}, nil)
-	videoRepo.On("ListFilepathsByChannel", ctx, 6).Return([]string{}, nil)
-	channelRepo.On("Delete", ctx, 6).Return(nil)
+	ch, err := s.service.GetChannel(ctx, 999)
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	err := svc.DeleteChannel(ctx, 6, 1)
-	require.NoError(t, err)
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(ch)
 }
 
-func TestChannelService_Exists(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestGetChannelByName_Positive() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	expected := s.mother.ValidChannel()
+	s.mockRepo.On("GetByName", ctx, expected.Name).Return(expected, nil)
 
-	channelRepo.On("GetByID", ctx, 7).Return(&domain.Channel{ID: 7}, nil)
+	ch, err := s.service.GetChannelByName(ctx, expected.Name)
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ok, err := svc.Exists(ctx, 7)
-	require.NoError(t, err)
-	require.True(t, ok)
+	s.NoError(err)
+	s.Equal(expected.Name, ch.Name)
 }
 
-func TestChannelService_IsOwner(t *testing.T) {
+func (s *ChannelServiceTestSuite) TestGetChannelByName_Negative() {
 	ctx := context.Background()
-	channelRepo := mocks.NewChannelRepository(t)
-	videoRepo := mocks.NewChannelVideoFilepathRepository(t)
-	storageSvc := mocks.NewStorageService(t)
+	s.mockRepo.On("GetByName", ctx, "unknown").Return(nil, nil)
 
-	channelRepo.On("GetByID", ctx, 8).Return(&domain.Channel{ID: 8, UserID: 2}, nil)
+	ch, err := s.service.GetChannelByName(ctx, "unknown")
 
-	svc := service.NewChannelService(channelRepo, videoRepo, storageSvc)
-	ok, err := svc.IsOwner(ctx, 8, 2)
-	require.NoError(t, err)
-	require.True(t, ok)
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(ch)
+}
+
+func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Positive() {
+	ctx := context.Background()
+	expected := s.mother.ValidChannel()
+	s.mockRepo.On("GetByUserID", ctx, expected.UserID).Return(expected, nil)
+
+	ch, err := s.service.GetChannelByUserID(ctx, expected.UserID)
+
+	s.NoError(err)
+	s.Equal(expected.UserID, ch.UserID)
+}
+
+func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Negative() {
+	ctx := context.Background()
+	s.mockRepo.On("GetByUserID", ctx, 999).Return(nil, nil)
+
+	ch, err := s.service.GetChannelByUserID(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(ch)
+}
+
+func (s *ChannelServiceTestSuite) TestUpdateChannel_Positive() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	newName := "updated_name"
+
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+	s.mockRepo.On("ExistsByName", ctx, newName).Return(false, nil)
+	s.mockRepo.On("Update", ctx, existing).Return(nil)
+
+	ch, err := s.service.UpdateChannel(ctx, existing.ID, existing.UserID, &newName, nil)
+
+	s.NoError(err)
+	s.Equal(newName, ch.Name)
+}
+
+func (s *ChannelServiceTestSuite) TestUpdateChannel_Negative() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	wrongUserID := 999
+	newName := "updated_name"
+
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	ch, err := s.service.UpdateChannel(ctx, existing.ID, wrongUserID, &newName, nil)
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(ch)
+}
+
+func (s *ChannelServiceTestSuite) TestDeleteChannel_Positive() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+	s.mockRepo.On("Delete", ctx, existing.ID).Return(nil)
+
+	err := s.service.DeleteChannel(ctx, existing.ID, existing.UserID)
+
+	s.NoError(err)
+}
+
+func (s *ChannelServiceTestSuite) TestDeleteChannel_Negative() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	wrongUserID := 999
+
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	err := s.service.DeleteChannel(ctx, existing.ID, wrongUserID)
+
+	s.ErrorIs(err, domain.ErrForbidden)
+}
+
+func (s *ChannelServiceTestSuite) TestExists_Positive() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	exists, err := s.service.Exists(ctx, existing.ID)
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *ChannelServiceTestSuite) TestExists_Negative() {
+	ctx := context.Background()
+	s.mockRepo.On("GetByID", ctx, 999).Return(nil, nil)
+
+	exists, err := s.service.Exists(ctx, 999)
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *ChannelServiceTestSuite) TestIsOwner_Positive() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	isOwner, err := s.service.IsOwner(ctx, existing.ID, existing.UserID)
+
+	s.NoError(err)
+	s.True(isOwner)
+}
+
+func (s *ChannelServiceTestSuite) TestIsOwner_Negative() {
+	ctx := context.Background()
+	existing := s.mother.ValidChannel()
+	wrongUserID := 999
+	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	isOwner, err := s.service.IsOwner(ctx, existing.ID, wrongUserID)
+
+	s.NoError(err)
+	s.False(isOwner)
+}
+
+func (s *ChannelServiceTestSuite) TestListChannels_Positive() {
+	ctx := context.Background()
+	expected := []*domain.Channel{s.mother.ValidChannel()}
+	s.mockRepo.On("ListChannels", ctx, 10, 0).Return(expected, nil)
+
+	channels, err := s.service.ListChannels(ctx, 10, 0)
+
+	s.NoError(err)
+	s.Len(channels, 1)
+}
+
+func (s *ChannelServiceTestSuite) TestListChannels_Negative() {
+	ctx := context.Background()
+	s.mockRepo.On("ListChannels", ctx, 10, 0).Return(nil, domain.ErrInternalServer)
+
+	channels, err := s.service.ListChannels(ctx, 10, 0)
+
+	s.ErrorIs(err, domain.ErrInternalServer)
+	s.Nil(channels)
+}
+
+func TestChannelServiceSuite(t *testing.T) {
+	suite.Run(t, new(ChannelServiceTestSuite))
 }

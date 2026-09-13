@@ -24,11 +24,14 @@ func commentKey(commentID int) string {
 }
 
 func (c *CommentStatsCache) incrField(ctx context.Context, commentID int, field string) error {
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := commentKey(commentID)
 	pipe := c.client.Pipeline()
-	pipe.HIncrBy(ctx, key, field, 1)
-	pipe.Expire(ctx, key, commentStatsTTL)
-	_, err := pipe.Exec(ctx)
+	pipe.HIncrBy(redisCtx, key, field, 1)
+	pipe.Expire(redisCtx, key, commentStatsTTL)
+	_, err := pipe.Exec(redisCtx)
 	return err
 }
 
@@ -90,7 +93,7 @@ func (c *CommentStatsCache) SetStats(ctx context.Context, commentID int, likes, 
 		"likes":    likes,
 		"dislikes": dislikes,
 	})
-	pipe.Expire(ctx, key, commentStatsTTL)
-	_, err := pipe.Exec(ctx)
+	pipe.Expire(redisCtx, key, commentStatsTTL)
+	_, err := pipe.Exec(redisCtx)
 	return err
 }

@@ -9,11 +9,10 @@ import (
 )
 
 type VideoInteractionService interface {
-	Like(ctx context.Context, userID, videoID int) error
-	Dislike(ctx context.Context, userID, videoID int) error
-	RemoveRating(ctx context.Context, userID, videoID int) error
+	Rate(ctx context.Context, userID, videoID int, action domain.RatingAction) error
 	RecordView(ctx context.Context, userID, videoID int) error
-	GetStats(ctx context.Context, videoID int) (stats *domain.VideoStats, err error)
+	GetStats(ctx context.Context, videoID int) (*domain.VideoStats, error)
+	GetStatsBatch(ctx context.Context, videoIDs []int) (map[int]*domain.VideoStats, error)
 }
 
 type videoInteractionService struct {
@@ -40,150 +39,87 @@ func NewVideoInteractionService(
 	}
 }
 
-func (s *videoInteractionService) Like(ctx context.Context, userID, videoID int) error {
+func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int, action domain.RatingAction) error {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoInteractionService"),
-		slog.String("operation", "Like"),
+		slog.String("operation", "Rate"),
 		slog.Int("user_id", userID),
 		slog.Int("video_id", videoID),
+		slog.String("action", string(action)),
 	)
 
-	logger.DebugContext(ctx, "Checking video existence")
 	video, err := s.videoRepo.GetByID(ctx, videoID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to get video", slog.String("error", err.Error()))
 		return err
 	}
-	if video == nil {
-		logger.WarnContext(ctx, "Video not found")
+	if video == nil || video.Status != domain.VideoStatusReady {
 		return domain.ErrVideoNotFound
 	}
 
-	logger.DebugContext(ctx, "Checking existing rating")
 	existing, err := s.ratingRepo.GetByUserAndVideo(ctx, userID, videoID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
 		return err
 	}
-	if existing != nil {
+
+	if action == domain.RatingActionRemove {
+		if existing == nil {
+			return domain.ErrRatingNotFound
+		}
+		if err := s.ratingRepo.Delete(ctx, userID, videoID); err != nil {
+			logger.ErrorContext(ctx, "Failed to delete rating", slog.String("error", err.Error()))
+			return err
+		}
 		if existing.Liked {
-			logger.DebugContext(ctx, "Video already liked, no change")
-			return nil
+			_ = s.statsCache.DecrLikes(ctx, videoID)
+		} else {
+			_ = s.statsCache.DecrDislikes(ctx, videoID)
 		}
-		existing.Liked = true
-		logger.DebugContext(ctx, "Updating rating from dislike to like")
-		if err := s.ratingRepo.Update(ctx, existing); err != nil {
-			logger.ErrorContext(ctx, "Failed to update rating", slog.String("error", err.Error()))
-			return err
-		}
-		_ = s.statsCache.IncrLikes(ctx, videoID)
-		_ = s.statsCache.DecrDislikes(ctx, videoID)
-		logger.InfoContext(ctx, "Rating updated to like")
+		logger.InfoContext(ctx, "Rating removed")
 		return nil
 	}
 
-	rating := &domain.VideoRating{
-		UserID:  userID,
-		VideoID: videoID,
-		Liked:   true,
-	}
-	logger.DebugContext(ctx, "Creating new like rating")
-	if err := s.ratingRepo.Create(ctx, rating); err != nil {
-		logger.ErrorContext(ctx, "Failed to create rating", slog.String("error", err.Error()))
-		return err
-	}
-	_ = s.statsCache.IncrLikes(ctx, videoID)
-	logger.InfoContext(ctx, "Like rating created")
-	return nil
-}
+	isLike := action == domain.RatingActionLike
 
-func (s *videoInteractionService) Dislike(ctx context.Context, userID, videoID int) error {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "VideoInteractionService"),
-		slog.String("operation", "Dislike"),
-		slog.Int("user_id", userID),
-		slog.Int("video_id", videoID),
-	)
-
-	logger.DebugContext(ctx, "Checking video existence")
-	video, err := s.videoRepo.GetByID(ctx, videoID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get video", slog.String("error", err.Error()))
-		return err
-	}
-	if video == nil {
-		logger.WarnContext(ctx, "Video not found")
-		return domain.ErrVideoNotFound
-	}
-
-	logger.DebugContext(ctx, "Checking existing rating")
-	existing, err := s.ratingRepo.GetByUserAndVideo(ctx, userID, videoID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
-		return err
-	}
 	if existing != nil {
-		if !existing.Liked {
-			logger.DebugContext(ctx, "Video already disliked, no change")
+		if existing.Liked == isLike {
 			return nil
 		}
-		existing.Liked = false
-		logger.DebugContext(ctx, "Updating rating from like to dislike")
+
+		existing.Liked = isLike
 		if err := s.ratingRepo.Update(ctx, existing); err != nil {
 			logger.ErrorContext(ctx, "Failed to update rating", slog.String("error", err.Error()))
 			return err
 		}
-		_ = s.statsCache.IncrDislikes(ctx, videoID)
-		_ = s.statsCache.DecrLikes(ctx, videoID)
-		logger.InfoContext(ctx, "Rating updated to dislike")
+
+		if isLike {
+			_ = s.statsCache.IncrLikes(ctx, videoID)
+			_ = s.statsCache.DecrDislikes(ctx, videoID)
+		} else {
+			_ = s.statsCache.IncrDislikes(ctx, videoID)
+			_ = s.statsCache.DecrLikes(ctx, videoID)
+		}
+		logger.InfoContext(ctx, "Rating updated")
 		return nil
 	}
 
 	rating := &domain.VideoRating{
 		UserID:  userID,
 		VideoID: videoID,
-		Liked:   false,
+		Liked:   isLike,
 	}
-	logger.DebugContext(ctx, "Creating new dislike rating")
 	if err := s.ratingRepo.Create(ctx, rating); err != nil {
 		logger.ErrorContext(ctx, "Failed to create rating", slog.String("error", err.Error()))
 		return err
 	}
-	_ = s.statsCache.IncrDislikes(ctx, videoID)
-	logger.InfoContext(ctx, "Dislike rating created")
-	return nil
-}
 
-func (s *videoInteractionService) RemoveRating(ctx context.Context, userID, videoID int) error {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "VideoInteractionService"),
-		slog.String("operation", "RemoveRating"),
-		slog.Int("user_id", userID),
-		slog.Int("video_id", videoID),
-	)
-
-	logger.DebugContext(ctx, "Checking existing rating")
-	existing, err := s.ratingRepo.GetByUserAndVideo(ctx, userID, videoID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
-		return err
-	}
-	if existing == nil {
-		logger.WarnContext(ctx, "Rating not found")
-		return domain.ErrRatingNotFound
-	}
-
-	logger.DebugContext(ctx, "Deleting rating", slog.Bool("was_liked", existing.Liked))
-	if err := s.ratingRepo.Delete(ctx, userID, videoID); err != nil {
-		logger.ErrorContext(ctx, "Failed to delete rating", slog.String("error", err.Error()))
-		return err
-	}
-	if existing.Liked {
-		_ = s.statsCache.DecrLikes(ctx, videoID)
+	if isLike {
+		_ = s.statsCache.IncrLikes(ctx, videoID)
 	} else {
-		_ = s.statsCache.DecrDislikes(ctx, videoID)
+		_ = s.statsCache.IncrDislikes(ctx, videoID)
 	}
-	logger.InfoContext(ctx, "Rating removed")
+	logger.InfoContext(ctx, "Rating created")
 	return nil
 }
 
@@ -195,7 +131,15 @@ func (s *videoInteractionService) RecordView(ctx context.Context, userID, videoI
 		slog.Int("video_id", videoID),
 	)
 
-	logger.DebugContext(ctx, "Recording view")
+	video, err := s.videoRepo.GetByID(ctx, videoID)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get video", slog.String("error", err.Error()))
+		return err
+	}
+	if video == nil || video.Status != domain.VideoStatusReady {
+		return domain.ErrVideoNotFound
+	}
+
 	viewing := &domain.Viewing{
 		UserID:  userID,
 		VideoID: videoID,
@@ -204,54 +148,43 @@ func (s *videoInteractionService) RecordView(ctx context.Context, userID, videoI
 		logger.ErrorContext(ctx, "Failed to record view", slog.String("error", err.Error()))
 		return fmt.Errorf("record view failed: %w", err)
 	}
+
 	_ = s.statsCache.IncrViews(ctx, videoID)
-	logger.InfoContext(ctx, "View recorded")
 	return nil
 }
 
-func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (stats *domain.VideoStats, err error) {
+func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (*domain.VideoStats, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "VideoInteractionService"),
 		slog.String("operation", "GetStats"),
 		slog.Int("video_id", videoID),
 	)
 
-	logger.DebugContext(ctx, "Trying to get stats from cache")
 	stats, hit, cacheErr := s.statsCache.GetStats(ctx, videoID)
 	if cacheErr == nil && hit {
-		logger.DebugContext(ctx, "Stats retrieved from cache",
-			slog.Int("views", stats.Views),
-			slog.Int("likes", stats.Likes),
-			slog.Int("dislikes", stats.Dislikes),
-			slog.Int("comments", stats.Comments))
 		return stats, nil
 	}
 	if cacheErr != nil {
 		logger.WarnContext(ctx, "Cache error, falling back to DB", slog.String("error", cacheErr.Error()))
 	}
 
-	logger.DebugContext(ctx, "Fetching stats from database")
 	likes, dislikes, err := s.ratingRepo.GetStats(ctx, videoID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to get rating stats", slog.String("error", err.Error()))
-		return &domain.VideoStats{}, err
+		return nil, err
 	}
+
 	views, err := s.viewingRepo.GetTotalViews(ctx, videoID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to get total views", slog.String("error", err.Error()))
-		return &domain.VideoStats{}, err
+		return nil, err
 	}
+
 	comments, err := s.commentRepo.CountByVideo(ctx, videoID)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to count comments", slog.String("error", err.Error()))
-		return &domain.VideoStats{}, err
+		return nil, err
 	}
-
-	logger.DebugContext(ctx, "Stats retrieved from DB and cache populated",
-		slog.Int("views", views),
-		slog.Int("likes", likes),
-		slog.Int("dislikes", dislikes),
-		slog.Int("comments", int(comments)))
 
 	stats = &domain.VideoStats{
 		Views:    views,
@@ -259,8 +192,36 @@ func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (st
 		Dislikes: dislikes,
 		Comments: int(comments),
 	}
+
 	if cacheErr == nil {
 		_ = s.statsCache.SetStats(ctx, videoID, stats)
 	}
 	return stats, nil
+}
+
+func (s *videoInteractionService) GetStatsBatch(ctx context.Context, videoIDs []int) (map[int]*domain.VideoStats, error) {
+	logger := domain.GetLogger(ctx).With(
+		"service", "VideoInteractionService",
+		"operation", "GetStatsBatch",
+	)
+
+	result := make(map[int]*domain.VideoStats, len(videoIDs))
+	if len(videoIDs) == 0 {
+		return result, nil
+	}
+
+	for _, id := range videoIDs {
+		stats, err := s.GetStats(ctx, id)
+		if err != nil {
+			logger.WarnContext(ctx, "Failed to get stats for video in batch",
+				"video_id", id,
+				"error", err.Error(),
+			)
+			result[id] = &domain.VideoStats{}
+			continue
+		}
+		result[id] = stats
+	}
+
+	return result, nil
 }

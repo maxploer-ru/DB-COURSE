@@ -10,26 +10,13 @@ func ToDomainPlaylist(model *models.Playlist) *domain.Playlist {
 		return nil
 	}
 
-	playlist := &domain.Playlist{
+	return &domain.Playlist{
 		ID:          model.ID,
 		ChannelID:   model.ChannelID,
 		Name:        model.Name,
 		Description: model.Description,
 		CreatedAt:   model.CreatedAt,
 	}
-
-	if len(model.PlaylistVideos) > 0 {
-		playlist.Items = make([]domain.PlaylistItem, 0, len(model.PlaylistVideos))
-		for _, item := range model.PlaylistVideos {
-			playlist.Items = append(playlist.Items, domain.PlaylistItem{
-				VideoID:    item.VideoID,
-				VideoTitle: item.Video.Title,
-				Number:     item.Number,
-			})
-		}
-	}
-
-	return playlist
 }
 
 func FromDomainPlaylist(playlist *domain.Playlist) *models.Playlist {

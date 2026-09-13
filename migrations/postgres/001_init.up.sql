@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS roles
     is_default BOOLEAN            NOT NULL DEFAULT FALSE
 );
 INSERT INTO roles (name, is_default)
-VALUES ('admin' , false),
-       ('moderator' , false),
+VALUES ('admin', false),
+       ('moderator', false),
        ('user', true)
 ON CONFLICT (name) DO NOTHING;
 
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS users
 CREATE TABLE IF NOT EXISTS channels
 (
     id          SERIAL PRIMARY KEY,
-    user_id     INT UNIQUE                NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id     INT UNIQUE         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     name        VARCHAR(32) UNIQUE NOT NULL,
     description TEXT,
     created_at  TIMESTAMPTZ        NOT NULL DEFAULT NOW()
@@ -34,12 +34,14 @@ CREATE TABLE IF NOT EXISTS channels
 
 CREATE TABLE IF NOT EXISTS videos
 (
-    id               SERIAL PRIMARY KEY,
-    channel_id       INT         NOT NULL REFERENCES channels (id) ON DELETE CASCADE,
-    title            VARCHAR(64) NOT NULL,
-    description      TEXT,
-    filepath         TEXT        NOT NULL,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                SERIAL PRIMARY KEY,
+    channel_id        INT         NOT NULL REFERENCES channels (id) ON DELETE CASCADE,
+    title             VARCHAR(64) NOT NULL,
+    description       TEXT,
+    filepath          TEXT        NOT NULL,
+    original_filename TEXT        NOT NULL DEFAULT '',
+    status            VARCHAR(16) NOT NULL DEFAULT 'pending',
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS playlists
@@ -103,3 +105,28 @@ CREATE TABLE IF NOT EXISTS comment_ratings
     liked      BOOLEAN     NOT NULL,
     rated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS delete_s3_tasks
+(
+    id         SERIAL PRIMARY KEY,
+    filepath   TEXT        NOT NULL,
+    is_done    BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION log_deleted_video_to_outbox()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    INSERT INTO delete_s3_tasks (filepath, is_done, created_at)
+    VALUES (OLD.filepath, false, NOW());
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_delete_video ON videos;
+CREATE TRIGGER trigger_delete_video
+    AFTER DELETE
+    ON videos
+    FOR EACH ROW
+EXECUTE FUNCTION log_deleted_video_to_outbox();

@@ -15,8 +15,6 @@ type AuthService interface {
 	Refresh(ctx context.Context, refreshToken string) (*AuthResult, error)
 	Logout(ctx context.Context, accessToken, refreshToken string) error
 	ValidateAccessToken(ctx context.Context, token string) (*domain.AccessTokenData, error)
-	GetMe(ctx context.Context, userID int) (*domain.User, error)
-	SetNotificationsEnabled(ctx context.Context, userID int, enabled bool) (*domain.User, error)
 }
 
 type UserValidatorService interface {
@@ -314,53 +312,11 @@ func (s *authService) ValidateAccessToken(ctx context.Context, token string) (*d
 		slog.String("operation", "ValidateAccessToken"),
 	)
 
-	logger.DebugContext(ctx, "Validating access token")
 	tokenData, err := s.jwtSvc.ValidateAccessToken(ctx, token)
 	if err != nil {
 		logger.WarnContext(ctx, "Invalid access token", slog.String("error", err.Error()))
 		return nil, domain.ErrInvalidAccessToken
 	}
-	logger = logger.With(slog.Int("user_id", tokenData.UserID))
 
-	logger.DebugContext(ctx, "Fetching user for additional checks")
-	user, err := s.userRepo.GetByID(ctx, tokenData.UserID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get user", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("get user failed: %w", err)
-	}
-	if user == nil {
-		logger.WarnContext(ctx, "User not found")
-		return nil, domain.ErrUserNotFound
-	}
-	if !user.IsActive {
-		logger.WarnContext(ctx, "User is banned")
-		return nil, domain.ErrUserIsBanned
-	}
-
-	return &domain.AccessTokenData{
-		UserID:   user.ID,
-		UserName: user.Username,
-		Role:     user.Role.Name,
-	}, nil
-}
-
-func (s *authService) GetMe(ctx context.Context, userID int) (*domain.User, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get user failed: %w", err)
-	}
-	if user == nil {
-		return nil, domain.ErrUserNotFound
-	}
-	if !user.IsActive {
-		return nil, domain.ErrUserIsBanned
-	}
-	return user, nil
-}
-
-func (s *authService) SetNotificationsEnabled(ctx context.Context, userID int, enabled bool) (*domain.User, error) {
-	if err := s.userRepo.SetNotificationsEnabled(ctx, userID, enabled); err != nil {
-		return nil, err
-	}
-	return s.GetMe(ctx, userID)
+	return tokenData, nil
 }

@@ -197,7 +197,7 @@ func (s *commentService) Delete(ctx context.Context, id, userID int, role string
 	if comment.UserID == userID {
 		allowed = true
 		logger.DebugContext(ctx, "User is comment author, allowed to delete")
-	} else if role == "moderator" {
+	} else if role == domain.RoleModerator {
 		allowed = true
 		logger.DebugContext(ctx, "User is moderator, allowed to delete")
 	}

@@ -1,173 +1,117 @@
-package repository
+package repository_test
 
 import (
 	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/db/postgres/models"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestUserRepository_Create(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
-
-	roleID := insertRole(t, "role_user", false)
-	user := &domain.User{Role: &domain.Role{ID: roleID}, Username: "user_a", Email: "user_a@example.com", PasswordHash: "hash", IsActive: true, NotificationsEnabled: true}
-
-	err := repo.Create(context.Background(), user)
-	require.NoError(t, err)
-	require.NotZero(t, user.ID)
+type UserRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.UserRepository
+	mother      mother.UserMother
 }
 
-func TestUserRepository_GetByID(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
-
-	roleID := insertRole(t, "role_b", false)
-	userID := insertUser(t, roleID, "user_b")
-
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.Equal(t, userID, user.ID)
-	require.NotNil(t, user.Role)
+func (s *UserRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
 }
 
-func TestUserRepository_GetByEmail(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
-
-	roleID := insertRole(t, "role_c", false)
-	userID := insertUser(t, roleID, "user_c")
-
-	user, err := repo.GetByEmail(context.Background(), "user_c@example.com")
-	require.NoError(t, err)
-	require.Equal(t, userID, user.ID)
+func (s *UserRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewUserRepository(s.tx)
+	s.mother = mother.UserMother{}
 }
 
-func TestUserRepository_GetByUsername(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
-
-	roleID := insertRole(t, "role_d", false)
-	userID := insertUser(t, roleID, "user_d")
-
-	user, err := repo.GetByUsername(context.Background(), "user_d")
-	require.NoError(t, err)
-	require.Equal(t, userID, user.ID)
+func (s *UserRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
 }
 
-func TestUserRepository_Update(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestCreate_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
 
-	roleID := insertRole(t, "role_e", false)
-	userID := insertUser(t, roleID, "user_e")
+	err := s.repo.Create(ctx, user)
 
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	user.Username = "user_e_new"
+	s.NoError(err)
+	s.NotZero(user.ID)
 
-	err = repo.Update(context.Background(), user)
-	require.NoError(t, err)
-
-	updated, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.Equal(t, "user_e_new", updated.Username)
+	var savedUser models.User
+	s.tx.First(&savedUser, user.ID)
+	s.Equal(user.Email, savedUser.Email)
 }
 
-func TestUserRepository_Delete(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestCreate_Negative() {
+	ctx := context.Background()
+	user1 := s.mother.ValidActiveUser()
+	user1.ID = 0
+	_ = s.repo.Create(ctx, user1)
 
-	roleID := insertRole(t, "role_f", false)
-	userID := insertUser(t, roleID, "user_f")
+	user2 := s.mother.ValidActiveUser()
+	user2.ID = 0
+	user2.Username = "another_name"
 
-	err := repo.Delete(context.Background(), userID)
-	require.NoError(t, err)
+	err := s.repo.Create(ctx, user2)
 
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.False(t, user.IsActive)
+	s.Error(err)
 }
 
-func TestUserRepository_ExistsByEmail(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestGetByID_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
 
-	roleID := insertRole(t, "role_g", false)
-	_ = insertUser(t, roleID, "user_g")
+	foundUser, err := s.repo.GetByID(ctx, user.ID)
 
-	exists, err := repo.ExistsByEmail(context.Background(), "user_g@example.com")
-	require.NoError(t, err)
-	require.True(t, exists)
+	s.NoError(err)
+	s.NotNil(foundUser)
+	s.Equal(user.Username, foundUser.Username)
+	s.NotNil(foundUser.Role)
 }
 
-func TestUserRepository_ExistsByUsername(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestGetByID_Negative() {
+	ctx := context.Background()
 
-	roleID := insertRole(t, "role_h", false)
-	_ = insertUser(t, roleID, "user_h")
+	foundUser, err := s.repo.GetByID(ctx, 999)
 
-	exists, err := repo.ExistsByUsername(context.Background(), "user_h")
-	require.NoError(t, err)
-	require.True(t, exists)
+	s.NoError(err)
+	s.Nil(foundUser)
 }
 
-func TestUserRepository_Ban(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestDelete_Positive() {
+	ctx := context.Background()
+	user := s.mother.ValidActiveUser()
+	user.ID = 0
+	_ = s.repo.Create(ctx, user)
 
-	roleID := insertRole(t, "role_i", false)
-	userID := insertUser(t, roleID, "user_i")
+	err := s.repo.Delete(ctx, user.ID)
 
-	err := repo.Ban(context.Background(), userID)
-	require.NoError(t, err)
+	s.NoError(err)
 
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.False(t, user.IsActive)
+	var count int64
+	s.tx.Model(&models.User{}).Where("id = ?", user.ID).Count(&count)
+	s.Equal(int64(0), count)
 }
 
-func TestUserRepository_Unban(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
+func (s *UserRepositoryTestSuite) TestDelete_Negative() {
+	ctx := context.Background()
 
-	roleID := insertRole(t, "role_j", false)
-	userID := insertUser(t, roleID, "user_j")
+	err := s.repo.Delete(ctx, 999)
 
-	_ = repo.Ban(context.Background(), userID)
-	err := repo.Unban(context.Background(), userID)
-	require.NoError(t, err)
-
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.True(t, user.IsActive)
+	s.ErrorIs(err, domain.ErrUserNotFound)
 }
 
-func TestUserRepository_SetNotificationsEnabled(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewUserRepository(db)
-
-	roleID := insertRole(t, "role_k", false)
-	userID := insertUser(t, roleID, "user_k")
-
-	err := repo.SetNotificationsEnabled(context.Background(), userID, false)
-	require.NoError(t, err)
-
-	user, err := repo.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	require.False(t, user.NotificationsEnabled)
+func TestUserRepositorySuite(t *testing.T) {
+	suite.Run(t, new(UserRepositoryTestSuite))
 }

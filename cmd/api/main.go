@@ -16,8 +16,6 @@ import (
 	"ZVideo/internal/infrastructure/auth"
 	"ZVideo/internal/infrastructure/cache"
 	"ZVideo/internal/infrastructure/config"
-	"ZVideo/internal/infrastructure/db/mongo"
-	mongorepo "ZVideo/internal/infrastructure/db/mongo/repository"
 	"ZVideo/internal/infrastructure/db/postgres"
 	pgrepo "ZVideo/internal/infrastructure/db/postgres/repository"
 	"ZVideo/internal/infrastructure/logger"
@@ -75,24 +73,24 @@ func main() {
 
 	switch strings.ToLower(cfg.DatabaseDriver) {
 	case "mongo", "mongodb":
-		mongoConn, err := mongo.NewConnection(cfg.Mongo)
-		if err != nil {
-			log.Fatal("Failed to connect to database:", err)
-		}
-		defer func() {
-			_ = mongoConn.Close(context.Background())
-		}()
+		//mongoConn, err := mongo.NewConnection(cfg.Mongo)
+		//if err != nil {
+		//	log.Fatal("Failed to connect to database:", err)
+		//}
+		//defer func() {
+		//	_ = mongoConn.Close(context.Background())
+		//}()
 
-		userRepository = mongorepo.NewUserRepository(mongoConn.DB)
-		roleRepository = mongorepo.NewRoleRepository(mongoConn.DB)
-		channelRepository = mongorepo.NewChannelRepository(mongoConn.DB)
-		communityRepository = mongorepo.NewCommunityRepository(mongoConn.DB)
-		videoRepository = mongorepo.NewVideoRepository(mongoConn.DB)
-		subscriptionRepository = mongorepo.NewSubscriptionRepository(mongoConn.DB)
-		videoRatingRepository = mongorepo.NewVideoRatingRepository(mongoConn.DB)
-		viewingRepository = mongorepo.NewViewingRepository(mongoConn.DB)
-		commentRepository = mongorepo.NewCommentRepository(mongoConn.DB)
-		commentRatingRepository = mongorepo.NewCommentRatingRepository(mongoConn.DB)
+		//userRepository = mongorepo.NewUserRepository(mongoConn.DB)
+		//roleRepository = mongorepo.NewRoleRepository(mongoConn.DB)
+		//channelRepository = mongorepo.NewChannelRepository(mongoConn.DB)
+		//communityRepository = mongorepo.NewCommunityRepository(mongoConn.DB)
+		//videoRepository = mongorepo.NewVideoRepository(mongoConn.DB)
+		//subscriptionRepository = mongorepo.NewSubscriptionRepository(mongoConn.DB)
+		//videoRatingRepository = mongorepo.NewVideoRatingRepository(mongoConn.DB)
+		//viewingRepository = mongorepo.NewViewingRepository(mongoConn.DB)
+		//commentRepository = mongorepo.NewCommentRepository(mongoConn.DB)
+		//commentRatingRepository = mongorepo.NewCommentRatingRepository(mongoConn.DB)
 		//playlistRepository = mongorepo.NewPlaylistRepository(mongoConn.DB)
 	case "postgres", "pg":
 		pgDB, err := postgres.NewConnection(cfg.Database)
@@ -143,10 +141,10 @@ func main() {
 	userValidationService := auth.NewUserValidator()
 	authService := service.NewAuthService(userRepository, roleRepository, refreshSessionCache, passwordService, jwtService, userValidationService)
 	storageService := storage.NewMinioStorageService(minioClient, presignClient, cfg.Minio.Bucket)
-	channelService := service.NewChannelService(channelRepository, videoRepository, storageService)
-	communityService := service.NewCommunityService(communityRepository, channelService, userRepository)
-	videoService := service.NewVideoService(videoRepository, subscriptionRepository, channelService, storageService)
+	channelService := service.NewChannelService(channelRepository)
+	communityService := service.NewCommunityService(communityRepository, channelService)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepository, channelRepository, counter)
+	videoService := service.NewVideoService(videoRepository, subscriptionService, channelService, storageService)
 	playlistService := service.NewPlaylistService(playlistRepository, videoRepository, channelService)
 	interactionService := service.NewVideoInteractionService(videoRatingRepository, viewingRepository, videoRepository, commentRepository, statsCache)
 	commentService := service.NewCommentService(commentRepository, videoRepository, statsCache, channelService)

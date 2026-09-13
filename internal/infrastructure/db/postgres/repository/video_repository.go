@@ -76,10 +76,10 @@ func (r *VideoRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (r *VideoRepository) List(ctx context.Context, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
+func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domain.Video, error) {
 	var dbVideos []models.Video
-	query := r.db.WithContext(ctx).Model(&models.Video{})
-	query = applyVideoSort(query, sort)
+	query := r.db.WithContext(ctx).Model(&models.Video{}).
+		Where("status = ?", domain.VideoStatusReady)
 	err := query.
 		Limit(limit).
 		Offset(offset).
@@ -95,11 +95,11 @@ func (r *VideoRepository) List(ctx context.Context, limit, offset int, sort doma
 	return domainVideos, nil
 }
 
-func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limit, offset int, sort domain.VideoSort) ([]*domain.Video, error) {
+func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error) {
 	var dbVideos []models.Video
 	query := r.db.WithContext(ctx).Model(&models.Video{}).
-		Where("channel_id = ?", channelID)
-	query = applyVideoSort(query, sort)
+		Where("channel_id = ?", channelID).
+		Where("status = ?", domain.VideoStatusReady)
 	if err := query.
 		Limit(limit).
 		Offset(offset).
@@ -125,21 +125,4 @@ func (r *VideoRepository) ListFilepathsByChannel(ctx context.Context, channelID 
 		return nil, fmt.Errorf("list file paths by channel: %w", err)
 	}
 	return filepath, nil
-}
-
-func applyVideoSort(query *gorm.DB, sort domain.VideoSort) *gorm.DB {
-	switch sort {
-	case domain.VideoSortViews:
-		return query.
-			Joins("LEFT JOIN (SELECT video_id, COUNT(*) AS views_count FROM viewings GROUP BY video_id) v ON v.video_id = videos.id").
-			Order("COALESCE(v.views_count, 0) DESC").
-			Order("videos.created_at DESC")
-	case domain.VideoSortRating:
-		return query.
-			Joins("LEFT JOIN (SELECT video_id, SUM(CASE WHEN liked THEN 1 ELSE -1 END) AS rating_score FROM video_ratings GROUP BY video_id) r ON r.video_id = videos.id").
-			Order("COALESCE(r.rating_score, 0) DESC").
-			Order("videos.created_at DESC")
-	default:
-		return query.Order("videos.created_at DESC")
-	}
 }

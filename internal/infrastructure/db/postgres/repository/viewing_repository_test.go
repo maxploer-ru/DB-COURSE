@@ -1,28 +1,82 @@
-package repository
+package repository_test
 
 import (
-	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/db/postgres/models"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestViewingRepository_CreateAndGetTotalViews(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewViewingRepository(db)
+type ViewingRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.ViewingRepository
+	mother      mother.ViewingMother
+	testUser    *models.User
+	testVideo   *models.Video
+}
 
-	roleID := insertRole(t, "role_view_a", false)
-	userID := insertUser(t, roleID, "user_view_a")
-	channelID := insertChannel(t, userID, "channel_view_a")
-	videoID := insertVideo(t, channelID, "video_view_a")
+func (s *ViewingRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
+	s.mother = mother.ViewingMother{}
+}
 
-	viewing := &domain.Viewing{UserID: userID, VideoID: videoID}
-	require.NoError(t, repo.Create(context.Background(), viewing))
-	require.NoError(t, repo.Create(context.Background(), viewing))
+func (s *ViewingRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewViewingRepository(s.tx)
 
-	count, err := repo.GetTotalViews(context.Background(), videoID)
-	require.NoError(t, err)
-	require.Equal(t, 2, count)
+	s.testUser = &models.User{Username: "viewer", Email: "v@t.com", PasswordHash: "x", RoleID: 1}
+	s.tx.Create(s.testUser)
+
+	channel := &models.Channel{UserID: s.testUser.ID, Name: "View Chan"}
+	s.tx.Create(channel)
+
+	s.testVideo = &models.Video{ChannelID: channel.ID, Title: "Test Video", Filepath: "x", Status: "ready"}
+	s.tx.Create(s.testVideo)
+}
+
+func (s *ViewingRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
+}
+
+func (s *ViewingRepositoryTestSuite) TestCreateAndGetTotalViews_Positive() {
+	ctx := context.Background()
+	view1 := s.mother.ValidViewing()
+	view1.UserID = s.testUser.ID
+	view1.VideoID = s.testVideo.ID
+
+	view2 := s.mother.ValidViewing()
+	view2.UserID = s.testUser.ID
+	view2.VideoID = s.testVideo.ID
+
+	err1 := s.repo.Create(ctx, view1)
+	err2 := s.repo.Create(ctx, view2)
+
+	s.NoError(err1)
+	s.NoError(err2)
+
+	totalViews, err := s.repo.GetTotalViews(ctx, s.testVideo.ID)
+
+	s.NoError(err)
+	s.Equal(2, totalViews)
+}
+
+func (s *ViewingRepositoryTestSuite) TestGetTotalViews_Negative_NoViews() {
+	ctx := context.Background()
+
+	totalViews, err := s.repo.GetTotalViews(ctx, 99999)
+
+	s.NoError(err)
+	s.Equal(0, totalViews)
+}
+
+func TestViewingRepositorySuite(t *testing.T) {
+	suite.Run(t, new(ViewingRepositoryTestSuite))
 }

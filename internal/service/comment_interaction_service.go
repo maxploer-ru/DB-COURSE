@@ -9,9 +9,7 @@ import (
 )
 
 type CommentInteractionService interface {
-	Like(ctx context.Context, userID, commentID int) error
-	Dislike(ctx context.Context, userID, commentID int) error
-	RemoveRating(ctx context.Context, userID, commentID int) error
+	Rate(ctx context.Context, userID, commentID int, action domain.RatingAction) error
 	GetStats(ctx context.Context, commentID int) (likes, dislikes int64, err error)
 }
 
@@ -33,12 +31,13 @@ func NewCommentInteractionService(
 	}
 }
 
-func (s *commentInteractionService) Like(ctx context.Context, userID, commentID int) error {
+func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID int, action domain.RatingAction) error {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "CommentInteractionService"),
-		slog.String("operation", "Like"),
+		slog.String("operation", "Rate"),
 		slog.Int("user_id", userID),
 		slog.Int("comment_id", commentID),
+		slog.String("action", string(action)),
 	)
 
 	logger.DebugContext(ctx, "Checking comment existence")
@@ -58,125 +57,82 @@ func (s *commentInteractionService) Like(ctx context.Context, userID, commentID 
 		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
 		return err
 	}
-	if existing != nil {
+
+	if action == domain.RatingActionRemove {
+		if existing == nil {
+			return domain.ErrCommentRatingNotFound
+		}
+		if err := s.ratingRepo.Delete(ctx, userID, commentID); err != nil {
+			logger.ErrorContext(ctx, "Failed to delete rating", slog.String("error", err.Error()))
+			return err
+		}
+
 		if existing.Liked {
-			logger.DebugContext(ctx, "Comment already liked, no change")
-			return nil
+			if err := s.statsCache.DecrLikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Failed to decrement likes cache", slog.String("error", err.Error()))
+			}
+		} else {
+			if err := s.statsCache.DecrDislikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Failed to decrement dislikes cache", slog.String("error", err.Error()))
+			}
 		}
-		existing.Liked = true
-		logger.DebugContext(ctx, "Updating rating from dislike to like")
-		if err := s.ratingRepo.Update(ctx, existing); err != nil {
-			logger.ErrorContext(ctx, "Failed to update rating", slog.String("error", err.Error()))
-			return err
-		}
-		_ = s.statsCache.IncrLikes(ctx, commentID)
-		_ = s.statsCache.DecrDislikes(ctx, commentID)
-		logger.DebugContext(ctx, "Rating updated to like")
+		logger.InfoContext(ctx, "Rating removed successfully")
 		return nil
 	}
 
-	rating := &domain.CommentRating{
-		UserID:    userID,
-		CommentID: commentID,
-		Liked:     true,
-	}
-	logger.DebugContext(ctx, "Creating new like rating")
-	if err := s.ratingRepo.Create(ctx, rating); err != nil {
-		logger.ErrorContext(ctx, "Failed to create rating", slog.String("error", err.Error()))
-		return err
-	}
-	_ = s.statsCache.IncrLikes(ctx, commentID)
-	logger.DebugContext(ctx, "Like rating created")
-	return nil
-}
+	isLike := action == domain.RatingActionLike
 
-func (s *commentInteractionService) Dislike(ctx context.Context, userID, commentID int) error {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "CommentInteractionService"),
-		slog.String("operation", "Dislike"),
-		slog.Int("user_id", userID),
-		slog.Int("comment_id", commentID),
-	)
-
-	logger.DebugContext(ctx, "Checking comment existence")
-	comment, err := s.commentRepo.GetByID(ctx, commentID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get comment", slog.String("error", err.Error()))
-		return err
-	}
-	if comment == nil {
-		logger.WarnContext(ctx, "Comment not found")
-		return domain.ErrCommentNotFound
-	}
-
-	logger.DebugContext(ctx, "Checking existing rating")
-	existing, err := s.ratingRepo.GetByUserAndComment(ctx, userID, commentID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
-		return err
-	}
 	if existing != nil {
-		if !existing.Liked {
-			logger.DebugContext(ctx, "Comment already disliked, no change")
+		if existing.Liked == isLike {
+			logger.DebugContext(ctx, "Rating is already in the requested state, no change")
 			return nil
 		}
-		existing.Liked = false
-		logger.DebugContext(ctx, "Updating rating from like to dislike")
+
+		existing.Liked = isLike
 		if err := s.ratingRepo.Update(ctx, existing); err != nil {
 			logger.ErrorContext(ctx, "Failed to update rating", slog.String("error", err.Error()))
 			return err
 		}
-		_ = s.statsCache.IncrDislikes(ctx, commentID)
-		_ = s.statsCache.DecrLikes(ctx, commentID)
-		logger.DebugContext(ctx, "Rating updated to dislike")
+
+		if isLike {
+			if err := s.statsCache.IncrLikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+			}
+			if err := s.statsCache.DecrDislikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+			}
+		} else {
+			if err := s.statsCache.IncrDislikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+			}
+			if err := s.statsCache.DecrLikes(ctx, commentID); err != nil {
+				logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+			}
+		}
+		logger.InfoContext(ctx, "Rating updated successfully")
 		return nil
 	}
 
 	rating := &domain.CommentRating{
 		UserID:    userID,
 		CommentID: commentID,
-		Liked:     false,
+		Liked:     isLike,
 	}
-	logger.DebugContext(ctx, "Creating new dislike rating")
 	if err := s.ratingRepo.Create(ctx, rating); err != nil {
 		logger.ErrorContext(ctx, "Failed to create rating", slog.String("error", err.Error()))
 		return err
 	}
-	_ = s.statsCache.IncrDislikes(ctx, commentID)
-	logger.DebugContext(ctx, "Dislike rating created")
-	return nil
-}
 
-func (s *commentInteractionService) RemoveRating(ctx context.Context, userID, commentID int) error {
-	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "CommentInteractionService"),
-		slog.String("operation", "RemoveRating"),
-		slog.Int("user_id", userID),
-		slog.Int("comment_id", commentID),
-	)
-
-	logger.DebugContext(ctx, "Checking existing rating")
-	existing, err := s.ratingRepo.GetByUserAndComment(ctx, userID, commentID)
-	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get existing rating", slog.String("error", err.Error()))
-		return err
-	}
-	if existing == nil {
-		logger.WarnContext(ctx, "Rating not found")
-		return domain.ErrCommentRatingNotFound
-	}
-
-	logger.DebugContext(ctx, "Deleting rating", slog.Bool("was_liked", existing.Liked))
-	if err := s.ratingRepo.Delete(ctx, userID, commentID); err != nil {
-		logger.ErrorContext(ctx, "Failed to delete rating", slog.String("error", err.Error()))
-		return err
-	}
-	if existing.Liked {
-		_ = s.statsCache.DecrLikes(ctx, commentID)
+	if isLike {
+		if err := s.statsCache.IncrLikes(ctx, commentID); err != nil {
+			logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+		}
 	} else {
-		_ = s.statsCache.DecrDislikes(ctx, commentID)
+		if err := s.statsCache.IncrDislikes(ctx, commentID); err != nil {
+			logger.WarnContext(ctx, "Cache error", slog.String("error", err.Error()))
+		}
 	}
-	logger.DebugContext(ctx, "Rating removed successfully")
+	logger.InfoContext(ctx, "Rating created successfully")
 	return nil
 }
 

@@ -15,6 +15,7 @@ type SubscriptionService interface {
 	GetSubscribersCount(ctx context.Context, channelID int) (int, error)
 	GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) ([]*domain.Subscription, error)
 	ResetNewVideosCount(ctx context.Context, userID, channelID int) error
+	NotifyAboutNewVideo(ctx context.Context, channelID int) error
 }
 
 type subscriptionService struct {
@@ -42,32 +43,28 @@ func (s *subscriptionService) Subscribe(ctx context.Context, userID, channelID i
 		slog.Int("channel_id", channelID),
 	)
 
-	logger.DebugContext(ctx, "Checking channel existence")
 	channel, err := s.channelRepo.GetByID(ctx, channelID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get channel", slog.String("error", err.Error()))
 		return fmt.Errorf("get channel failed: %w", err)
 	}
 	if channel == nil {
-		logger.WarnContext(ctx, "Channel not found")
 		return domain.ErrChannelNotFound
 	}
 	if channel.UserID == userID {
-		logger.WarnContext(ctx, "Attempt to self-subscribe")
 		return domain.ErrSelfSubscription
 	}
 
-	logger.DebugContext(ctx, "Creating subscription in repository")
 	created, err := s.subRepo.Subscribe(ctx, userID, channelID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to create subscription", slog.String("error", err.Error()))
 		return fmt.Errorf("subscribe to channel failed: %w", err)
 	}
+
 	if created {
-		_ = s.counter.Increment(ctx, channelID)
-	} else {
-		logger.DebugContext(ctx, "Subscription already exists, skip counter increment")
+		if err := s.counter.Increment(ctx, channelID); err != nil {
+			logger.WarnContext(ctx, "Failed to increment subscriber cache, consistency may be delayed", slog.String("error", err.Error()))
+		}
 	}
+
 	logger.InfoContext(ctx, "Subscription created successfully")
 	return nil
 }
@@ -80,21 +77,36 @@ func (s *subscriptionService) Unsubscribe(ctx context.Context, userID, channelID
 		slog.Int("channel_id", channelID),
 	)
 
-	logger.DebugContext(ctx, "Deleting subscription from repository")
 	deleted, err := s.subRepo.Unsubscribe(ctx, userID, channelID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to delete subscription", slog.String("error", err.Error()))
 		return fmt.Errorf("unsubscribe to channel failed: %w", err)
 	}
+
 	if deleted {
-		_ = s.counter.Decrement(ctx, channelID)
-	} else {
-		logger.DebugContext(ctx, "Subscription does not exist, skip counter decrement")
+		if err := s.counter.Decrement(ctx, channelID); err != nil {
+			logger.WarnContext(ctx, "Failed to decrement subscriber cache, consistency may be delayed", slog.String("error", err.Error()))
+		}
 	}
+
 	logger.InfoContext(ctx, "Subscription removed successfully")
 	return nil
 }
 
+func (s *subscriptionService) NotifyAboutNewVideo(ctx context.Context, channelID int) error {
+	logger := domain.GetLogger(ctx).With(
+		slog.String("service", "SubscriptionService"),
+		slog.String("operation", "NotifyAboutNewVideo"),
+		slog.Int("channel_id", channelID),
+	)
+
+	if err := s.subRepo.NotifySubscribersAboutNewVideo(ctx, channelID); err != nil {
+		logger.ErrorContext(ctx, "Failed to notify subscribers about new video", slog.String("error", err.Error()))
+		return fmt.Errorf("notify subscribers failed: %w", err)
+	}
+
+	logger.InfoContext(ctx, "Subscribers notified about new video")
+	return nil
+}
 func (s *subscriptionService) IsSubscribed(ctx context.Context, userID, channelID int) (bool, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "SubscriptionService"),

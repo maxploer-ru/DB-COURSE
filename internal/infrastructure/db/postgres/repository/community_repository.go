@@ -30,7 +30,8 @@ func (r *CommunityRepository) CreatePost(ctx context.Context, post *domain.Commu
 
 func (r *CommunityRepository) GetPostByID(ctx context.Context, id int) (*domain.CommunityPost, error) {
 	var model models.CommunityPost
-	err := r.db.WithContext(ctx).First(&model, id).Error
+	err := r.db.WithContext(ctx).First(&model, id).
+		Preload("User").Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -90,7 +91,8 @@ func (r *CommunityRepository) CreateComment(ctx context.Context, comment *domain
 
 func (r *CommunityRepository) GetCommentByID(ctx context.Context, id int) (*domain.CommunityComment, error) {
 	var model models.CommunityComment
-	err := r.db.WithContext(ctx).First(&model, id).Error
+	err := r.db.WithContext(ctx).First(&model, id).
+		Preload("User").Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -103,6 +105,7 @@ func (r *CommunityRepository) GetCommentByID(ctx context.Context, id int) (*doma
 func (r *CommunityRepository) ListCommentsByPost(ctx context.Context, postID int, limit, offset int) ([]*domain.CommunityComment, error) {
 	var modelsList []models.CommunityComment
 	err := r.db.WithContext(ctx).
+		Preload("User").
 		Where("post_id = ?", postID).
 		Order("created_at DESC").
 		Limit(limit).

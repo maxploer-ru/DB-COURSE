@@ -4,14 +4,16 @@ import (
 	"ZVideo/internal/domain"
 	"ZVideo/internal/repository"
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 )
 
 type AdminService interface {
-	BanUser(ctx context.Context, userID int) error
-	UnbanUser(ctx context.Context, userID int) error
+	BanUser(ctx context.Context, adminID, targetUserID int) error
+	UnbanUser(ctx context.Context, adminID, targetUserID int) error
 	ChangeUserRole(ctx context.Context, adminID, targetUserID int, roleName string) error
+	ListUsers(ctx context.Context, adminID, limit, offset int) ([]*domain.User, error)
 }
 
 type adminService struct {
@@ -19,43 +21,40 @@ type adminService struct {
 	roleRepo repository.RoleRepository
 }
 
-func NewAdminService(
-	userRepo repository.UserRepository,
-	roleRepo repository.RoleRepository,
-) AdminService {
+func NewAdminService(userRepo repository.UserRepository, roleRepo repository.RoleRepository) AdminService {
 	return &adminService{
 		userRepo: userRepo,
 		roleRepo: roleRepo,
 	}
 }
 
-func (s *adminService) BanUser(ctx context.Context, userID int) error {
+func (s *adminService) BanUser(ctx context.Context, adminID, targetUserID int) error {
 	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "AuthService"),
+		slog.String("service", "AdminService"),
 		slog.String("operation", "BanUser"),
-		slog.Int("target_user_id", userID),
+		slog.Int("admin_id", adminID),
+		slog.Int("target_user_id", targetUserID),
 	)
 
-	logger.DebugContext(ctx, "Banning user")
-	if err := s.userRepo.Ban(ctx, userID); err != nil {
+	if err := s.userRepo.Ban(ctx, targetUserID); err != nil {
 		logger.ErrorContext(ctx, "Failed to ban user", slog.String("error", err.Error()))
-		return err
+		return fmt.Errorf("ban user failed: %w", err)
 	}
 	logger.InfoContext(ctx, "User banned successfully")
 	return nil
 }
 
-func (s *adminService) UnbanUser(ctx context.Context, userID int) error {
+func (s *adminService) UnbanUser(ctx context.Context, adminID, targetUserID int) error {
 	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "AuthService"),
+		slog.String("service", "AdminService"),
 		slog.String("operation", "UnbanUser"),
-		slog.Int("target_user_id", userID),
+		slog.Int("admin_id", adminID),
+		slog.Int("target_user_id", targetUserID),
 	)
 
-	logger.DebugContext(ctx, "Unbanning user")
-	if err := s.userRepo.Unban(ctx, userID); err != nil {
+	if err := s.userRepo.Unban(ctx, targetUserID); err != nil {
 		logger.ErrorContext(ctx, "Failed to unban user", slog.String("error", err.Error()))
-		return err
+		return fmt.Errorf("unban user failed: %w", err)
 	}
 	logger.InfoContext(ctx, "User unbanned successfully")
 	return nil
@@ -63,55 +62,65 @@ func (s *adminService) UnbanUser(ctx context.Context, userID int) error {
 
 func (s *adminService) ChangeUserRole(ctx context.Context, adminID, targetUserID int, roleName string) error {
 	logger := domain.GetLogger(ctx).With(
-		slog.String("service", "AuthService"),
+		slog.String("service", "AdminService"),
 		slog.String("operation", "ChangeUserRole"),
 		slog.Int("admin_id", adminID),
 		slog.Int("target_user_id", targetUserID),
-		slog.String("role", roleName),
+		slog.String("target_role", roleName),
 	)
 
 	if adminID == targetUserID {
-		logger.WarnContext(ctx, "Admin cannot change their own role")
+		logger.WarnContext(ctx, "Admin attempted to change their own role")
 		return domain.ErrForbidden
 	}
 
 	roleName = strings.TrimSpace(strings.ToLower(roleName))
-	if roleName == "" {
-		logger.WarnContext(ctx, "Role name is empty")
-		return domain.ErrRoleNotFound
-	}
-
 	role, err := s.roleRepo.GetByName(ctx, roleName)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get role by name", slog.String("error", err.Error()))
-		return err
+		logger.ErrorContext(ctx, "Failed to find role", slog.String("error", err.Error()))
+		return fmt.Errorf("find role failed: %w", err)
 	}
 	if role == nil {
-		logger.WarnContext(ctx, "Role not found")
 		return domain.ErrRoleNotFound
 	}
 
 	user, err := s.userRepo.GetByID(ctx, targetUserID)
 	if err != nil {
-		logger.ErrorContext(ctx, "Failed to get user by id", slog.String("error", err.Error()))
-		return err
+		logger.ErrorContext(ctx, "Failed to get user", slog.String("error", err.Error()))
+		return fmt.Errorf("get user failed: %w", err)
 	}
 	if user == nil {
-		logger.WarnContext(ctx, "User not found")
 		return domain.ErrUserNotFound
 	}
 
 	if user.Role != nil && strings.EqualFold(user.Role.Name, role.Name) {
-		logger.DebugContext(ctx, "User already has requested role")
 		return nil
 	}
 
 	user.Role = role
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		logger.ErrorContext(ctx, "Failed to update user role", slog.String("error", err.Error()))
-		return err
+		return fmt.Errorf("update user role failed: %w", err)
 	}
 
 	logger.InfoContext(ctx, "User role changed successfully")
 	return nil
+}
+
+func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int) ([]*domain.User, error) {
+	logger := domain.GetLogger(ctx).With(
+		slog.String("service", "AdminService"),
+		slog.String("operation", "ListUsers"),
+		slog.Int("admin_id", adminID),
+	)
+
+	logger.DebugContext(ctx, "Listing users")
+	users, err := s.userRepo.ListUsers(ctx, limit, offset)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to list users", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("list users failed: %w", err)
+	}
+
+	logger.DebugContext(ctx, "Users retrieved successfully", slog.Int("count", len(users)))
+	return users, nil
 }

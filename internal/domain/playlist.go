@@ -8,11 +8,15 @@ type Playlist struct {
 	Name        string
 	Description string
 	CreatedAt   time.Time
-	Items       []PlaylistItem
 }
 
 type PlaylistItem struct {
+	PlaylistID int
 	VideoID    int
-	VideoTitle string
 	Number     int
+	AddedAt    time.Time
+
+	VideoTitle  string
+	ChannelName string
+	VideoStatus VideoStatus
 }

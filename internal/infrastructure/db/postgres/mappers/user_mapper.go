@@ -39,15 +39,20 @@ func FromDomainUser(user *domain.User) *models.User {
 		return nil
 	}
 
-	return &models.User{
+	model := &models.User{
 		ID:                   user.ID,
-		RoleID:               user.Role.ID, // TODO: проверять что не nil
 		Username:             user.Username,
 		Email:                user.Email,
 		PasswordHash:         user.PasswordHash,
 		IsActive:             user.IsActive,
 		NotificationsEnabled: user.NotificationsEnabled,
 	}
+
+	if user.Role != nil {
+		model.RoleID = user.Role.ID
+	}
+
+	return model
 }
 
 func FromDomainUserList(users []*domain.User) []*models.User {

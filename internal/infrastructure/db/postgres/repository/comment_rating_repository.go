@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -29,7 +30,7 @@ func (r *CommentRatingRepository) Create(ctx context.Context, rating *domain.Com
 	}
 	err := r.db.WithContext(ctx).Create(model).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
+		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "duplicate key") {
 			return domain.ErrAlreadyRated
 		}
 		return fmt.Errorf("create comment rating: %w", err)

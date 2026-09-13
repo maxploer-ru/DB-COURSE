@@ -10,11 +10,12 @@ func ToDomainChannel(model *models.Channel) *domain.Channel {
 		return nil
 	}
 	return &domain.Channel{
-		ID:          model.ID,
-		Name:        model.Name,
-		CreatedAt:   model.CreatedAt,
-		UserID:      model.UserID,
-		Description: model.Description,
+		ID:            model.ID,
+		Name:          model.Name,
+		Description:   model.Description,
+		CreatedAt:     model.CreatedAt,
+		UserID:        model.UserID,
+		OwnerUsername: model.User.Username,
 	}
 }
 

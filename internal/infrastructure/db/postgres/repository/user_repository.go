@@ -50,6 +50,30 @@ func (repo *UserRepository) GetByID(ctx context.Context, id int) (*domain.User, 
 	return mappers.ToDomainUser(&model), nil
 }
 
+func (repo *UserRepository) ListUsers(ctx context.Context, limit, offset int) ([]*domain.User, error) {
+	var dbModels []*models.User
+
+	err := repo.db.WithContext(ctx).
+		Preload("Role").
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&dbModels).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("list users failed: %w", err)
+	}
+	return mappers.ToDomainUserList(dbModels), nil
+}
+
+func (repo *UserRepository) GetByIDs(ctx context.Context, ids []int) ([]*domain.User, error) {
+	var dbModels []*models.User
+	if err := repo.db.WithContext(ctx).Preload("Role").Where("id IN ?", ids).Find(&dbModels).Error; err != nil {
+		return nil, err
+	}
+	return mappers.ToDomainUserList(dbModels), nil
+}
+
 func (repo *UserRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
 	var model models.User
 
@@ -98,10 +122,14 @@ func (repo *UserRepository) Update(ctx context.Context, user *domain.User) error
 }
 
 func (repo *UserRepository) Delete(ctx context.Context, id int) error {
-	return repo.db.WithContext(ctx).
-		Model(&models.User{}).
-		Where("id = ?", id).
-		Set("is_active", false).Error
+	result := repo.db.WithContext(ctx).Delete(&models.User{}, id)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
 }
 
 func (repo *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {

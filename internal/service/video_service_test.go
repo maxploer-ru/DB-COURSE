@@ -2,162 +2,264 @@ package service_test
 
 import (
 	"ZVideo/internal/domain"
-	service "ZVideo/internal/service"
-	"ZVideo/mocks"
+	"ZVideo/internal/service"
+	"ZVideo/internal/testing/mocks"
+	"ZVideo/internal/testing/mother"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestVideoService_CreateVideo(t *testing.T) {
-	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
-
-	channelSvc.On("IsOwner", ctx, 2, 5).Return(true, nil)
-	videoRepo.On("Create", ctx, mock.MatchedBy(func(v *domain.Video) bool {
-		return v.ChannelID == 2 && v.Filepath == "file"
-	})).Return(nil)
-	subRepo.On("NotifySubscribersAboutNewVideo", ctx, 2).Return(nil)
-
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	video, err := svc.CreateVideo(ctx, 2, 5, "t", "d", "file")
-	require.NoError(t, err)
-	require.Equal(t, 2, video.ChannelID)
+type VideoServiceTestSuite struct {
+	suite.Suite
+	mockVideoRepo  *mocks.VideoRepository
+	mockSubSvc     *mocks.SubscriptionService
+	mockChanSvc    *mocks.ChannelService
+	mockStorageSvc *mocks.StorageService
+	service        service.VideoService
+	mother         mother.VideoMother
 }
 
-func TestVideoService_GetUploadPresignedURL(t *testing.T) {
-	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
-
-	channelSvc.On("IsOwner", ctx, 2, 5).Return(true, nil)
-	storageSvc.On("GenerateUploadPresignedURL", ctx, mock.Anything, 15*time.Minute).Return("url", nil)
-
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	url, key, err := svc.GetUploadPresignedURL(ctx, 2, 5, "file.mp4")
-	require.NoError(t, err)
-	require.Equal(t, "url", url)
-	require.NotEmpty(t, key)
+func (s *VideoServiceTestSuite) SetupTest() {
+	s.mockVideoRepo = mocks.NewVideoRepository(s.T())
+	s.mockSubSvc = mocks.NewSubscriptionService(s.T())
+	s.mockChanSvc = mocks.NewChannelService(s.T())
+	s.mockStorageSvc = mocks.NewStorageService(s.T())
+	s.service = service.NewVideoService(s.mockVideoRepo, s.mockSubSvc, s.mockChanSvc, s.mockStorageSvc)
+	s.mother = mother.VideoMother{}
 }
 
-func TestVideoService_GetVideo(t *testing.T) {
+func (s *VideoServiceTestSuite) TestInitUpload_Positive() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
+	channelID := 1
+	userID := 1
+	filename := "test.mp4"
 
-	videoRepo.On("GetByID", ctx, 1).Return(&domain.Video{ID: 1}, nil)
+	s.mockChanSvc.On("IsOwner", ctx, channelID, userID).Return(true, nil)
+	s.mockVideoRepo.On("Create", ctx, mock.AnythingOfType("*domain.Video")).Return(nil)
+	s.mockStorageSvc.On("GenerateUploadPresignedURL", ctx, mock.AnythingOfType("string"), 15*time.Minute).Return("http://upload.url", nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	video, err := svc.GetVideo(ctx, 1)
-	require.NoError(t, err)
-	require.Equal(t, 1, video.ID)
+	vid, url, err := s.service.InitUpload(ctx, channelID, userID, "Title", "Desc", filename)
+
+	s.NoError(err)
+	s.NotNil(vid)
+	s.Equal("http://upload.url", url)
+	s.Equal(domain.VideoStatusPending, vid.Status)
 }
 
-func TestVideoService_UpdateVideo(t *testing.T) {
+func (s *VideoServiceTestSuite) TestInitUpload_Negative() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
 
-	video := &domain.Video{ID: 3, ChannelID: 2, Title: "old"}
-	videoRepo.On("GetByID", ctx, 3).Return(video, nil)
-	channelSvc.On("IsOwner", ctx, 2, 5).Return(true, nil)
-	videoRepo.On("Update", ctx, video).Return(nil)
+	s.mockChanSvc.On("IsOwner", ctx, 1, 999).Return(false, nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	newTitle := "new"
-	updated, err := svc.UpdateVideo(ctx, 3, 5, &newTitle, nil)
-	require.NoError(t, err)
-	require.Equal(t, "new", updated.Title)
+	vid, url, err := s.service.InitUpload(ctx, 1, 999, "Title", "Desc", "test.mp4")
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(vid)
+	s.Empty(url)
 }
 
-func TestVideoService_DeleteVideo(t *testing.T) {
+func (s *VideoServiceTestSuite) TestConfirmUpload_Positive() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
+	vid := s.mother.PendingVideoForChannel(1)
 
-	videoRepo.On("GetByID", ctx, 4).Return(&domain.Video{ID: 4, ChannelID: 2, Filepath: "file"}, nil)
-	channelSvc.On("IsOwner", ctx, 2, 5).Return(true, nil)
-	storageSvc.On("DeleteObject", ctx, "file").Return(nil)
-	videoRepo.On("Delete", ctx, 4).Return(nil)
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+	s.mockChanSvc.On("IsOwner", ctx, vid.ChannelID, 1).Return(true, nil)
+	s.mockVideoRepo.On("Update", ctx, vid).Return(nil)
+	s.mockSubSvc.On("NotifyAboutNewVideo", ctx, vid.ChannelID).Return(nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	err := svc.DeleteVideo(ctx, 4, 5, "user")
-	require.NoError(t, err)
+	err := s.service.ConfirmUpload(ctx, vid.ID, 1)
+
+	s.NoError(err)
+	s.Equal(domain.VideoStatusReady, vid.Status)
 }
 
-func TestVideoService_ListChannelVideos(t *testing.T) {
+func (s *VideoServiceTestSuite) TestConfirmUpload_Negative() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
 
-	channelSvc.On("Exists", ctx, 2).Return(true, nil)
-	videoRepo.On("ListByChannel", ctx, 2, 10, 0, domain.VideoSortNewest).Return([]*domain.Video{{ID: 1}}, nil)
+	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	videos, err := svc.ListChannelVideos(ctx, 2, 10, 0, domain.VideoSortNewest)
-	require.NoError(t, err)
-	require.Len(t, videos, 1)
+	err := s.service.ConfirmUpload(ctx, 999, 1)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
 }
 
-func TestVideoService_ListMyVideos(t *testing.T) {
+func (s *VideoServiceTestSuite) TestGetVideo_Positive() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
+	expected := s.mother.ReadyVideoForChannel(1)
 
-	channelSvc.On("GetChannelByUserID", ctx, 5).Return(&domain.Channel{ID: 2, UserID: 5}, nil)
-	videoRepo.On("ListByChannel", ctx, 2, 10, 0, domain.VideoSortNewest).Return([]*domain.Video{{ID: 1}}, nil)
+	s.mockVideoRepo.On("GetByID", ctx, expected.ID).Return(expected, nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	videos, err := svc.ListMyVideos(ctx, 5, 10, 0, domain.VideoSortNewest)
-	require.NoError(t, err)
-	require.Len(t, videos, 1)
+	vid, err := s.service.GetVideo(ctx, expected.ID)
+
+	s.NoError(err)
+	s.Equal(expected.ID, vid.ID)
 }
 
-func TestVideoService_ListAllVideos(t *testing.T) {
+func (s *VideoServiceTestSuite) TestGetVideo_Negative() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
 
-	videoRepo.On("List", ctx, 10, 0, domain.VideoSortNewest).Return([]*domain.Video{{ID: 1}}, nil)
+	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	videos, err := svc.ListAllVideos(ctx, 10, 0, domain.VideoSortNewest)
-	require.NoError(t, err)
-	require.Len(t, videos, 1)
+	vid, err := s.service.GetVideo(ctx, 999)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+	s.Nil(vid)
 }
 
-func TestVideoService_GetStreamingPresignedURL(t *testing.T) {
+func (s *VideoServiceTestSuite) TestUpdateVideo_Positive() {
 	ctx := context.Background()
-	videoRepo := mocks.NewVideoRepository(t)
-	subRepo := mocks.NewSubscriptionRepository(t)
-	channelSvc := mocks.NewChannelService(t)
-	storageSvc := mocks.NewStorageService(t)
+	vid := s.mother.ReadyVideoForChannel(1)
+	newTitle := "New Title"
 
-	videoRepo.On("GetByID", ctx, 10).Return(&domain.Video{ID: 10, Filepath: "file"}, nil)
-	storageSvc.On("GenerateAccessPresignedURL", ctx, "file", time.Hour).Return("url", nil)
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+	s.mockChanSvc.On("IsOwner", ctx, vid.ChannelID, 1).Return(true, nil)
+	s.mockVideoRepo.On("Update", ctx, vid).Return(nil)
 
-	svc := service.NewVideoService(videoRepo, subRepo, channelSvc, storageSvc)
-	url, err := svc.GetStreamingPresignedURL(ctx, 10)
-	require.NoError(t, err)
-	require.Equal(t, "url", url)
+	updatedVid, err := s.service.UpdateVideo(ctx, vid.ID, 1, &newTitle, nil)
+
+	s.NoError(err)
+	s.Equal(newTitle, updatedVid.Title)
+}
+
+func (s *VideoServiceTestSuite) TestUpdateVideo_Negative() {
+	ctx := context.Background()
+	vid := s.mother.ReadyVideoForChannel(1)
+	newTitle := "New Title"
+
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+	s.mockChanSvc.On("IsOwner", ctx, vid.ChannelID, 999).Return(false, nil)
+
+	updatedVid, err := s.service.UpdateVideo(ctx, vid.ID, 999, &newTitle, nil)
+
+	s.ErrorIs(err, domain.ErrForbidden)
+	s.Nil(updatedVid)
+}
+
+func (s *VideoServiceTestSuite) TestDeleteVideo_Positive() {
+	ctx := context.Background()
+	vid := s.mother.ReadyVideoForChannel(1)
+
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+	s.mockVideoRepo.On("Delete", ctx, vid.ID).Return(nil)
+
+	err := s.service.DeleteVideo(ctx, vid.ID, 1, domain.RoleAdmin)
+
+	s.NoError(err)
+}
+
+func (s *VideoServiceTestSuite) TestDeleteVideo_Negative() {
+	ctx := context.Background()
+
+	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
+
+	err := s.service.DeleteVideo(ctx, 999, 1, domain.RoleUser)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+}
+
+func (s *VideoServiceTestSuite) TestListChannelVideos_Positive() {
+	ctx := context.Background()
+	expected := []*domain.Video{s.mother.ReadyVideoForChannel(1)}
+
+	s.mockChanSvc.On("Exists", ctx, 1).Return(true, nil)
+	s.mockVideoRepo.On("ListByChannel", ctx, 1, 10, 0).Return(expected, nil)
+
+	videos, err := s.service.ListChannelVideos(ctx, 1, 10, 0)
+
+	s.NoError(err)
+	s.Len(videos, 1)
+}
+
+func (s *VideoServiceTestSuite) TestListChannelVideos_Negative() {
+	ctx := context.Background()
+
+	s.mockChanSvc.On("Exists", ctx, 999).Return(false, nil)
+
+	videos, err := s.service.ListChannelVideos(ctx, 999, 10, 0)
+
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(videos)
+}
+
+func (s *VideoServiceTestSuite) TestListMyVideos_Positive() {
+	ctx := context.Background()
+	chMother := mother.ChannelMother{}
+	ch := chMother.ChannelForUser(1)
+	expected := []*domain.Video{s.mother.ReadyVideoForChannel(ch.ID)}
+
+	s.mockChanSvc.On("GetChannelByUserID", ctx, 1).Return(ch, nil)
+	s.mockVideoRepo.On("ListByChannel", ctx, ch.ID, 10, 0).Return(expected, nil)
+
+	videos, err := s.service.ListMyVideos(ctx, 1, 10, 0)
+
+	s.NoError(err)
+	s.Len(videos, 1)
+}
+
+func (s *VideoServiceTestSuite) TestListMyVideos_Negative() {
+	ctx := context.Background()
+
+	s.mockChanSvc.On("GetChannelByUserID", ctx, 999).Return(nil, errors.New("db error"))
+
+	videos, err := s.service.ListMyVideos(ctx, 999, 10, 0)
+
+	s.Error(err)
+	s.Nil(videos)
+}
+
+func (s *VideoServiceTestSuite) TestListAllVideos_Positive() {
+	ctx := context.Background()
+	expected := []*domain.Video{s.mother.ReadyVideoForChannel(1)}
+
+	s.mockVideoRepo.On("List", ctx, 10, 0).Return(expected, nil)
+
+	videos, err := s.service.ListAllVideos(ctx, 10, 0)
+
+	s.NoError(err)
+	s.Len(videos, 1)
+}
+
+func (s *VideoServiceTestSuite) TestListAllVideos_Negative() {
+	ctx := context.Background()
+
+	s.mockVideoRepo.On("List", ctx, 10, 0).Return(nil, errors.New("db error"))
+
+	videos, err := s.service.ListAllVideos(ctx, 10, 0)
+
+	s.Error(err)
+	s.Nil(videos)
+}
+
+func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Positive() {
+	ctx := context.Background()
+	vid := s.mother.ReadyVideoForChannel(1)
+
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+	s.mockStorageSvc.On("GenerateAccessPresignedURL", ctx, vid.Filepath, 1*time.Hour).Return("http://stream.url", nil)
+
+	url, err := s.service.GetStreamingPresignedURL(ctx, vid.ID)
+
+	s.NoError(err)
+	s.Equal("http://stream.url", url)
+}
+
+func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Negative() {
+	ctx := context.Background()
+	vid := s.mother.PendingVideoForChannel(1)
+
+	s.mockVideoRepo.On("GetByID", ctx, vid.ID).Return(vid, nil)
+
+	url, err := s.service.GetStreamingPresignedURL(ctx, vid.ID)
+
+	s.Error(err)
+	s.Empty(url)
+}
+
+func TestVideoServiceSuite(t *testing.T) {
+	suite.Run(t, new(VideoServiceTestSuite))
 }

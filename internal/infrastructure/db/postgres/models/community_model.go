@@ -9,6 +9,7 @@ type CommunityPost struct {
 	Content   string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null;default:current_timestamp"`
 
+	User     User               `gorm:"foreignKey:UserID"`
 	Comments []CommunityComment `gorm:"foreignKey:PostID"`
 }
 
@@ -18,6 +19,8 @@ type CommunityComment struct {
 	UserID    int       `gorm:"not null"`
 	Content   string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"not null;default:current_timestamp"`
+
+	User User `gorm:"foreignKey:UserID"`
 }
 
 func (CommunityComment) TableName() string {

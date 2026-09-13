@@ -3,6 +3,7 @@ package cache
 import (
 	"ZVideo/internal/domain"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,7 +23,7 @@ func (c *VideoStatsCache) GetCommentsCount(ctx context.Context, videoID int) (co
 	defer cancel()
 
 	value, err := c.client.HGet(redisCtx, videoKey(videoID), "comments").Result()
-	if err == redis.Nil {
+	if errors.Is(err, redis.Nil) {
 		return 0, false, nil
 	}
 	if err != nil {
@@ -107,11 +108,14 @@ func videoKey(videoID int) string {
 }
 
 func (c *VideoStatsCache) incrField(ctx context.Context, videoID int, field string) error {
+	redisCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := videoKey(videoID)
 	pipe := c.client.Pipeline()
-	pipe.HIncrBy(ctx, key, field, 1)
-	pipe.Expire(ctx, key, videoStatsTTL)
-	_, err := pipe.Exec(ctx)
+	pipe.HIncrBy(redisCtx, key, field, 1)
+	pipe.Expire(redisCtx, key, videoStatsTTL)
+	_, err := pipe.Exec(redisCtx)
 	return err
 }
 
@@ -193,7 +197,7 @@ func (c *VideoStatsCache) SetStats(ctx context.Context, videoID int, stats *doma
 		"dislikes": stats.Dislikes,
 		"comments": stats.Comments,
 	})
-	pipe.Expire(ctx, key, videoStatsTTL)
-	_, err := pipe.Exec(ctx)
+	pipe.Expire(redisCtx, key, videoStatsTTL)
+	_, err := pipe.Exec(redisCtx)
 	return err
 }

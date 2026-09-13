@@ -2,6 +2,12 @@ package domain
 
 import "time"
 
+const (
+	RoleAdmin     = "admin"
+	RoleModerator = "moderator"
+	RoleUser      = "user"
+)
+
 type User struct {
 	ID                   int
 	Username             string
@@ -9,6 +15,8 @@ type User struct {
 	PasswordHash         string
 	IsActive             bool
 	NotificationsEnabled bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 
 	Role *Role
 }

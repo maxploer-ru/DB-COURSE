@@ -16,10 +16,13 @@ type PlaylistService interface {
 	ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Playlist, error)
 	Update(ctx context.Context, playlistID, userID int, name, description *string) (*domain.Playlist, error)
 	Delete(ctx context.Context, playlistID, userID int) error
+
 	AddVideo(ctx context.Context, playlistID, videoID, userID int) error
 	RemoveVideo(ctx context.Context, playlistID, videoID, userID int) error
 	UpdateVideoPosition(ctx context.Context, playlistID, videoID, userID, newPosition int) error
+
 	GetMyPlaylists(ctx context.Context, userID int, limit, offset int) ([]*domain.Playlist, error)
+	GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) ([]*domain.PlaylistItem, error)
 }
 
 type playlistService struct {
@@ -160,6 +163,38 @@ func (s *playlistService) Delete(ctx context.Context, playlistID, userID int) er
 	return s.playlistRepo.Delete(ctx, playlistID)
 }
 
+func (s *playlistService) GetMyPlaylists(ctx context.Context, userID int, limit, offset int) ([]*domain.Playlist, error) {
+	logger := domain.GetLogger(ctx).With(
+		"service", "PlaylistService",
+		"operation", "GetMyPlaylists",
+		"user_id", userID,
+	)
+
+	logger.DebugContext(ctx, "Fetching user's channel")
+	channel, err := s.channelSvc.GetChannelByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get channel by user id failed: %w", err)
+	}
+	if channel == nil {
+		return []*domain.Playlist{}, nil
+	}
+
+	logger.DebugContext(ctx, "Listing playlists from repository")
+	return s.playlistRepo.ListByChannel(ctx, channel.ID, limit, offset)
+}
+
+func (s *playlistService) GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) ([]*domain.PlaylistItem, error) {
+	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	if playlist == nil {
+		return nil, domain.ErrPlaylistNotFound
+	}
+
+	return s.playlistRepo.ListItems(ctx, playlistID, limit, offset)
+}
+
 func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, userID int) error {
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
 	if err != nil {
@@ -170,22 +205,17 @@ func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, use
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil {
-		return fmt.Errorf("check channel owner failed: %w", err)
-	}
-	if !isOwner {
+	if err != nil || !isOwner {
 		return domain.ErrForbidden
 	}
 
 	video, err := s.videoRepo.GetByID(ctx, videoID)
-	if err != nil {
-		return fmt.Errorf("get video failed: %w", err)
-	}
-	if video == nil {
+	if err != nil || video == nil {
 		return domain.ErrVideoNotFound
 	}
-	if video.ChannelID != playlist.ChannelID {
-		return domain.ErrPlaylistVideoChannelMismatch
+
+	if video.Status != domain.VideoStatusReady {
+		return fmt.Errorf("cannot add pending video to playlist")
 	}
 
 	return s.playlistRepo.AddVideo(ctx, playlistID, videoID)
@@ -193,18 +223,12 @@ func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, use
 
 func (s *playlistService) RemoveVideo(ctx context.Context, playlistID, videoID, userID int) error {
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
-	if err != nil {
-		return err
-	}
-	if playlist == nil {
+	if err != nil || playlist == nil {
 		return domain.ErrPlaylistNotFound
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil {
-		return fmt.Errorf("check channel owner failed: %w", err)
-	}
-	if !isOwner {
+	if err != nil || !isOwner {
 		return domain.ErrForbidden
 	}
 
@@ -221,50 +245,28 @@ func (s *playlistService) UpdateVideoPosition(ctx context.Context, playlistID, v
 	)
 
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
-	if err != nil {
-		return err
-	}
-	if playlist == nil {
+	if err != nil || playlist == nil {
 		return domain.ErrPlaylistNotFound
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil {
-		return fmt.Errorf("check channel owner failed: %w", err)
-	}
-	if !isOwner {
+	if err != nil || !isOwner {
 		return domain.ErrForbidden
+	}
+
+	maxPos, err := s.playlistRepo.GetItemsCount(ctx, playlistID)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get playlist items count", slog.String("error", err.Error()))
+		return err
 	}
 
 	if newPosition < 1 {
 		newPosition = 1
 	}
-	maxPos := len(playlist.Items)
 	if newPosition > maxPos {
 		newPosition = maxPos
 	}
 
 	logger.DebugContext(ctx, "Updating video position in repository")
 	return s.playlistRepo.UpdateVideoPosition(ctx, playlistID, videoID, newPosition)
-}
-
-func (s *playlistService) GetMyPlaylists(ctx context.Context, userID int, limit, offset int) ([]*domain.Playlist, error) {
-	logger := domain.GetLogger(ctx).With(
-		"service", "PlaylistService",
-		"operation", "GetMyPlaylists",
-		"user_id", userID,
-	)
-
-	logger.DebugContext(ctx, "Fetching user's channel")
-	channel, err := s.channelSvc.GetChannelByUserID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("get channel by user id failed: %w", err)
-	}
-	if channel == nil {
-		// Если канала нет, то и плейлистов нет — возвращаем пустой список
-		return []*domain.Playlist{}, nil
-	}
-
-	logger.DebugContext(ctx, "Listing playlists from repository")
-	return s.playlistRepo.ListByChannel(ctx, channel.ID, limit, offset)
 }

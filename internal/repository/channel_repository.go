@@ -13,4 +13,6 @@ type ChannelRepository interface {
 	Update(ctx context.Context, channel *domain.Channel) error
 	Delete(ctx context.Context, id int) error
 	ExistsByName(ctx context.Context, name string) (bool, error)
+
+	ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error)
 }

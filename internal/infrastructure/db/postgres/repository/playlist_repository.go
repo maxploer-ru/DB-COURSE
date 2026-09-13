@@ -30,12 +30,7 @@ func (r *PlaylistRepository) Create(ctx context.Context, playlist *domain.Playli
 
 func (r *PlaylistRepository) GetByID(ctx context.Context, playlistID int) (*domain.Playlist, error) {
 	var model models.Playlist
-	err := r.db.WithContext(ctx).
-		Preload("PlaylistVideos", func(db *gorm.DB) *gorm.DB {
-			return db.Order("number ASC")
-		}).
-		Preload("PlaylistVideos.Video").
-		First(&model, playlistID).Error
+	err := r.db.WithContext(ctx).First(&model, playlistID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -52,10 +47,6 @@ func (r *PlaylistRepository) ListByChannel(ctx context.Context, channelID int, l
 		Order("created_at DESC").
 		Limit(limit).
 		Offset(offset).
-		Preload("PlaylistVideos", func(db *gorm.DB) *gorm.DB {
-			return db.Order("number ASC")
-		}).
-		Preload("PlaylistVideos.Video").
 		Find(&modelsList).Error
 	if err != nil {
 		return nil, fmt.Errorf("list playlists by channel failed: %w", err)
@@ -170,4 +161,42 @@ func (r *PlaylistRepository) UpdateVideoPosition(ctx context.Context, playlistID
 
 		return nil
 	})
+}
+
+func (r *PlaylistRepository) ListItems(ctx context.Context, playlistID int, limit, offset int) ([]*domain.PlaylistItem, error) {
+	var items []models.PlaylistItem
+	err := r.db.WithContext(ctx).
+		Where("playlist_id = ?", playlistID).
+		Order("number ASC").
+		Limit(limit).
+		Offset(offset).
+		Preload("Video").
+		Preload("Video.Channel").
+		Find(&items).Error
+	if err != nil {
+		return nil, fmt.Errorf("list playlist items failed: %w", err)
+	}
+
+	result := make([]*domain.PlaylistItem, len(items))
+	for i, item := range items {
+		result[i] = &domain.PlaylistItem{
+			PlaylistID:  item.PlaylistID,
+			VideoID:     item.VideoID,
+			Number:      item.Number,
+			AddedAt:     item.AddedAt,
+			VideoTitle:  item.Video.Title,
+			ChannelName: item.Video.Channel.Name,
+			VideoStatus: domain.VideoStatus(item.Video.Status),
+		}
+	}
+	return result, nil
+}
+
+func (r *PlaylistRepository) GetItemsCount(ctx context.Context, playlistID int) (int, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.PlaylistItem{}).
+		Where("playlist_id = ?", playlistID).
+		Count(&count).Error
+	return int(count), err
 }

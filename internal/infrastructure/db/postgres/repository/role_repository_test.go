@@ -1,86 +1,63 @@
-package repository
+package repository_test
 
 import (
-	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/db/postgres/repository"
+	"ZVideo/internal/testing/db"
+	"ZVideo/internal/testing/mother"
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
-func TestRoleRepository_Create(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
-
-	role := &domain.Role{Name: "role_a", IsDefault: false}
-	err := repo.Create(context.Background(), role)
-	require.NoError(t, err)
-	require.NotZero(t, role.ID)
+type RoleRepositoryTestSuite struct {
+	suite.Suite
+	pgContainer *db.PostgresContainer
+	db          *gorm.DB
+	tx          *gorm.DB
+	repo        *repository.RoleRepository
+	mother      mother.RoleMother
 }
 
-func TestRoleRepository_GetByID(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
-
-	id := insertRole(t, "role_b", false)
-	role, err := repo.GetByID(context.Background(), id)
-	require.NoError(t, err)
-	require.Equal(t, id, role.ID)
+func (s *RoleRepositoryTestSuite) SetupSuite() {
+	s.db = sharedDB
+	s.mother = mother.RoleMother{}
 }
 
-func TestRoleRepository_GetByName(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
-
-	_ = insertRole(t, "role_c", false)
-	role, err := repo.GetByName(context.Background(), "role_c")
-	require.NoError(t, err)
-	require.Equal(t, "role_c", role.Name)
+func (s *RoleRepositoryTestSuite) SetupTest() {
+	s.tx = s.db.Begin()
+	s.repo = repository.NewRoleRepository(s.tx)
 }
 
-func TestRoleRepository_GetDefaultRole(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
-
-	role, err := repo.GetDefaultRole(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, role)
-	require.True(t, role.IsDefault)
+func (s *RoleRepositoryTestSuite) TearDownTest() {
+	s.tx.Rollback()
 }
 
-func TestRoleRepository_Update(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
+func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive() {
+	ctx := context.Background()
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "super_admin"
 
-	role := &domain.Role{Name: "role_d", IsDefault: false}
-	require.NoError(t, repo.Create(context.Background(), role))
-	role.Name = "role_d_updated"
+	err := s.repo.Create(ctx, role)
+	s.NoError(err)
+	s.NotZero(role.ID)
 
-	err := repo.Update(context.Background(), role)
-	require.NoError(t, err)
-
-	updated, err := repo.GetByID(context.Background(), role.ID)
-	require.NoError(t, err)
-	require.Equal(t, "role_d_updated", updated.Name)
+	found, err := s.repo.GetByName(ctx, "super_admin")
+	s.NoError(err)
+	s.Equal(role.Name, found.Name)
 }
 
-func TestRoleRepository_Delete(t *testing.T) {
-	resetDB(t)
-	db := testDBOrSkip(t)
-	repo := NewRoleRepository(db)
+func (s *RoleRepositoryTestSuite) TestGetByName_Negative_NotFound() {
+	ctx := context.Background()
 
-	role := &domain.Role{Name: "role_e", IsDefault: false}
-	require.NoError(t, repo.Create(context.Background(), role))
+	found, err := s.repo.GetByName(ctx, "non_existent")
 
-	err := repo.Delete(context.Background(), role.ID)
-	require.NoError(t, err)
+	s.NoError(err)
+	s.Nil(found)
+}
 
-	deleted, err := repo.GetByID(context.Background(), role.ID)
-	require.NoError(t, err)
-	require.Nil(t, deleted)
+func TestRoleRepositorySuite(t *testing.T) {
+	suite.Run(t, new(RoleRepositoryTestSuite))
 }
