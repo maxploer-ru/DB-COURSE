@@ -12,7 +12,7 @@ import (
 type CommentService interface {
 	Create(ctx context.Context, userID, videoID int, content string) (*domain.Comment, error)
 	GetByID(ctx context.Context, id int) (*domain.Comment, error)
-	ListByVideo(ctx context.Context, videoID int, limit, offset int) ([]*domain.Comment, error)
+	ListByVideo(ctx context.Context, videoID int, limit, offset int) (*domain.PageResponse[*domain.Comment], error)
 	Update(ctx context.Context, id, userID int, content string) (*domain.Comment, error)
 	Delete(ctx context.Context, id, userID int, role string) error
 	GetCount(ctx context.Context, videoID int) (int64, error)
@@ -103,7 +103,7 @@ func (s *commentService) GetByID(ctx context.Context, id int) (*domain.Comment, 
 	return comment, nil
 }
 
-func (s *commentService) ListByVideo(ctx context.Context, videoID int, limit, offset int) ([]*domain.Comment, error) {
+func (s *commentService) ListByVideo(ctx context.Context, videoID int, limit, offset int) (*domain.PageResponse[*domain.Comment], error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "CommentService"),
 		slog.String("operation", "ListByVideo"),
@@ -129,8 +129,18 @@ func (s *commentService) ListByVideo(ctx context.Context, videoID int, limit, of
 		logger.ErrorContext(ctx, "Failed to list comments", slog.String("error", err.Error()))
 		return nil, err
 	}
+	total, err := s.GetCount(ctx, videoID)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count comments", slog.String("error", err.Error()))
+		return nil, err
+	}
 	logger.DebugContext(ctx, "Comments listed successfully", slog.Int("count", len(comments)))
-	return comments, nil
+	return &domain.PageResponse[*domain.Comment]{
+		Items:      comments,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *commentService) Update(ctx context.Context, id, userID int, content string) (*domain.Comment, error) {

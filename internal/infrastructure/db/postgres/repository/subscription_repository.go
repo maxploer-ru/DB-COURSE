@@ -84,6 +84,15 @@ func (r *SubscriptionRepository) GetUserSubscriptions(ctx context.Context, userI
 	return mappers.ToDomainSubscriptionList(subs), nil
 }
 
+func (r *SubscriptionRepository) CountUserSubscriptions(ctx context.Context, userID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Subscription{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
+}
+
 func (r *SubscriptionRepository) NotifySubscribersAboutNewVideo(ctx context.Context, channelID int) error {
 	if err := r.db.WithContext(ctx).
 		Exec("CALL notify_subscribers_about_new_video(?)", channelID).Error; err != nil {

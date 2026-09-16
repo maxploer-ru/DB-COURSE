@@ -95,6 +95,18 @@ func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domai
 	return domainVideos, nil
 }
 
+func (r *VideoRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Video{}).
+		Where("status = ?", domain.VideoStatusReady).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count videos: %w", err)
+	}
+	return count, nil
+}
+
 func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error) {
 	var dbVideos []models.Video
 	query := r.db.WithContext(ctx).Model(&models.Video{}).
@@ -113,6 +125,19 @@ func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limi
 		domainVideos = append(domainVideos, mappers.ToDomainVideo(&dbVideo))
 	}
 	return domainVideos, nil
+}
+
+func (r *VideoRepository) CountByChannel(ctx context.Context, channelID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Video{}).
+		Where("channel_id = ?", channelID).
+		Where("status = ?", domain.VideoStatusReady).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count videos by channel: %w", err)
+	}
+	return count, nil
 }
 
 func (r *VideoRepository) ListFilepathsByChannel(ctx context.Context, channelID int) ([]string, error) {

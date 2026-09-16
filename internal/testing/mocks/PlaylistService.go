@@ -111,23 +111,23 @@ func (_m *PlaylistService) GetByID(ctx context.Context, playlistID int) (*domain
 }
 
 // GetMyPlaylists provides a mock function with given fields: ctx, userID, limit, offset
-func (_m *PlaylistService) GetMyPlaylists(ctx context.Context, userID int, limit int, offset int) ([]*domain.Playlist, error) {
+func (_m *PlaylistService) GetMyPlaylists(ctx context.Context, userID int, limit int, offset int) (*domain.PageResponse[*domain.Playlist], error) {
 	ret := _m.Called(ctx, userID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetMyPlaylists")
 	}
 
-	var r0 []*domain.Playlist
+	var r0 *domain.PageResponse[*domain.Playlist]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Playlist, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Playlist], error)); ok {
 		return rf(ctx, userID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Playlist); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Playlist]); ok {
 		r0 = rf(ctx, userID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Playlist)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Playlist])
 		}
 	}
 
@@ -141,23 +141,23 @@ func (_m *PlaylistService) GetMyPlaylists(ctx context.Context, userID int, limit
 }
 
 // GetPlaylistItems provides a mock function with given fields: ctx, playlistID, limit, offset
-func (_m *PlaylistService) GetPlaylistItems(ctx context.Context, playlistID int, limit int, offset int) ([]*domain.PlaylistItem, error) {
+func (_m *PlaylistService) GetPlaylistItems(ctx context.Context, playlistID int, limit int, offset int) (*domain.PageResponse[*domain.PlaylistItem], error) {
 	ret := _m.Called(ctx, playlistID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPlaylistItems")
 	}
 
-	var r0 []*domain.PlaylistItem
+	var r0 *domain.PageResponse[*domain.PlaylistItem]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.PlaylistItem, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.PlaylistItem], error)); ok {
 		return rf(ctx, playlistID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.PlaylistItem); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.PlaylistItem]); ok {
 		r0 = rf(ctx, playlistID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.PlaylistItem)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.PlaylistItem])
 		}
 	}
 
@@ -171,23 +171,23 @@ func (_m *PlaylistService) GetPlaylistItems(ctx context.Context, playlistID int,
 }
 
 // ListByChannel provides a mock function with given fields: ctx, channelID, limit, offset
-func (_m *PlaylistService) ListByChannel(ctx context.Context, channelID int, limit int, offset int) ([]*domain.Playlist, error) {
+func (_m *PlaylistService) ListByChannel(ctx context.Context, channelID int, limit int, offset int) (*domain.PageResponse[*domain.Playlist], error) {
 	ret := _m.Called(ctx, channelID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByChannel")
 	}
 
-	var r0 []*domain.Playlist
+	var r0 *domain.PageResponse[*domain.Playlist]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Playlist, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Playlist], error)); ok {
 		return rf(ctx, channelID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Playlist); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Playlist]); ok {
 		r0 = rf(ctx, channelID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Playlist)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Playlist])
 		}
 	}
 

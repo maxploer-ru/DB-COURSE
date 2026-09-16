@@ -102,11 +102,13 @@ func (s *CommentServiceTestSuite) TestListByVideo_Positive() {
 
 	s.mockVideoRepo.On("GetByID", ctx, video.ID).Return(video, nil)
 	s.mockCommentRepo.On("ListByVideo", ctx, video.ID, 10, 0).Return(expectedList, nil)
+	s.mockCountCache.On("GetCommentsCount", ctx, video.ID).Return(int64(len(expectedList)), true, nil)
 
 	list, err := s.service.ListByVideo(ctx, video.ID, 10, 0)
 
 	s.NoError(err)
-	s.Len(list, 1)
+	s.Len(list.Items, 1)
+	s.Equal(int64(1), list.TotalCount)
 }
 
 func (s *CommentServiceTestSuite) TestListByVideo_Negative() {

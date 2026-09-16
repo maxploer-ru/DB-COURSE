@@ -32,6 +32,34 @@ func (_m *PlaylistRepository) AddVideo(ctx context.Context, playlistID int, vide
 	return r0
 }
 
+// CountByChannel provides a mock function with given fields: ctx, channelID
+func (_m *PlaylistRepository) CountByChannel(ctx context.Context, channelID int) (int64, error) {
+	ret := _m.Called(ctx, channelID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountByChannel")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) (int64, error)); ok {
+		return rf(ctx, channelID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) int64); ok {
+		r0 = rf(ctx, channelID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, channelID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Create provides a mock function with given fields: ctx, playlist
 func (_m *PlaylistRepository) Create(ctx context.Context, playlist *domain.Playlist) error {
 	ret := _m.Called(ctx, playlist)

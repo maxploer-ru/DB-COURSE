@@ -55,6 +55,18 @@ func (r *CommunityRepository) ListPostsByChannel(ctx context.Context, channelID 
 	return mappers.ToDomainCommunityPostList(modelsList), nil
 }
 
+func (r *CommunityRepository) CountPostsByChannel(ctx context.Context, channelID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.CommunityPost{}).
+		Where("channel_id = ?", channelID).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count community posts by channel: %w", err)
+	}
+	return count, nil
+}
+
 func (r *CommunityRepository) UpdatePost(ctx context.Context, post *domain.CommunityPost) error {
 	model := mappers.FromDomainCommunityPost(post)
 	result := r.db.WithContext(ctx).Model(&models.CommunityPost{}).
@@ -115,6 +127,18 @@ func (r *CommunityRepository) ListCommentsByPost(ctx context.Context, postID int
 		return nil, fmt.Errorf("list community comments by post: %w", err)
 	}
 	return mappers.ToDomainCommunityCommentList(modelsList), nil
+}
+
+func (r *CommunityRepository) CountCommentsByPost(ctx context.Context, postID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.CommunityComment{}).
+		Where("post_id = ?", postID).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count community comments by post: %w", err)
+	}
+	return count, nil
 }
 
 func (r *CommunityRepository) UpdateComment(ctx context.Context, comment *domain.CommunityComment) error {

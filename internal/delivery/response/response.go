@@ -81,7 +81,7 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 		RespondWithError(w, http.StatusBadRequest, "PLAYLIST_VIDEO_CHANNEL_MISMATCH", "Video belongs to another channel")
 
 	case errors.Is(err, domain.ErrSelfSubscription):
-		RespondWithError(w, http.StatusBadRequest, "SUBSCRIPTION_NOT_FOUND", "Cannot subscribe to your own channel")
+		RespondWithError(w, http.StatusBadRequest, "SELF_SUBSCRIPTION", "Cannot subscribe to your own channel")
 
 	case errors.Is(err, domain.ErrAlreadyRated):
 		RespondWithError(w, http.StatusConflict, "ALREADY_RATED", "This video has already been rated")

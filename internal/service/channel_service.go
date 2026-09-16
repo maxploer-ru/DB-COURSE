@@ -18,7 +18,7 @@ type ChannelService interface {
 	Exists(ctx context.Context, channelID int) (bool, error)
 	IsOwner(ctx context.Context, channelID, userID int) (bool, error)
 
-	ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error)
+	ListChannels(ctx context.Context, limit, offset int) (*domain.PageResponse[*domain.Channel], error)
 }
 
 type channelService struct {
@@ -231,7 +231,7 @@ func (s *channelService) DeleteChannel(ctx context.Context, channelID, userID in
 	return nil
 }
 
-func (s *channelService) ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error) {
+func (s *channelService) ListChannels(ctx context.Context, limit, offset int) (*domain.PageResponse[*domain.Channel], error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "ChannelService"),
 		slog.String("operation", "ListChannels"),
@@ -244,8 +244,18 @@ func (s *channelService) ListChannels(ctx context.Context, limit, offset int) ([
 		logger.ErrorContext(ctx, "Failed to list channels", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("list channels failed: %w", err)
 	}
+	total, err := s.channelRepo.CountChannels(ctx)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count channels", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("count channels failed: %w", err)
+	}
 
-	return channels, nil
+	return &domain.PageResponse[*domain.Channel]{
+		Items:      channels,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *channelService) Exists(ctx context.Context, channelID int) (bool, error) {

@@ -54,6 +54,18 @@ func (r *PlaylistRepository) ListByChannel(ctx context.Context, channelID int, l
 	return mappers.ToDomainPlaylistList(modelsList), nil
 }
 
+func (r *PlaylistRepository) CountByChannel(ctx context.Context, channelID int) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Playlist{}).
+		Where("channel_id = ?", channelID).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count playlists by channel failed: %w", err)
+	}
+	return count, nil
+}
+
 func (r *PlaylistRepository) Update(ctx context.Context, playlist *domain.Playlist) error {
 	result := r.db.WithContext(ctx).
 		Model(&models.Playlist{}).

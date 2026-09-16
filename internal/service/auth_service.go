@@ -10,7 +10,7 @@ import (
 )
 
 type AuthService interface {
-	Register(ctx context.Context, username, email, password string) error
+	Register(ctx context.Context, username, email, password string) (*domain.User, error)
 	Login(ctx context.Context, email, password string) (*AuthResult, error)
 	Refresh(ctx context.Context, refreshToken string) (*AuthResult, error)
 	Logout(ctx context.Context, accessToken, refreshToken string) error
@@ -67,7 +67,7 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Register(ctx context.Context, username, email, password string) error {
+func (s *authService) Register(ctx context.Context, username, email, password string) (*domain.User, error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "AuthService"),
 		slog.String("operation", "Register"),
@@ -78,43 +78,43 @@ func (s *authService) Register(ctx context.Context, username, email, password st
 	logger.DebugContext(ctx, "Validating new user")
 	if err := s.userValSvc.ValidateNewUser(ctx, email, username, password); err != nil {
 		logger.WarnContext(ctx, "User validation failed", slog.String("error", err.Error()))
-		return err
+		return nil, err
 	}
 
 	logger.DebugContext(ctx, "Checking username existence")
 	exists, err := s.userRepo.ExistsByUsername(ctx, username)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to check username existence", slog.String("error", err.Error()))
-		return err
+		return nil, err
 	}
 	if exists {
 		logger.WarnContext(ctx, "Username already taken")
-		return domain.ErrUserNameAlreadyExists
+		return nil, domain.ErrUserNameAlreadyExists
 	}
 
 	logger.DebugContext(ctx, "Checking email existence")
 	exists, err = s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to check email existence", slog.String("error", err.Error()))
-		return err
+		return nil, err
 	}
 	if exists {
 		logger.WarnContext(ctx, "Email already registered")
-		return domain.ErrUserEmailAlreadyExists
+		return nil, domain.ErrUserEmailAlreadyExists
 	}
 
 	logger.DebugContext(ctx, "Getting default role")
 	defaultRole, err := s.roleRepo.GetDefaultRole(ctx)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to get default role", slog.String("error", err.Error()))
-		return err
+		return nil, err
 	}
 
 	logger.DebugContext(ctx, "Hashing password")
 	passwordHash, err := s.pwdSvc.HashPassword(ctx, password)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to hash password", slog.String("error", err.Error()))
-		return fmt.Errorf("hash password failed: %w", err)
+		return nil, fmt.Errorf("hash password failed: %w", err)
 	}
 
 	user := &domain.User{
@@ -129,11 +129,13 @@ func (s *authService) Register(ctx context.Context, username, email, password st
 	logger.DebugContext(ctx, "Creating user in repository")
 	if err = s.userRepo.Create(ctx, user); err != nil {
 		logger.ErrorContext(ctx, "Failed to create user", slog.String("error", err.Error()))
-		return fmt.Errorf("create user failed: %w", err)
+		return nil, fmt.Errorf("create user failed: %w", err)
 	}
 
 	logger.InfoContext(ctx, "User registered successfully", slog.Int("user_id", user.ID))
-	return nil
+	createdUser := *user
+	createdUser.PasswordHash = ""
+	return &createdUser, nil
 }
 
 func (s *authService) Login(ctx context.Context, email, password string) (*AuthResult, error) {

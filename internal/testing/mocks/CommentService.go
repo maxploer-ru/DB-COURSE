@@ -121,23 +121,23 @@ func (_m *CommentService) GetCount(ctx context.Context, videoID int) (int64, err
 }
 
 // ListByVideo provides a mock function with given fields: ctx, videoID, limit, offset
-func (_m *CommentService) ListByVideo(ctx context.Context, videoID int, limit int, offset int) ([]*domain.Comment, error) {
+func (_m *CommentService) ListByVideo(ctx context.Context, videoID int, limit int, offset int) (*domain.PageResponse[*domain.Comment], error) {
 	ret := _m.Called(ctx, videoID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListByVideo")
 	}
 
-	var r0 []*domain.Comment
+	var r0 *domain.PageResponse[*domain.Comment]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Comment, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Comment], error)); ok {
 		return rf(ctx, videoID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Comment); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Comment]); ok {
 		r0 = rf(ctx, videoID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Comment)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Comment])
 		}
 	}
 

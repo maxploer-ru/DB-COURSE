@@ -36,6 +36,7 @@ func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive() {
 
 	s.mockChanSvc.On("GetChannel", ctx, ch.ID).Return(ch, nil)
 	s.mockRepo.On("ListPostsByChannel", ctx, ch.ID, 10, 0).Return(expectedPosts, nil)
+	s.mockRepo.On("CountPostsByChannel", ctx, ch.ID).Return(int64(len(expectedPosts)), nil)
 
 	community, err := s.service.GetChannelCommunity(ctx, ch.ID, 10, 0)
 
@@ -43,6 +44,7 @@ func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive() {
 	s.NotNil(community)
 	s.Equal(ch.ID, community.Channel.ID)
 	s.Len(community.Posts, 1)
+	s.Equal(int64(1), community.TotalCount)
 }
 
 func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative() {

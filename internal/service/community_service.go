@@ -13,7 +13,7 @@ import (
 type CommunityService interface {
 	GetChannelCommunity(ctx context.Context, channelID int, limit, offset int) (*domain.Community, error)
 	GetMyCommunity(ctx context.Context, userID int, limit, offset int) (*domain.Community, error)
-	GetPostComments(ctx context.Context, postID int, limit, offset int) ([]*domain.CommunityComment, error)
+	GetPostComments(ctx context.Context, postID int, limit, offset int) (*domain.PageResponse[*domain.CommunityComment], error)
 	CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error)
 	UpdatePost(ctx context.Context, postID, userID int, content string) (*domain.CommunityPost, error)
 	DeletePost(ctx context.Context, postID, userID int) error
@@ -44,10 +44,17 @@ func (s *communityService) GetChannelCommunity(ctx context.Context, channelID in
 	if err != nil {
 		return nil, fmt.Errorf("list community posts: %w", err)
 	}
+	total, err := s.communityRepo.CountPostsByChannel(ctx, channelID)
+	if err != nil {
+		return nil, fmt.Errorf("count community posts: %w", err)
+	}
 
 	return &domain.Community{
-		Channel: channel,
-		Posts:   posts,
+		Channel:    channel,
+		Posts:      posts,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
 	}, nil
 }
 
@@ -59,12 +66,29 @@ func (s *communityService) GetMyCommunity(ctx context.Context, userID int, limit
 	return s.GetChannelCommunity(ctx, channel.ID, limit, offset)
 }
 
-func (s *communityService) GetPostComments(ctx context.Context, postID int, limit, offset int) ([]*domain.CommunityComment, error) {
+func (s *communityService) GetPostComments(ctx context.Context, postID int, limit, offset int) (*domain.PageResponse[*domain.CommunityComment], error) {
+	post, err := s.communityRepo.GetPostByID(ctx, postID)
+	if err != nil {
+		return nil, fmt.Errorf("get community post: %w", err)
+	}
+	if post == nil {
+		return nil, domain.ErrCommunityPostNotFound
+	}
+
 	comments, err := s.communityRepo.ListCommentsByPost(ctx, postID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list comments: %w", err)
 	}
-	return comments, nil
+	total, err := s.communityRepo.CountCommentsByPost(ctx, postID)
+	if err != nil {
+		return nil, fmt.Errorf("count comments: %w", err)
+	}
+	return &domain.PageResponse[*domain.CommunityComment]{
+		Items:      comments,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *communityService) CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error) {

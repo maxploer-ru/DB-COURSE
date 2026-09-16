@@ -15,4 +15,5 @@ type ChannelRepository interface {
 	ExistsByName(ctx context.Context, name string) (bool, error)
 
 	ListChannels(ctx context.Context, limit, offset int) ([]*domain.Channel, error)
+	CountChannels(ctx context.Context) (int64, error)
 }

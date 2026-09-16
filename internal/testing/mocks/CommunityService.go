@@ -171,23 +171,23 @@ func (_m *CommunityService) GetMyCommunity(ctx context.Context, userID int, limi
 }
 
 // GetPostComments provides a mock function with given fields: ctx, postID, limit, offset
-func (_m *CommunityService) GetPostComments(ctx context.Context, postID int, limit int, offset int) ([]*domain.CommunityComment, error) {
+func (_m *CommunityService) GetPostComments(ctx context.Context, postID int, limit int, offset int) (*domain.PageResponse[*domain.CommunityComment], error) {
 	ret := _m.Called(ctx, postID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPostComments")
 	}
 
-	var r0 []*domain.CommunityComment
+	var r0 *domain.PageResponse[*domain.CommunityComment]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.CommunityComment, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.CommunityComment], error)); ok {
 		return rf(ctx, postID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.CommunityComment); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.CommunityComment]); ok {
 		r0 = rf(ctx, postID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.CommunityComment)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.CommunityComment])
 		}
 	}
 

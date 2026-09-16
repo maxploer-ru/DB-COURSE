@@ -13,7 +13,7 @@ import (
 type PlaylistService interface {
 	Create(ctx context.Context, channelID, userID int, name, description string) (*domain.Playlist, error)
 	GetByID(ctx context.Context, playlistID int) (*domain.Playlist, error)
-	ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Playlist, error)
+	ListByChannel(ctx context.Context, channelID int, limit, offset int) (*domain.PageResponse[*domain.Playlist], error)
 	Update(ctx context.Context, playlistID, userID int, name, description *string) (*domain.Playlist, error)
 	Delete(ctx context.Context, playlistID, userID int) error
 
@@ -21,8 +21,8 @@ type PlaylistService interface {
 	RemoveVideo(ctx context.Context, playlistID, videoID, userID int) error
 	UpdateVideoPosition(ctx context.Context, playlistID, videoID, userID, newPosition int) error
 
-	GetMyPlaylists(ctx context.Context, userID int, limit, offset int) ([]*domain.Playlist, error)
-	GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) ([]*domain.PlaylistItem, error)
+	GetMyPlaylists(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Playlist], error)
+	GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) (*domain.PageResponse[*domain.PlaylistItem], error)
 }
 
 type playlistService struct {
@@ -90,7 +90,7 @@ func (s *playlistService) GetByID(ctx context.Context, playlistID int) (*domain.
 	return playlist, nil
 }
 
-func (s *playlistService) ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Playlist, error) {
+func (s *playlistService) ListByChannel(ctx context.Context, channelID int, limit, offset int) (*domain.PageResponse[*domain.Playlist], error) {
 	exists, err := s.channelSvc.Exists(ctx, channelID)
 	if err != nil {
 		return nil, fmt.Errorf("check channel exists failed: %w", err)
@@ -98,7 +98,20 @@ func (s *playlistService) ListByChannel(ctx context.Context, channelID int, limi
 	if !exists {
 		return nil, domain.ErrChannelNotFound
 	}
-	return s.playlistRepo.ListByChannel(ctx, channelID, limit, offset)
+	playlists, err := s.playlistRepo.ListByChannel(ctx, channelID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.playlistRepo.CountByChannel(ctx, channelID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.PageResponse[*domain.Playlist]{
+		Items:      playlists,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *playlistService) Update(ctx context.Context, playlistID, userID int, name, description *string) (*domain.Playlist, error) {
@@ -163,7 +176,7 @@ func (s *playlistService) Delete(ctx context.Context, playlistID, userID int) er
 	return s.playlistRepo.Delete(ctx, playlistID)
 }
 
-func (s *playlistService) GetMyPlaylists(ctx context.Context, userID int, limit, offset int) ([]*domain.Playlist, error) {
+func (s *playlistService) GetMyPlaylists(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Playlist], error) {
 	logger := domain.GetLogger(ctx).With(
 		"service", "PlaylistService",
 		"operation", "GetMyPlaylists",
@@ -176,14 +189,19 @@ func (s *playlistService) GetMyPlaylists(ctx context.Context, userID int, limit,
 		return nil, fmt.Errorf("get channel by user id failed: %w", err)
 	}
 	if channel == nil {
-		return []*domain.Playlist{}, nil
+		return &domain.PageResponse[*domain.Playlist]{
+			Items:      []*domain.Playlist{},
+			TotalCount: 0,
+			Limit:      limit,
+			Offset:     offset,
+		}, nil
 	}
 
 	logger.DebugContext(ctx, "Listing playlists from repository")
-	return s.playlistRepo.ListByChannel(ctx, channel.ID, limit, offset)
+	return s.ListByChannel(ctx, channel.ID, limit, offset)
 }
 
-func (s *playlistService) GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) ([]*domain.PlaylistItem, error) {
+func (s *playlistService) GetPlaylistItems(ctx context.Context, playlistID int, limit, offset int) (*domain.PageResponse[*domain.PlaylistItem], error) {
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
 	if err != nil {
 		return nil, err
@@ -192,7 +210,20 @@ func (s *playlistService) GetPlaylistItems(ctx context.Context, playlistID int, 
 		return nil, domain.ErrPlaylistNotFound
 	}
 
-	return s.playlistRepo.ListItems(ctx, playlistID, limit, offset)
+	items, err := s.playlistRepo.ListItems(ctx, playlistID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.playlistRepo.GetItemsCount(ctx, playlistID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.PageResponse[*domain.PlaylistItem]{
+		Items:      items,
+		TotalCount: int64(total),
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, userID int) error {

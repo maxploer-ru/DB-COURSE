@@ -13,7 +13,7 @@ type SubscriptionService interface {
 	Unsubscribe(ctx context.Context, userID, channelID int) error
 	IsSubscribed(ctx context.Context, userID, channelID int) (bool, error)
 	GetSubscribersCount(ctx context.Context, channelID int) (int, error)
-	GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) ([]*domain.Subscription, error)
+	GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Subscription], error)
 	ResetNewVideosCount(ctx context.Context, userID, channelID int) error
 	NotifyAboutNewVideo(ctx context.Context, channelID int) error
 }
@@ -157,7 +157,7 @@ func (s *subscriptionService) GetSubscribersCount(ctx context.Context, channelID
 	return realCnt, nil
 }
 
-func (s *subscriptionService) GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) ([]*domain.Subscription, error) {
+func (s *subscriptionService) GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Subscription], error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "SubscriptionService"),
 		slog.String("operation", "GetUserSubscriptions"),
@@ -172,8 +172,18 @@ func (s *subscriptionService) GetUserSubscriptions(ctx context.Context, userID i
 		logger.ErrorContext(ctx, "Failed to get user subscriptions", slog.String("error", err.Error()))
 		return nil, err
 	}
+	total, err := s.subRepo.CountUserSubscriptions(ctx, userID)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count user subscriptions", slog.String("error", err.Error()))
+		return nil, err
+	}
 	logger.DebugContext(ctx, "User subscriptions retrieved", slog.Int("count", len(subs)))
-	return subs, nil
+	return &domain.PageResponse[*domain.Subscription]{
+		Items:      subs,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *subscriptionService) ResetNewVideosCount(ctx context.Context, userID, channelID int) error {

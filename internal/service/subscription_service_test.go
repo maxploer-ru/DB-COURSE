@@ -158,11 +158,13 @@ func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Positive() {
 	expected := []*domain.Subscription{s.mother.ValidSubscription()}
 
 	s.mockSubRepo.On("GetUserSubscriptions", ctx, 1, 10, 0).Return(expected, nil)
+	s.mockSubRepo.On("CountUserSubscriptions", ctx, 1).Return(int64(len(expected)), nil)
 
 	subs, err := s.service.GetUserSubscriptions(ctx, 1, 10, 0)
 
 	s.NoError(err)
-	s.Len(subs, 1)
+	s.Len(subs.Items, 1)
+	s.Equal(int64(1), subs.TotalCount)
 }
 
 func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Negative() {

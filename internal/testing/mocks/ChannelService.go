@@ -209,23 +209,23 @@ func (_m *ChannelService) IsOwner(ctx context.Context, channelID int, userID int
 }
 
 // ListChannels provides a mock function with given fields: ctx, limit, offset
-func (_m *ChannelService) ListChannels(ctx context.Context, limit int, offset int) ([]*domain.Channel, error) {
+func (_m *ChannelService) ListChannels(ctx context.Context, limit int, offset int) (*domain.PageResponse[*domain.Channel], error) {
 	ret := _m.Called(ctx, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListChannels")
 	}
 
-	var r0 []*domain.Channel
+	var r0 *domain.PageResponse[*domain.Channel]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) ([]*domain.Channel, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*domain.PageResponse[*domain.Channel], error)); ok {
 		return rf(ctx, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) []*domain.Channel); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) *domain.PageResponse[*domain.Channel]); ok {
 		r0 = rf(ctx, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Channel)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Channel])
 		}
 	}
 

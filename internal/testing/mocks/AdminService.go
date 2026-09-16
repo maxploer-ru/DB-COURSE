@@ -51,23 +51,23 @@ func (_m *AdminService) ChangeUserRole(ctx context.Context, adminID int, targetU
 }
 
 // ListUsers provides a mock function with given fields: ctx, adminID, limit, offset
-func (_m *AdminService) ListUsers(ctx context.Context, adminID int, limit int, offset int) ([]*domain.User, error) {
+func (_m *AdminService) ListUsers(ctx context.Context, adminID int, limit int, offset int) (*domain.PageResponse[*domain.User], error) {
 	ret := _m.Called(ctx, adminID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListUsers")
 	}
 
-	var r0 []*domain.User
+	var r0 *domain.PageResponse[*domain.User]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.User, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.User], error)); ok {
 		return rf(ctx, adminID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.User); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.User]); ok {
 		r0 = rf(ctx, adminID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.User)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.User])
 		}
 	}
 

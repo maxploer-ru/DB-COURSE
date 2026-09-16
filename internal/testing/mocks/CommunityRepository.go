@@ -14,6 +14,62 @@ type CommunityRepository struct {
 	mock.Mock
 }
 
+// CountCommentsByPost provides a mock function with given fields: ctx, postID
+func (_m *CommunityRepository) CountCommentsByPost(ctx context.Context, postID int) (int64, error) {
+	ret := _m.Called(ctx, postID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountCommentsByPost")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) (int64, error)); ok {
+		return rf(ctx, postID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) int64); ok {
+		r0 = rf(ctx, postID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, postID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CountPostsByChannel provides a mock function with given fields: ctx, channelID
+func (_m *CommunityRepository) CountPostsByChannel(ctx context.Context, channelID int) (int64, error) {
+	ret := _m.Called(ctx, channelID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountPostsByChannel")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) (int64, error)); ok {
+		return rf(ctx, channelID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) int64); ok {
+		r0 = rf(ctx, channelID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, channelID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateComment provides a mock function with given fields: ctx, comment
 func (_m *CommunityRepository) CreateComment(ctx context.Context, comment *domain.CommunityComment) error {
 	ret := _m.Called(ctx, comment)

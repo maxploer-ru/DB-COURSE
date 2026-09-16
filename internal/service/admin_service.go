@@ -13,7 +13,7 @@ type AdminService interface {
 	BanUser(ctx context.Context, adminID, targetUserID int) error
 	UnbanUser(ctx context.Context, adminID, targetUserID int) error
 	ChangeUserRole(ctx context.Context, adminID, targetUserID int, roleName string) error
-	ListUsers(ctx context.Context, adminID, limit, offset int) ([]*domain.User, error)
+	ListUsers(ctx context.Context, adminID, limit, offset int) (*domain.PageResponse[*domain.User], error)
 }
 
 type adminService struct {
@@ -107,7 +107,7 @@ func (s *adminService) ChangeUserRole(ctx context.Context, adminID, targetUserID
 	return nil
 }
 
-func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int) ([]*domain.User, error) {
+func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int) (*domain.PageResponse[*domain.User], error) {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "AdminService"),
 		slog.String("operation", "ListUsers"),
@@ -120,7 +120,17 @@ func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int
 		logger.ErrorContext(ctx, "Failed to list users", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("list users failed: %w", err)
 	}
+	total, err := s.userRepo.CountUsers(ctx)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count users", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("count users failed: %w", err)
+	}
 
 	logger.DebugContext(ctx, "Users retrieved successfully", slog.Int("count", len(users)))
-	return users, nil
+	return &domain.PageResponse[*domain.User]{
+		Items:      users,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }

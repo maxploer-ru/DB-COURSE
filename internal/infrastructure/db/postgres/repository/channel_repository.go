@@ -95,3 +95,11 @@ func (r *ChannelRepository) ListChannels(ctx context.Context, limit, offset int)
 	}
 	return mappers.ToDomainChannelList(dbModels), nil
 }
+
+func (r *ChannelRepository) CountChannels(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Channel{}).
+		Count(&count).Error
+	return count, err
+}

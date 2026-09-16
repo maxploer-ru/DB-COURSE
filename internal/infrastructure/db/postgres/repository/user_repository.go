@@ -66,6 +66,17 @@ func (repo *UserRepository) ListUsers(ctx context.Context, limit, offset int) ([
 	return mappers.ToDomainUserList(dbModels), nil
 }
 
+func (repo *UserRepository) CountUsers(ctx context.Context) (int64, error) {
+	var count int64
+	err := repo.db.WithContext(ctx).
+		Model(&models.User{}).
+		Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("count users failed: %w", err)
+	}
+	return count, nil
+}
+
 func (repo *UserRepository) GetByIDs(ctx context.Context, ids []int) ([]*domain.User, error) {
 	var dbModels []*models.User
 	if err := repo.db.WithContext(ctx).Preload("Role").Where("id IN ?", ids).Find(&dbModels).Error; err != nil {

@@ -20,9 +20,9 @@ type VideoService interface {
 	GetVideo(ctx context.Context, videoID int) (*domain.Video, error)
 	UpdateVideo(ctx context.Context, videoID, userID int, title, description *string) (*domain.Video, error)
 	DeleteVideo(ctx context.Context, videoID, userID int, role string) error
-	ListChannelVideos(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error)
-	ListMyVideos(ctx context.Context, userID int, limit, offset int) ([]*domain.Video, error)
-	ListAllVideos(ctx context.Context, limit, offset int) ([]*domain.Video, error)
+	ListChannelVideos(ctx context.Context, channelID int, limit, offset int) (*domain.PageResponse[*domain.Video], error)
+	ListMyVideos(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Video], error)
+	ListAllVideos(ctx context.Context, limit, offset int) (*domain.PageResponse[*domain.Video], error)
 	GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error)
 }
 
@@ -198,24 +198,50 @@ func (s *videoService) UpdateVideo(ctx context.Context, videoID, userID int, tit
 	return video, nil
 }
 
-func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error) {
+func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, limit, offset int) (*domain.PageResponse[*domain.Video], error) {
 	exists, err := s.channelSvc.Exists(ctx, channelID)
 	if err != nil || !exists {
 		return nil, domain.ErrChannelNotFound
 	}
-	return s.videoRepo.ListByChannel(ctx, channelID, limit, offset)
+	videos, err := s.videoRepo.ListByChannel(ctx, channelID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.videoRepo.CountByChannel(ctx, channelID)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.PageResponse[*domain.Video]{
+		Items:      videos,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
-func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offset int) ([]*domain.Video, error) {
+func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offset int) (*domain.PageResponse[*domain.Video], error) {
 	channel, err := s.channelSvc.GetChannelByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("get channel by user id: %w", err)
 	}
-	return s.videoRepo.ListByChannel(ctx, channel.ID, limit, offset)
+	return s.ListChannelVideos(ctx, channel.ID, limit, offset)
 }
 
-func (s *videoService) ListAllVideos(ctx context.Context, limit, offset int) ([]*domain.Video, error) {
-	return s.videoRepo.List(ctx, limit, offset)
+func (s *videoService) ListAllVideos(ctx context.Context, limit, offset int) (*domain.PageResponse[*domain.Video], error) {
+	videos, err := s.videoRepo.List(ctx, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.videoRepo.Count(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &domain.PageResponse[*domain.Video]{
+		Items:      videos,
+		TotalCount: total,
+		Limit:      limit,
+		Offset:     offset,
+	}, nil
 }
 
 func (s *videoService) GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error) {

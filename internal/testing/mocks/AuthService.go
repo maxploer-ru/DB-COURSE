@@ -95,21 +95,33 @@ func (_m *AuthService) Refresh(ctx context.Context, refreshToken string) (*servi
 }
 
 // Register provides a mock function with given fields: ctx, username, email, password
-func (_m *AuthService) Register(ctx context.Context, username string, email string, password string) error {
+func (_m *AuthService) Register(ctx context.Context, username string, email string, password string) (*domain.User, error) {
 	ret := _m.Called(ctx, username, email, password)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Register")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+	var r0 *domain.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) (*domain.User, error)); ok {
+		return rf(ctx, username, email, password)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) *domain.User); ok {
 		r0 = rf(ctx, username, email, password)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.User)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string) error); ok {
+		r1 = rf(ctx, username, email, password)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // ValidateAccessToken provides a mock function with given fields: ctx, token

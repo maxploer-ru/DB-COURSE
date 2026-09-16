@@ -43,23 +43,23 @@ func (_m *SubscriptionService) GetSubscribersCount(ctx context.Context, channelI
 }
 
 // GetUserSubscriptions provides a mock function with given fields: ctx, userID, limit, offset
-func (_m *SubscriptionService) GetUserSubscriptions(ctx context.Context, userID int, limit int, offset int) ([]*domain.Subscription, error) {
+func (_m *SubscriptionService) GetUserSubscriptions(ctx context.Context, userID int, limit int, offset int) (*domain.PageResponse[*domain.Subscription], error) {
 	ret := _m.Called(ctx, userID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUserSubscriptions")
 	}
 
-	var r0 []*domain.Subscription
+	var r0 *domain.PageResponse[*domain.Subscription]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Subscription, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Subscription], error)); ok {
 		return rf(ctx, userID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Subscription); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Subscription]); ok {
 		r0 = rf(ctx, userID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Subscription)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Subscription])
 		}
 	}
 

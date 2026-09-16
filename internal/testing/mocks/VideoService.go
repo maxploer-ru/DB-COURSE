@@ -146,23 +146,23 @@ func (_m *VideoService) InitUpload(ctx context.Context, channelID int, userID in
 }
 
 // ListAllVideos provides a mock function with given fields: ctx, limit, offset
-func (_m *VideoService) ListAllVideos(ctx context.Context, limit int, offset int) ([]*domain.Video, error) {
+func (_m *VideoService) ListAllVideos(ctx context.Context, limit int, offset int) (*domain.PageResponse[*domain.Video], error) {
 	ret := _m.Called(ctx, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListAllVideos")
 	}
 
-	var r0 []*domain.Video
+	var r0 *domain.PageResponse[*domain.Video]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) ([]*domain.Video, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) (*domain.PageResponse[*domain.Video], error)); ok {
 		return rf(ctx, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int) []*domain.Video); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int) *domain.PageResponse[*domain.Video]); ok {
 		r0 = rf(ctx, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Video)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Video])
 		}
 	}
 
@@ -176,23 +176,23 @@ func (_m *VideoService) ListAllVideos(ctx context.Context, limit int, offset int
 }
 
 // ListChannelVideos provides a mock function with given fields: ctx, channelID, limit, offset
-func (_m *VideoService) ListChannelVideos(ctx context.Context, channelID int, limit int, offset int) ([]*domain.Video, error) {
+func (_m *VideoService) ListChannelVideos(ctx context.Context, channelID int, limit int, offset int) (*domain.PageResponse[*domain.Video], error) {
 	ret := _m.Called(ctx, channelID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListChannelVideos")
 	}
 
-	var r0 []*domain.Video
+	var r0 *domain.PageResponse[*domain.Video]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Video, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Video], error)); ok {
 		return rf(ctx, channelID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Video); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Video]); ok {
 		r0 = rf(ctx, channelID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Video)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Video])
 		}
 	}
 
@@ -206,23 +206,23 @@ func (_m *VideoService) ListChannelVideos(ctx context.Context, channelID int, li
 }
 
 // ListMyVideos provides a mock function with given fields: ctx, userID, limit, offset
-func (_m *VideoService) ListMyVideos(ctx context.Context, userID int, limit int, offset int) ([]*domain.Video, error) {
+func (_m *VideoService) ListMyVideos(ctx context.Context, userID int, limit int, offset int) (*domain.PageResponse[*domain.Video], error) {
 	ret := _m.Called(ctx, userID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListMyVideos")
 	}
 
-	var r0 []*domain.Video
+	var r0 *domain.PageResponse[*domain.Video]
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) ([]*domain.Video, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) (*domain.PageResponse[*domain.Video], error)); ok {
 		return rf(ctx, userID, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) []*domain.Video); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, int, int) *domain.PageResponse[*domain.Video]); ok {
 		r0 = rf(ctx, userID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*domain.Video)
+			r0 = ret.Get(0).(*domain.PageResponse[*domain.Video])
 		}
 	}
 

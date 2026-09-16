@@ -11,6 +11,7 @@ type SubscriptionRepository interface {
 	IsSubscribed(ctx context.Context, userID, channelID int) (bool, error)
 	GetSubscribersCount(ctx context.Context, channelID int) (int, error)
 	GetUserSubscriptions(ctx context.Context, userID int, limit, offset int) ([]*domain.Subscription, error)
+	CountUserSubscriptions(ctx context.Context, userID int) (int64, error)
 	NotifySubscribersAboutNewVideo(ctx context.Context, channelID int) error
 	ResetNewVideosCount(ctx context.Context, userID, channelID int) error
 }

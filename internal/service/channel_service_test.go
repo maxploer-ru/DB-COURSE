@@ -219,11 +219,13 @@ func (s *ChannelServiceTestSuite) TestListChannels_Positive() {
 	ctx := context.Background()
 	expected := []*domain.Channel{s.mother.ValidChannel()}
 	s.mockRepo.On("ListChannels", ctx, 10, 0).Return(expected, nil)
+	s.mockRepo.On("CountChannels", ctx).Return(int64(len(expected)), nil)
 
 	channels, err := s.service.ListChannels(ctx, 10, 0)
 
 	s.NoError(err)
-	s.Len(channels, 1)
+	s.Len(channels.Items, 1)
+	s.Equal(int64(1), channels.TotalCount)
 }
 
 func (s *ChannelServiceTestSuite) TestListChannels_Negative() {

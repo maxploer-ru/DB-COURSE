@@ -21,6 +21,9 @@ type CommunityComment struct {
 }
 
 type Community struct {
-	Channel *Channel
-	Posts   []*CommunityPost
+	Channel    *Channel
+	Posts      []*CommunityPost
+	TotalCount int64
+	Limit      int
+	Offset     int
 }

@@ -14,6 +14,34 @@ type SubscriptionRepository struct {
 	mock.Mock
 }
 
+// CountUserSubscriptions provides a mock function with given fields: ctx, userID
+func (_m *SubscriptionRepository) CountUserSubscriptions(ctx context.Context, userID int) (int64, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CountUserSubscriptions")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) (int64, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) int64); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetSubscribersCount provides a mock function with given fields: ctx, channelID
 func (_m *SubscriptionRepository) GetSubscribersCount(ctx context.Context, channelID int) (int, error) {
 	ret := _m.Called(ctx, channelID)

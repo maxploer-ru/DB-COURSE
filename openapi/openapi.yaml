@@ -1,0 +1,2059 @@
+openapi: 3.0.3
+info:
+  title: ZVideo API
+  version: 1.0.0
+  description: REST API for a video hosting platform.
+servers:
+  - url: /api/v1
+security:
+  - BearerAuth: []
+tags:
+  - name: Auth
+  - name: Users
+  - name: Channels
+  - name: Subscriptions
+  - name: Videos
+  - name: Comments
+  - name: Playlists
+  - name: Community
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Login with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Tokens issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      security: []
+      summary: Rotate refresh token and issue new tokens
+      operationId: refreshTokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke current refresh token
+      operationId: logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Logged out.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Users]
+      summary: Delete current user account
+      operationId: deleteCurrentUser
+      responses:
+        '204':
+          description: Account deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/me/notification-settings:
+    patch:
+      tags: [Users]
+      summary: Update current user's notification settings
+      operationId: updateCurrentUserNotificationSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationSettingsRequest'
+      responses:
+        '204':
+          description: Notification settings updated.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Requires admin role.
+      operationId: listUsers
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Users page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /users/{userId}/ban:
+    post:
+      tags: [Users]
+      summary: Ban a user
+      description: Requires admin role.
+      operationId: banUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: User banned.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{userId}/unban:
+    post:
+      tags: [Users]
+      summary: Unban a user
+      description: Requires admin role.
+      operationId: unbanUser
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: User unbanned.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{userId}/role:
+    put:
+      tags: [Users]
+      summary: Replace user role
+      description: Requires admin role.
+      operationId: replaceUserRole
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeUserRoleRequest'
+      responses:
+        '204':
+          description: Role changed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/{userId}/channel:
+    get:
+      tags: [Channels]
+      security: []
+      summary: Get a user's channel
+      operationId: getUserChannel
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User's channel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels:
+    get:
+      tags: [Channels]
+      security: []
+      summary: List channels
+      operationId: listChannels
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Channels page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelPage'
+    post:
+      tags: [Channels]
+      summary: Create current user's channel
+      operationId: createChannel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChannelCreateRequest'
+      responses:
+        '201':
+          description: Channel created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /channels/me:
+    get:
+      tags: [Channels]
+      summary: Get current user's channel
+      operationId: getMyChannel
+      responses:
+        '200':
+          description: Current user's channel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}:
+    get:
+      tags: [Channels]
+      security: []
+      summary: Get channel by id
+      operationId: getChannel
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '200':
+          description: Channel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Channels]
+      summary: Update channel
+      operationId: updateChannel
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChannelUpdateRequest'
+      responses:
+        '200':
+          description: Channel updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Channels]
+      summary: Delete channel
+      operationId: deleteChannel
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '204':
+          description: Channel deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/by-name/{name}:
+    get:
+      tags: [Channels]
+      security: []
+      summary: Get channel by name
+      operationId: getChannelByName
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Channel.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/subscriptions:
+    put:
+      tags: [Subscriptions]
+      summary: Subscribe to channel
+      operationId: subscribeToChannel
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '204':
+          description: Subscribed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Subscriptions]
+      summary: Unsubscribe from channel
+      operationId: unsubscribeFromChannel
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '204':
+          description: Unsubscribed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/subscriptions/status:
+    get:
+      tags: [Subscriptions]
+      summary: Check current user's subscription to channel
+      operationId: getChannelSubscriptionStatus
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '200':
+          description: Subscription status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/subscribers/count:
+    get:
+      tags: [Subscriptions]
+      security: []
+      summary: Get channel subscribers count
+      operationId: getChannelSubscribersCount
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '200':
+          description: Subscribers count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/me/subscriptions:
+    get:
+      tags: [Subscriptions]
+      summary: List current user's subscriptions
+      operationId: listMySubscriptions
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Subscriptions page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/me/subscriptions/{channelId}/new-videos-count:
+    delete:
+      tags: [Subscriptions]
+      summary: Reset unread new videos count for subscription
+      operationId: resetSubscriptionNewVideosCount
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      responses:
+        '204':
+          description: Counter reset.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos:
+    get:
+      tags: [Videos]
+      security: []
+      summary: List videos
+      operationId: listVideos
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Videos page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPage'
+  /users/me/videos:
+    get:
+      tags: [Videos]
+      summary: List current user's channel videos
+      operationId: listMyVideos
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Videos page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /channels/{channelId}/videos:
+    get:
+      tags: [Videos]
+      security: []
+      summary: List channel videos
+      operationId: listChannelVideos
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Videos page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/videos/uploads:
+    post:
+      tags: [Videos]
+      summary: Initialize video upload
+      operationId: initVideoUpload
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoUploadInitRequest'
+      responses:
+        '201':
+          description: Pending video and upload URL created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoUploadInitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}:
+    get:
+      tags: [Videos]
+      security: []
+      summary: Get video metadata
+      operationId: getVideo
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Video.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Videos]
+      summary: Update video metadata
+      operationId: updateVideo
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoUpdateRequest'
+      responses:
+        '200':
+          description: Video updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Video'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Videos]
+      summary: Delete video
+      description: Channel owner, moderator, or admin can delete a video. File deletion may be performed asynchronously.
+      operationId: deleteVideo
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '204':
+          description: Video deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}/confirm:
+    post:
+      tags: [Videos]
+      summary: Confirm uploaded video and publish it
+      operationId: confirmVideoUpload
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '204':
+          description: Video confirmed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}/stream-url:
+    get:
+      tags: [Videos]
+      security: []
+      summary: Get video streaming URL
+      operationId: getVideoStreamUrl
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Presigned URL for the original video file.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedUrlResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Video is not ready yet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /videos/{videoId}/views:
+    post:
+      tags: [Videos]
+      summary: Record a video view
+      operationId: recordVideoView
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '204':
+          description: View recorded.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}/rating:
+    put:
+      tags: [Videos]
+      summary: Replace current user's video rating
+      operationId: rateVideo
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingRequest'
+      responses:
+        '204':
+          description: Rating applied.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}/stats:
+    get:
+      tags: [Videos]
+      security: []
+      summary: Get video stats
+      operationId: getVideoStats
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '200':
+          description: Video stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /videos/{videoId}/comments:
+    get:
+      tags: [Comments]
+      security: []
+      summary: List video comments
+      operationId: listVideoComments
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Comments page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Comments]
+      summary: Create video comment
+      operationId: createVideoComment
+      parameters:
+        - $ref: '#/components/parameters/VideoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '201':
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{commentId}:
+    get:
+      tags: [Comments]
+      security: []
+      summary: Get comment
+      operationId: getComment
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+      responses:
+        '200':
+          description: Comment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Comments]
+      summary: Update comment
+      operationId: updateComment
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '200':
+          description: Comment updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Comments]
+      summary: Delete comment
+      description: Comment author, moderator, or admin can delete a comment.
+      operationId: deleteComment
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+      responses:
+        '204':
+          description: Comment deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{commentId}/rating:
+    put:
+      tags: [Comments]
+      summary: Replace current user's comment rating
+      operationId: rateComment
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingRequest'
+      responses:
+        '204':
+          description: Rating applied.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /comments/{commentId}/stats:
+    get:
+      tags: [Comments]
+      security: []
+      summary: Get comment rating stats
+      operationId: getCommentStats
+      parameters:
+        - $ref: '#/components/parameters/CommentId'
+      responses:
+        '200':
+          description: Comment stats.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/playlists:
+    get:
+      tags: [Playlists]
+      security: []
+      summary: List channel playlists
+      operationId: listChannelPlaylists
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Playlists page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Playlists]
+      summary: Create playlist in channel
+      operationId: createPlaylist
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaylistCreateRequest'
+      responses:
+        '201':
+          description: Playlist created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /users/me/playlists:
+    get:
+      tags: [Playlists]
+      summary: List current user's playlists
+      operationId: listMyPlaylists
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Playlists page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /playlists/{playlistId}:
+    get:
+      tags: [Playlists]
+      security: []
+      summary: Get playlist
+      operationId: getPlaylist
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+      responses:
+        '200':
+          description: Playlist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Playlists]
+      summary: Update playlist
+      operationId: updatePlaylist
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaylistUpdateRequest'
+      responses:
+        '200':
+          description: Playlist updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Playlist'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Playlists]
+      summary: Delete playlist
+      operationId: deletePlaylist
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+      responses:
+        '204':
+          description: Playlist deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /playlists/{playlistId}/videos:
+    get:
+      tags: [Playlists]
+      security: []
+      summary: List playlist videos
+      operationId: listPlaylistVideos
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Playlist items page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlaylistItemPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Playlists]
+      summary: Add video to playlist
+      operationId: addVideoToPlaylist
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPlaylistVideoRequest'
+      responses:
+        '204':
+          description: Video added.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /playlists/{playlistId}/videos/{videoId}:
+    patch:
+      tags: [Playlists]
+      summary: Update video position in playlist
+      operationId: updatePlaylistVideoPosition
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+        - $ref: '#/components/parameters/VideoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlaylistVideoPositionRequest'
+      responses:
+        '204':
+          description: Position updated.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Playlists]
+      summary: Remove video from playlist
+      operationId: removeVideoFromPlaylist
+      parameters:
+        - $ref: '#/components/parameters/PlaylistId'
+        - $ref: '#/components/parameters/VideoId'
+      responses:
+        '204':
+          description: Video removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/community:
+    get:
+      tags: [Community]
+      security: []
+      summary: Get channel community with posts
+      operationId: getChannelCommunity
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Channel community.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Community'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/me/community:
+    get:
+      tags: [Community]
+      summary: Get current user's channel community
+      operationId: getMyCommunity
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Current user's community.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Community'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /channels/{channelId}/community/posts:
+    post:
+      tags: [Community]
+      summary: Create community post
+      operationId: createCommunityPost
+      parameters:
+        - $ref: '#/components/parameters/ChannelId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '201':
+          description: Post created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /community/posts/{postId}:
+    patch:
+      tags: [Community]
+      summary: Update community post
+      operationId: updateCommunityPost
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '200':
+          description: Post updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Community]
+      summary: Delete community post
+      operationId: deleteCommunityPost
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        '204':
+          description: Post deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /community/posts/{postId}/comments:
+    get:
+      tags: [Community]
+      security: []
+      summary: List community post comments
+      operationId: listCommunityPostComments
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Community comments page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityCommentPage'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Community]
+      summary: Create community post comment
+      operationId: createCommunityComment
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '201':
+          description: Community comment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityComment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /community/comments/{commentId}:
+    patch:
+      tags: [Community]
+      summary: Update community comment
+      operationId: updateCommunityComment
+      parameters:
+        - $ref: '#/components/parameters/CommunityCommentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentRequest'
+      responses:
+        '200':
+          description: Community comment updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityComment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Community]
+      summary: Delete community comment
+      operationId: deleteCommunityComment
+      parameters:
+        - $ref: '#/components/parameters/CommunityCommentId'
+      responses:
+        '204':
+          description: Community comment deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ChannelId:
+      name: channelId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    VideoId:
+      name: videoId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    CommentId:
+      name: commentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PlaylistId:
+      name: playlistId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    CommunityCommentId:
+      name: commentId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    BadRequest:
+      description: Request validation or domain rule failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidUsername:
+              summary: Invalid username
+              value:
+                error:
+                  code: INVALID_USERNAME
+                  message: The username is invalid
+            invalidUserEmail:
+              summary: Invalid email
+              value:
+                error:
+                  code: INVALID_USER_EMAIL
+                  message: The email is invalid
+            weakPassword:
+              summary: Weak password
+              value:
+                error:
+                  code: WEAK_PASSWORD
+                  message: The password is too weak
+            playlistNameEmpty:
+              summary: Empty playlist name
+              value:
+                error:
+                  code: PLAYLIST_NAME_EMPTY
+                  message: Playlist name cannot be empty
+            playlistVideoChannelMismatch:
+              summary: Playlist and video belong to different channels
+              value:
+                error:
+                  code: PLAYLIST_VIDEO_CHANNEL_MISMATCH
+                  message: Video belongs to another channel
+            selfSubscription:
+              summary: User cannot subscribe to own channel
+              value:
+                error:
+                  code: SELF_SUBSCRIPTION
+                  message: Cannot subscribe to your own channel
+            invalidNotificationSettings:
+              summary: Invalid notification settings
+              value:
+                error:
+                  code: INVALID_NOTIFICATION_SETTINGS
+                  message: Notification settings payload is invalid
+            roleNotFound:
+              summary: Role not found
+              value:
+                error:
+                  code: ROLE_NOT_FOUND
+                  message: Role not found
+            communityPostContentEmpty:
+              summary: Empty community post
+              value:
+                error:
+                  code: COMMUNITY_POST_CONTENT_EMPTY
+                  message: Community post content cannot be empty
+            communityCommentContentEmpty:
+              summary: Empty community comment
+              value:
+                error:
+                  code: COMMUNITY_COMMENT_CONTENT_EMPTY
+                  message: Community comment content cannot be empty
+    Unauthorized:
+      description: Authentication failed or token is missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalidCredentials:
+              summary: Invalid login credentials
+              value:
+                error:
+                  code: INVALID_CREDENTIALS
+                  message: Invalid email or password
+            invalidToken:
+              summary: Invalid or expired token
+              value:
+                error:
+                  code: INVALID_TOKEN
+                  message: Invalid or expired token
+            missingAuthorization:
+              summary: Missing bearer token
+              value:
+                error:
+                  code: UNAUTHORIZED
+                  message: user not authorized
+    Forbidden:
+      description: Authenticated user is not allowed to perform this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              summary: Insufficient permissions
+              value:
+                error:
+                  code: FORBIDDEN
+                  message: You don't have permission to access this resource
+            userBanned:
+              summary: User account is banned
+              value:
+                error:
+                  code: USER_BANNED
+                  message: User account is banned
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            userNotFound:
+              summary: User not found
+              value:
+                error:
+                  code: USER_NOT_FOUND
+                  message: User not found
+            channelNotFound:
+              summary: Channel not found
+              value:
+                error:
+                  code: CHANNEL_NOT_FOUND
+                  message: Channel not found
+            videoNotFound:
+              summary: Video not found
+              value:
+                error:
+                  code: VIDEO_NOT_FOUND
+                  message: Video not found
+            playlistNotFound:
+              summary: Playlist not found
+              value:
+                error:
+                  code: PLAYLIST_NOT_FOUND
+                  message: Playlist not found
+            ratingNotFound:
+              summary: Rating not found
+              value:
+                error:
+                  code: RATING_NOT_FOUND
+                  message: Rating not found
+            commentNotFound:
+              summary: Comment not found
+              value:
+                error:
+                  code: COMMENT_NOT_FOUND
+                  message: Comment not found
+            communityPostNotFound:
+              summary: Community post not found
+              value:
+                error:
+                  code: COMMUNITY_POST_NOT_FOUND
+                  message: Community post not found
+            communityCommentNotFound:
+              summary: Community comment not found
+              value:
+                error:
+                  code: COMMUNITY_COMMENT_NOT_FOUND
+                  message: Community comment not found
+    Conflict:
+      description: Resource state conflicts with the request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            usernameTaken:
+              summary: Username already exists
+              value:
+                error:
+                  code: USERNAME_TAKEN
+                  message: Username already taken
+            emailTaken:
+              summary: Email already exists
+              value:
+                error:
+                  code: EMAIL_TAKEN
+                  message: Email already registered
+            channelAlreadyExists:
+              summary: User already has a channel
+              value:
+                error:
+                  code: CHANNEL_ALREADY_EXISTS
+                  message: Channel already exists
+            channelNameTaken:
+              summary: Channel name already exists
+              value:
+                error:
+                  code: CHANNEL_NAME_TAKEN
+                  message: Channel name already exists
+            alreadyRated:
+              summary: Resource has already been rated
+              value:
+                error:
+                  code: ALREADY_RATED
+                  message: This video has already been rated
+            videoNotReady:
+              summary: Video is not ready
+              value:
+                error:
+                  code: VIDEO_NOT_READY
+                  message: Video is not ready yet
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internalError:
+              summary: Unexpected server error
+              value:
+                error:
+                  code: INTERNAL_ERROR
+                  message: Something went wrong
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: ERROR_CODE
+        message:
+          type: string
+          example: Human-readable error message
+    RegisterRequest:
+      type: object
+      required: [username, email, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    AuthResponse:
+      type: object
+      required: [user, accessToken, refreshToken, refreshExpiresAt]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        refreshExpiresAt:
+          type: string
+          format: date-time
+    Role:
+      type: object
+      required: [id, name, isDefault]
+      properties:
+        id:
+          type: integer
+        name:
+          $ref: '#/components/schemas/RoleName'
+        isDefault:
+          type: boolean
+    RoleName:
+      type: string
+      enum: [admin, moderator, user]
+    User:
+      type: object
+      required: [id, username, email, isActive, notificationsEnabled, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        isActive:
+          type: boolean
+        notificationsEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        role:
+          $ref: '#/components/schemas/Role'
+    NotificationSettingsRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+    ChangeUserRoleRequest:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleName'
+    Channel:
+      type: object
+      required: [id, userId, ownerUsername, name, description, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        ownerUsername:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ChannelCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          default: ''
+    ChannelUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Subscription:
+      type: object
+      required: [userId, channelId, channelName, newVideosCount, subscribedAt]
+      properties:
+        userId:
+          type: integer
+        channelId:
+          type: integer
+        channelName:
+          type: string
+        newVideosCount:
+          type: integer
+          minimum: 0
+        subscribedAt:
+          type: string
+          format: date-time
+    SubscriptionStatus:
+      type: object
+      required: [subscribed]
+      properties:
+        subscribed:
+          type: boolean
+    CountResponse:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+    VideoStatus:
+      type: string
+      enum: [pending, ready]
+    Video:
+      type: object
+      required: [id, channelId, channelName, title, description, filepath, originalFilename, status, createdAt]
+      properties:
+        id:
+          type: integer
+        channelId:
+          type: integer
+        channelName:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        filepath:
+          type: string
+          description: Storage object key.
+        originalFilename:
+          type: string
+        status:
+          $ref: '#/components/schemas/VideoStatus'
+        createdAt:
+          type: string
+          format: date-time
+        stats:
+          $ref: '#/components/schemas/VideoStats'
+    VideoStats:
+      type: object
+      required: [views, likes, dislikes, comments]
+      properties:
+        views:
+          type: integer
+          minimum: 0
+        likes:
+          type: integer
+          minimum: 0
+        dislikes:
+          type: integer
+          minimum: 0
+        comments:
+          type: integer
+          minimum: 0
+    VideoUploadInitRequest:
+      type: object
+      required: [title, filename]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+          default: ''
+        filename:
+          type: string
+          example: video.mp4
+    VideoUploadInitResponse:
+      type: object
+      required: [video, uploadUrl, uploadExpiresAt]
+      properties:
+        video:
+          $ref: '#/components/schemas/Video'
+        uploadUrl:
+          type: string
+          format: uri
+        uploadExpiresAt:
+          type: string
+          format: date-time
+    VideoUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+    PresignedUrlResponse:
+      type: object
+      required: [url, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time
+    RatingAction:
+      type: string
+      enum: [like, dislike, remove]
+    RatingRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          $ref: '#/components/schemas/RatingAction'
+    RatingStats:
+      type: object
+      required: [likes, dislikes]
+      properties:
+        likes:
+          type: integer
+          minimum: 0
+        dislikes:
+          type: integer
+          minimum: 0
+    Comment:
+      type: object
+      required: [id, userId, username, videoId, content, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        videoId:
+          type: integer
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ContentRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+    Playlist:
+      type: object
+      required: [id, channelId, name, description, createdAt]
+      properties:
+        id:
+          type: integer
+        channelId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PlaylistCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          default: ''
+    PlaylistUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    AddPlaylistVideoRequest:
+      type: object
+      required: [videoId]
+      properties:
+        videoId:
+          type: integer
+          minimum: 1
+    UpdatePlaylistVideoPositionRequest:
+      type: object
+      required: [position]
+      properties:
+        position:
+          type: integer
+          minimum: 1
+    PlaylistItem:
+      type: object
+      required: [playlistId, videoId, number, addedAt, videoTitle, channelName, videoStatus]
+      properties:
+        playlistId:
+          type: integer
+        videoId:
+          type: integer
+        number:
+          type: integer
+          minimum: 1
+        addedAt:
+          type: string
+          format: date-time
+        videoTitle:
+          type: string
+        channelName:
+          type: string
+        videoStatus:
+          $ref: '#/components/schemas/VideoStatus'
+    Community:
+      type: object
+      required: [channel, posts, totalCount, limit, offset]
+      properties:
+        channel:
+          $ref: '#/components/schemas/Channel'
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunityPost'
+        totalCount:
+          type: integer
+          format: int64
+          minimum: 0
+        limit:
+          type: integer
+        offset:
+          type: integer
+    CommunityPost:
+      type: object
+      required: [id, channelId, userId, username, content, createdAt]
+      properties:
+        id:
+          type: integer
+        channelId:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    CommunityComment:
+      type: object
+      required: [id, postId, userId, username, content, createdAt]
+      properties:
+        id:
+          type: integer
+        postId:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PageMeta:
+      type: object
+      required: [limit, offset, totalCount]
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        totalCount:
+          type: integer
+          format: int64
+          minimum: 0
+    UserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+    ChannelPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Channel'
+    SubscriptionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Subscription'
+    VideoPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Video'
+    CommentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Comment'
+    PlaylistPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Playlist'
+    PlaylistItemPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/PlaylistItem'
+    CommunityCommentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CommunityComment'

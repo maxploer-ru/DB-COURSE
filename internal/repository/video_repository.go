@@ -12,5 +12,7 @@ type VideoRepository interface {
 	Delete(ctx context.Context, id int) error
 
 	List(ctx context.Context, limit, offset int) ([]*domain.Video, error)
+	Count(ctx context.Context) (int64, error)
 	ListByChannel(ctx context.Context, channelID int, limit, offset int) ([]*domain.Video, error)
+	CountByChannel(ctx context.Context, channelID int) (int64, error)
 }

@@ -78,11 +78,13 @@ func (s *PlaylistServiceTestSuite) TestListByChannel_Positive() {
 	expected := []*domain.Playlist{s.mother.PlaylistForChannel(1)}
 	s.mockChanSvc.On("Exists", ctx, 1).Return(true, nil)
 	s.mockPlaylistRepo.On("ListByChannel", ctx, 1, 10, 0).Return(expected, nil)
+	s.mockPlaylistRepo.On("CountByChannel", ctx, 1).Return(int64(len(expected)), nil)
 
 	list, err := s.service.ListByChannel(ctx, 1, 10, 0)
 
 	s.NoError(err)
-	s.Len(list, 1)
+	s.Len(list.Items, 1)
+	s.Equal(int64(1), list.TotalCount)
 }
 
 func (s *PlaylistServiceTestSuite) TestListByChannel_Negative() {
@@ -221,12 +223,15 @@ func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Positive() {
 	ch := chMother.ChannelForUser(1)
 	expected := []*domain.Playlist{s.mother.PlaylistForChannel(ch.ID)}
 	s.mockChanSvc.On("GetChannelByUserID", ctx, 1).Return(ch, nil)
+	s.mockChanSvc.On("Exists", ctx, ch.ID).Return(true, nil)
 	s.mockPlaylistRepo.On("ListByChannel", ctx, ch.ID, 10, 0).Return(expected, nil)
+	s.mockPlaylistRepo.On("CountByChannel", ctx, ch.ID).Return(int64(len(expected)), nil)
 
 	list, err := s.service.GetMyPlaylists(ctx, 1, 10, 0)
 
 	s.NoError(err)
-	s.Len(list, 1)
+	s.Len(list.Items, 1)
+	s.Equal(int64(1), list.TotalCount)
 }
 
 func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Negative() {
@@ -245,11 +250,13 @@ func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Positive() {
 	expected := []*domain.PlaylistItem{{PlaylistID: pl.ID, VideoID: 1, Number: 1}}
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
 	s.mockPlaylistRepo.On("ListItems", ctx, pl.ID, 10, 0).Return(expected, nil)
+	s.mockPlaylistRepo.On("GetItemsCount", ctx, pl.ID).Return(len(expected), nil)
 
 	items, err := s.service.GetPlaylistItems(ctx, pl.ID, 10, 0)
 
 	s.NoError(err)
-	s.Len(items, 1)
+	s.Len(items.Items, 1)
+	s.Equal(int64(1), items.TotalCount)
 }
 
 func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Negative() {

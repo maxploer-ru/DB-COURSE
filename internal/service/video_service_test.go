@@ -168,11 +168,13 @@ func (s *VideoServiceTestSuite) TestListChannelVideos_Positive() {
 
 	s.mockChanSvc.On("Exists", ctx, 1).Return(true, nil)
 	s.mockVideoRepo.On("ListByChannel", ctx, 1, 10, 0).Return(expected, nil)
+	s.mockVideoRepo.On("CountByChannel", ctx, 1).Return(int64(len(expected)), nil)
 
 	videos, err := s.service.ListChannelVideos(ctx, 1, 10, 0)
 
 	s.NoError(err)
-	s.Len(videos, 1)
+	s.Len(videos.Items, 1)
+	s.Equal(int64(1), videos.TotalCount)
 }
 
 func (s *VideoServiceTestSuite) TestListChannelVideos_Negative() {
@@ -193,12 +195,15 @@ func (s *VideoServiceTestSuite) TestListMyVideos_Positive() {
 	expected := []*domain.Video{s.mother.ReadyVideoForChannel(ch.ID)}
 
 	s.mockChanSvc.On("GetChannelByUserID", ctx, 1).Return(ch, nil)
+	s.mockChanSvc.On("Exists", ctx, ch.ID).Return(true, nil)
 	s.mockVideoRepo.On("ListByChannel", ctx, ch.ID, 10, 0).Return(expected, nil)
+	s.mockVideoRepo.On("CountByChannel", ctx, ch.ID).Return(int64(len(expected)), nil)
 
 	videos, err := s.service.ListMyVideos(ctx, 1, 10, 0)
 
 	s.NoError(err)
-	s.Len(videos, 1)
+	s.Len(videos.Items, 1)
+	s.Equal(int64(1), videos.TotalCount)
 }
 
 func (s *VideoServiceTestSuite) TestListMyVideos_Negative() {
@@ -217,11 +222,13 @@ func (s *VideoServiceTestSuite) TestListAllVideos_Positive() {
 	expected := []*domain.Video{s.mother.ReadyVideoForChannel(1)}
 
 	s.mockVideoRepo.On("List", ctx, 10, 0).Return(expected, nil)
+	s.mockVideoRepo.On("Count", ctx).Return(int64(len(expected)), nil)
 
 	videos, err := s.service.ListAllVideos(ctx, 10, 0)
 
 	s.NoError(err)
-	s.Len(videos, 1)
+	s.Len(videos.Items, 1)
+	s.Equal(int64(1), videos.TotalCount)
 }
 
 func (s *VideoServiceTestSuite) TestListAllVideos_Negative() {
