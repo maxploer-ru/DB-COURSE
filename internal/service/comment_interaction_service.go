@@ -70,9 +70,11 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 		if atomicRepo, ok := s.ratingRepo.(atomicCommentRatingRepository); ok {
 			previous, found, err := atomicRepo.DeleteAndGet(ctx, userID, commentID)
 			if err != nil {
+				logger.ErrorContext(ctx, "Failed to remove comment rating", slog.Any("error", err))
 				return err
 			}
 			if !found {
+				logger.WarnContext(ctx, "Comment rating not found")
 				return domain.ErrCommentRatingNotFound
 			}
 			if previous.Liked {
@@ -80,6 +82,7 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 			} else {
 				_ = s.statsCache.DecrDislikes(ctx, commentID)
 			}
+			logger.InfoContext(ctx, "Comment rating removed")
 			return nil
 		}
 		if existing == nil {
@@ -107,6 +110,7 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 		rating := &domain.CommentRating{UserID: userID, CommentID: commentID, Liked: action == domain.RatingActionLike}
 		previous, created, err := atomicRepo.Upsert(ctx, rating)
 		if err != nil {
+			logger.ErrorContext(ctx, "Failed to persist comment rating", slog.Any("error", err))
 			return err
 		}
 		if created {
@@ -124,6 +128,7 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 				_ = s.statsCache.DecrLikes(ctx, commentID)
 			}
 		}
+		logger.InfoContext(ctx, "Comment rating persisted", slog.Bool("created", created))
 		return nil
 	}
 

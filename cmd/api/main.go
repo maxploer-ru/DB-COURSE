@@ -5,6 +5,7 @@ import (
 	"ZVideo/internal/delivery/middleware"
 	"ZVideo/internal/delivery/openapi"
 	"ZVideo/internal/delivery/response"
+	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/auth"
 	"ZVideo/internal/infrastructure/cache"
 	"ZVideo/internal/infrastructure/config"
@@ -16,8 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -28,25 +27,23 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Print(err)
+	cfg := config.LoadConfig()
+	baseLogger, closeLog := logger.NewConfigured(cfg.Logging)
+	defer closeLog()
+
+	if err := run(cfg, baseLogger); err != nil {
+		baseLogger.ErrorContext(context.Background(), "API process failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	cfg := config.LoadConfig()
+func run(cfg *config.Config, baseLogger domain.Logger) error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
-
-	logOutput, closeLog := configureLogOutput(cfg.Logging)
-	defer closeLog()
-	baseLogger := logger.NewSlogLogger(parseLogLevel(cfg.Logging.Level), logOutput, cfg.Logging.AddSource)
 
 	if !strings.EqualFold(cfg.DatabaseDriver, "postgres") && !strings.EqualFold(cfg.DatabaseDriver, "pg") {
 		return fmt.Errorf("unsupported database driver %q", cfg.DatabaseDriver)
@@ -131,8 +128,8 @@ func run() error {
 	)
 
 	router := chi.NewRouter()
-	router.Use(middleware.Recovery)
 	router.Use(middleware.Logging(baseLogger))
+	router.Use(middleware.Recovery)
 	apiHandler := openapi.HandlerWithOptions(handler, openapi.ChiServerOptions{
 		BaseURL:    "/api/v1",
 		BaseRouter: router,
@@ -140,6 +137,7 @@ func run() error {
 			selectiveAuthMiddleware(authService),
 		},
 		ErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			domain.GetLogger(r.Context()).WarnContext(r.Context(), "OpenAPI request validation failed", slog.Any("error", err))
 			response.RespondWithError(w, http.StatusBadRequest, "INVALID_PARAMETER", err.Error())
 		},
 	})
@@ -192,32 +190,5 @@ func selectiveAuthMiddleware(authService service.AuthService) openapi.Middleware
 			}
 			next.ServeHTTP(w, r)
 		})
-	}
-}
-
-func configureLogOutput(cfg config.LoggingConfig) (io.Writer, func()) {
-	if cfg.OutputPath == "" || cfg.OutputPath == "stdout" {
-		return os.Stdout, func() {}
-	}
-	file := &lumberjack.Logger{
-		Filename:   cfg.OutputPath,
-		MaxSize:    100,
-		MaxBackups: 3,
-		MaxAge:     28,
-		Compress:   true,
-	}
-	return file, func() { _ = file.Close() }
-}
-
-func parseLogLevel(level string) slog.Level {
-	switch strings.ToLower(strings.TrimSpace(level)) {
-	case "debug":
-		return slog.LevelDebug
-	case "warn", "warning":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
 	}
 }

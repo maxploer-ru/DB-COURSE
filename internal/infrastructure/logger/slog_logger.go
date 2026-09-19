@@ -22,28 +22,30 @@ func NewSlogLogger(level slog.Level, output io.Writer, addSource bool) domain.Lo
 func (l *SlogLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
 	var attrs []slog.Attr
 	if rid, ok := ctx.Value(domain.RequestIDKey).(string); ok && rid != "" {
-		attrs = append(attrs, slog.String("requestID", rid))
+		attrs = append(attrs, slog.String("request_id", rid))
 	}
 	if uid, ok := ctx.Value(domain.UserIDKey).(int); ok && uid != 0 {
-		attrs = append(attrs, slog.Int("userID", uid))
+		attrs = append(attrs, slog.Int("user_id", uid))
 	}
-	for _, arg := range args {
-		if attr, ok := arg.(slog.Attr); ok {
-			attrs = append(attrs, attr)
-		} else {
-		}
-	}
+	attrs = append(attrs, argsToAttrs(args)...)
 	l.logger.LogAttrs(ctx, level, msg, attrs...)
 }
 
 func argsToAttrs(args []any) []slog.Attr {
 	var attrs []slog.Attr
-	for i := 0; i < len(args); i += 2 {
+	for i := 0; i < len(args); i++ {
+		if attr, ok := args[i].(slog.Attr); ok {
+			attrs = append(attrs, attr)
+			continue
+		}
 		if i+1 < len(args) {
 			if key, ok := args[i].(string); ok {
 				attrs = append(attrs, slog.Any(key, args[i+1]))
+				i++
+				continue
 			}
 		}
+		attrs = append(attrs, slog.Any("log_arg", args[i]))
 	}
 	return attrs
 }

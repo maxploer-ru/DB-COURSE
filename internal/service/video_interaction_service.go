@@ -75,9 +75,11 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 		if atomicRepo, ok := s.ratingRepo.(atomicVideoRatingRepository); ok {
 			previous, found, err := atomicRepo.DeleteAndGet(ctx, userID, videoID)
 			if err != nil {
+				logger.ErrorContext(ctx, "Failed to remove video rating", slog.Any("error", err))
 				return err
 			}
 			if !found {
+				logger.WarnContext(ctx, "Video rating not found")
 				return domain.ErrRatingNotFound
 			}
 			if previous.Liked {
@@ -85,6 +87,7 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 			} else {
 				_ = s.statsCache.DecrDislikes(ctx, videoID)
 			}
+			logger.InfoContext(ctx, "Video rating removed")
 			return nil
 		}
 		if existing == nil {
@@ -107,6 +110,7 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 		rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: action == domain.RatingActionLike}
 		previous, created, err := atomicRepo.Upsert(ctx, rating)
 		if err != nil {
+			logger.ErrorContext(ctx, "Failed to persist video rating", slog.Any("error", err))
 			return err
 		}
 		if created {
@@ -124,6 +128,7 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 				_ = s.statsCache.DecrLikes(ctx, videoID)
 			}
 		}
+		logger.InfoContext(ctx, "Video rating persisted", slog.Bool("created", created))
 		return nil
 	}
 
@@ -196,7 +201,10 @@ func (s *videoInteractionService) RecordView(ctx context.Context, userID, videoI
 		return fmt.Errorf("record view failed: %w", err)
 	}
 
-	_ = s.statsCache.IncrViews(ctx, videoID)
+	if err := s.statsCache.IncrViews(ctx, videoID); err != nil {
+		logger.WarnContext(ctx, "Failed to increment view cache", slog.Any("error", err))
+	}
+	logger.InfoContext(ctx, "Video view recorded")
 	return nil
 }
 
@@ -241,7 +249,9 @@ func (s *videoInteractionService) GetStats(ctx context.Context, videoID int) (*d
 	}
 
 	if cacheErr == nil {
-		_ = s.statsCache.SetStats(ctx, videoID, stats)
+		if err := s.statsCache.SetStats(ctx, videoID, stats); err != nil {
+			logger.WarnContext(ctx, "Failed to populate video stats cache", slog.Any("error", err))
+		}
 	}
 	return stats, nil
 }

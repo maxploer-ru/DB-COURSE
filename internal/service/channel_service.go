@@ -225,13 +225,16 @@ func (s *channelService) DeleteChannel(ctx context.Context, channelID, userID in
 
 	ch, err := s.channelRepo.GetByID(ctx, channelID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get channel for deletion", slog.Any("error", err))
 		return fmt.Errorf("get channel failed: %w", err)
 	}
 	if ch == nil {
+		logger.WarnContext(ctx, "Channel not found for deletion")
 		return domain.ErrChannelNotFound
 	}
 
 	if ch.UserID != userID {
+		logger.WarnContext(ctx, "User is not the channel owner")
 		return domain.ErrForbidden
 	}
 

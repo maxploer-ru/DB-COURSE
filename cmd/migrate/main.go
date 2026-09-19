@@ -1,12 +1,16 @@
 package main
 
 import (
+	"ZVideo/internal/domain"
+	"ZVideo/internal/infrastructure/config"
+	applogger "ZVideo/internal/infrastructure/logger"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,17 +20,21 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Print(err)
+	cfg := config.LoadConfig()
+	appLogger, closeLog := applogger.NewConfigured(cfg.Logging)
+	defer closeLog()
+
+	if err := run(appLogger); err != nil {
+		appLogger.ErrorContext(context.Background(), "migration process failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(appLogger domain.Logger) error {
 	var direction string
 	var steps int
 	var driver string
@@ -51,18 +59,18 @@ func run() error {
 
 	switch driver {
 	case "postgres":
-		if err := migratePostgres(migrationsPath, direction, steps); err != nil {
+		if err := migratePostgres(migrationsPath, direction, steps, appLogger); err != nil {
 			return fmt.Errorf("migration failed: %w", err)
 		}
 	default:
 		return fmt.Errorf("unknown driver %q", driver)
 	}
 
-	log.Println("Migration completed successfully!")
+	appLogger.InfoContext(context.Background(), "migration completed successfully")
 	return nil
 }
 
-func migratePostgres(migrationsPath, direction string, steps int) error {
+func migratePostgres(migrationsPath, direction string, steps int, appLogger domain.Logger) error {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		getEnv("DB_HOST", "localhost"),
 		getEnv("DB_PORT", "5432"),
@@ -72,16 +80,16 @@ func migratePostgres(migrationsPath, direction string, steps int) error {
 		getEnv("DB_SSLMODE", "disable"),
 	)
 
-	log.Println("Connecting to Postgres...")
+	appLogger.InfoContext(context.Background(), "connecting to Postgres")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	log.Println("Connected successfully!")
+	appLogger.InfoContext(context.Background(), "connected to Postgres")
 
 	if err := ensurePgMigrationTable(db); err != nil {
 		return err
@@ -100,7 +108,7 @@ func migratePostgres(migrationsPath, direction string, steps int) error {
 		return err
 	}
 
-	return applyPgMigrations(db, files, direction, steps)
+	return applyPgMigrations(db, files, direction, steps, appLogger)
 }
 
 type pgMigrationFile struct {
@@ -109,20 +117,20 @@ type pgMigrationFile struct {
 	DownPath string
 }
 
-func applyPgMigrations(db *gorm.DB, files []pgMigrationFile, direction string, steps int) error {
+func applyPgMigrations(db *gorm.DB, files []pgMigrationFile, direction string, steps int, appLogger domain.Logger) error {
 	applied, err := listAppliedPgMigrations(db)
 	if err != nil {
 		return err
 	}
 
 	if direction == "up" {
-		return applyPgUp(db, files, applied, steps)
+		return applyPgUp(db, files, applied, steps, appLogger)
 	}
 
-	return applyPgDown(db, files, applied, steps)
+	return applyPgDown(db, files, applied, steps, appLogger)
 }
 
-func applyPgUp(db *gorm.DB, files []pgMigrationFile, applied map[string]string, steps int) error {
+func applyPgUp(db *gorm.DB, files []pgMigrationFile, applied map[string]string, steps int, appLogger domain.Logger) error {
 	var pending []pgMigrationFile
 	for _, file := range files {
 		if _, ok := applied[file.Version]; !ok {
@@ -135,23 +143,23 @@ func applyPgUp(db *gorm.DB, files []pgMigrationFile, applied map[string]string, 
 	}
 
 	if len(pending) == 0 {
-		log.Println("No migrations to apply")
+		appLogger.InfoContext(context.Background(), "no migrations to apply")
 		return nil
 	}
 
-	log.Printf("Found %d migration(s) to apply\n", len(pending))
+	appLogger.InfoContext(context.Background(), "migrations to apply", slog.Int("count", len(pending)))
 	for _, file := range pending {
 		if file.UpPath == "" {
 			return fmt.Errorf("missing up migration for %s", file.Version)
 		}
-		if err := runPgMigration(db, file.Version, file.UpPath, true, applied); err != nil {
+		if err := runPgMigration(db, file.Version, file.UpPath, true, applied, appLogger); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func applyPgDown(db *gorm.DB, files []pgMigrationFile, applied map[string]string, steps int) error {
+func applyPgDown(db *gorm.DB, files []pgMigrationFile, applied map[string]string, steps int, appLogger domain.Logger) error {
 	orderedApplied, err := listAppliedPgMigrationsOrdered(db, "desc")
 	if err != nil {
 		return err
@@ -162,7 +170,7 @@ func applyPgDown(db *gorm.DB, files []pgMigrationFile, applied map[string]string
 	}
 
 	if len(orderedApplied) == 0 {
-		log.Println("No migrations to rollback")
+		appLogger.InfoContext(context.Background(), "no migrations to rollback")
 		return nil
 	}
 
@@ -171,20 +179,20 @@ func applyPgDown(db *gorm.DB, files []pgMigrationFile, applied map[string]string
 		fileByVersion[file.Version] = file
 	}
 
-	log.Printf("Found %d migration(s) to rollback\n", len(orderedApplied))
+	appLogger.InfoContext(context.Background(), "migrations to rollback", slog.Int("count", len(orderedApplied)))
 	for _, version := range orderedApplied {
 		file := fileByVersion[version]
 		if file.DownPath == "" {
 			return fmt.Errorf("missing down migration for %s", version)
 		}
-		if err := runPgMigration(db, file.Version, file.DownPath, false, applied); err != nil {
+		if err := runPgMigration(db, file.Version, file.DownPath, false, applied, appLogger); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runPgMigration(db *gorm.DB, version, path string, isUp bool, applied map[string]string) error {
+func runPgMigration(db *gorm.DB, version, path string, isUp bool, applied map[string]string, appLogger domain.Logger) error {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", path, err)
@@ -197,7 +205,8 @@ func runPgMigration(db *gorm.DB, version, path string, isUp bool, applied map[st
 		return nil
 	}
 
-	log.Printf("Applying: %s", filepath.Base(path))
+	appLogger.InfoContext(context.Background(), "applying migration",
+		slog.String("version", version), slog.String("file", filepath.Base(path)), slog.Bool("up", isUp))
 	return db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(string(content)).Error; err != nil {
 			return fmt.Errorf("failed to execute %s: %w", path, err)

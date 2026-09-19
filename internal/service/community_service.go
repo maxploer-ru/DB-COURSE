@@ -35,17 +35,22 @@ func NewCommunityService(communityRepo repository.CommunityRepository, channelSv
 }
 
 func (s *communityService) GetChannelCommunity(ctx context.Context, channelID int, limit, offset int) (*domain.Community, error) {
+	logger := serviceLogger(ctx, "CommunityService", "GetChannelCommunity",
+		slog.Int("channel_id", channelID), slog.Int("limit", limit), slog.Int("offset", offset))
 	channel, err := s.channelSvc.GetChannel(ctx, channelID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get community channel", slog.Any("error", err))
 		return nil, fmt.Errorf("get channel: %w", err)
 	}
 
 	posts, err := s.communityRepo.ListPostsByChannel(ctx, channelID, limit, offset)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to list community posts", slog.Any("error", err))
 		return nil, fmt.Errorf("list community posts: %w", err)
 	}
 	total, err := s.communityRepo.CountPostsByChannel(ctx, channelID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count community posts", slog.Any("error", err))
 		return nil, fmt.Errorf("count community posts: %w", err)
 	}
 
@@ -59,31 +64,41 @@ func (s *communityService) GetChannelCommunity(ctx context.Context, channelID in
 }
 
 func (s *communityService) GetMyCommunity(ctx context.Context, userID int, limit, offset int) (*domain.Community, error) {
+	logger := serviceLogger(ctx, "CommunityService", "GetMyCommunity",
+		slog.Int("user_id", userID), slog.Int("limit", limit), slog.Int("offset", offset))
 	channel, err := s.channelSvc.GetChannelByUserID(ctx, userID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get user's channel", slog.Any("error", err))
 		return nil, fmt.Errorf("get channel by user: %w", err)
 	}
 	if channel == nil {
+		logger.WarnContext(ctx, "User has no channel")
 		return nil, domain.ErrChannelNotFound
 	}
 	return s.GetChannelCommunity(ctx, channel.ID, limit, offset)
 }
 
 func (s *communityService) GetPostComments(ctx context.Context, postID int, limit, offset int) (*domain.PageResponse[*domain.CommunityComment], error) {
+	logger := serviceLogger(ctx, "CommunityService", "GetPostComments",
+		slog.Int("post_id", postID), slog.Int("limit", limit), slog.Int("offset", offset))
 	post, err := s.communityRepo.GetPostByID(ctx, postID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to get community post", slog.Any("error", err))
 		return nil, fmt.Errorf("get community post: %w", err)
 	}
 	if post == nil {
+		logger.WarnContext(ctx, "Community post not found")
 		return nil, domain.ErrCommunityPostNotFound
 	}
 
 	comments, err := s.communityRepo.ListCommentsByPost(ctx, postID, limit, offset)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to list community comments", slog.Any("error", err))
 		return nil, fmt.Errorf("list comments: %w", err)
 	}
 	total, err := s.communityRepo.CountCommentsByPost(ctx, postID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to count community comments", slog.Any("error", err))
 		return nil, fmt.Errorf("count comments: %w", err)
 	}
 	return &domain.PageResponse[*domain.CommunityComment]{
@@ -95,16 +110,21 @@ func (s *communityService) GetPostComments(ctx context.Context, postID int, limi
 }
 
 func (s *communityService) CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error) {
+	logger := serviceLogger(ctx, "CommunityService", "CreatePost",
+		slog.Int("channel_id", channelID), slog.Int("user_id", userID))
 	isOwner, err := s.channelSvc.IsOwner(ctx, channelID, userID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to check channel ownership", slog.Any("error", err))
 		return nil, fmt.Errorf("check channel owner: %w", err)
 	}
 	if !isOwner {
+		logger.WarnContext(ctx, "User is not the channel owner")
 		return nil, domain.ErrForbidden
 	}
 
 	content = strings.TrimSpace(content)
 	if content == "" {
+		logger.WarnContext(ctx, "Community post content is empty")
 		return nil, domain.ErrCommunityPostContentEmpty
 	}
 
@@ -116,9 +136,11 @@ func (s *communityService) CreatePost(ctx context.Context, channelID, userID int
 	}
 
 	if err := s.communityRepo.CreatePost(ctx, post); err != nil {
+		logger.ErrorContext(ctx, "Failed to create community post", slog.Any("error", err))
 		return nil, fmt.Errorf("create community post: %w", err)
 	}
 
+	logger.InfoContext(ctx, "Community post created", slog.Int("post_id", post.ID))
 	return post, nil
 }
 

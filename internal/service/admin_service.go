@@ -159,11 +159,14 @@ func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int
 }
 
 func (s *adminService) requireAdmin(ctx context.Context, adminID int) error {
+	logger := serviceLogger(ctx, "AdminService", "RequireAdmin", slog.Int("admin_id", adminID))
 	admin, err := s.userRepo.GetByID(ctx, adminID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to load administrator", slog.Any("error", err))
 		return fmt.Errorf("load administrator failed: %w", err)
 	}
 	if admin == nil || !admin.IsActive || admin.Role == nil || !strings.EqualFold(admin.Role.Name, domain.RoleAdmin) {
+		logger.WarnContext(ctx, "Administrator check failed")
 		return domain.ErrForbidden
 	}
 	return nil

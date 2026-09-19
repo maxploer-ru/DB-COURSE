@@ -300,22 +300,28 @@ func (s *authService) Logout(ctx context.Context, accessToken, refreshToken stri
 		slog.String("operation", "Logout"),
 	)
 	if accessToken == "" {
+		logger.WarnContext(ctx, "Logout rejected because access token is missing")
 		return domain.ErrInvalidAccessToken
 	}
 	accessData, err := s.jwtSvc.ValidateAccessToken(ctx, accessToken)
 	if err != nil {
+		logger.WarnContext(ctx, "Logout rejected because access token is invalid", slog.Any("error", err))
 		return domain.ErrInvalidAccessToken
 	}
 	if refreshToken == "" {
+		logger.WarnContext(ctx, "Logout rejected because refresh token is missing", slog.Int("user_id", accessData.UserID))
 		return domain.ErrInvalidRefreshToken
 	}
 	refreshData, err := s.jwtSvc.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
+		logger.WarnContext(ctx, "Logout rejected because refresh token is invalid", slog.Int("user_id", accessData.UserID), slog.Any("error", err))
 		return domain.ErrInvalidRefreshToken
 	}
 	if refreshData.UserID != accessData.UserID {
+		logger.WarnContext(ctx, "Logout rejected because token users do not match", slog.Int("access_user_id", accessData.UserID), slog.Int("refresh_user_id", refreshData.UserID))
 		return domain.ErrForbidden
 	}
+	logger = logger.With(slog.Int("user_id", accessData.UserID))
 	if err := s.refreshRepo.Delete(ctx, refreshData.TokenID); err != nil {
 		logger.ErrorContext(ctx, "Failed to delete refresh session", slog.String("error", err.Error()))
 		return fmt.Errorf("delete refresh session failed: %w", err)
@@ -338,15 +344,19 @@ func (s *authService) ValidateAccessToken(ctx context.Context, token string) (*d
 
 	user, err := s.userRepo.GetByID(ctx, tokenData.UserID)
 	if err != nil {
+		logger.ErrorContext(ctx, "Failed to load authenticated user", slog.Int("user_id", tokenData.UserID), slog.Any("error", err))
 		return nil, fmt.Errorf("load authenticated user: %w", err)
 	}
 	if user == nil {
+		logger.WarnContext(ctx, "Authenticated user not found", slog.Int("user_id", tokenData.UserID))
 		return nil, domain.ErrInvalidAccessToken
 	}
 	if !user.IsActive {
+		logger.WarnContext(ctx, "Authenticated user is banned", slog.Int("user_id", user.ID))
 		return nil, domain.ErrUserIsBanned
 	}
 	if user.Role == nil {
+		logger.ErrorContext(ctx, "Authenticated user has no role", slog.Int("user_id", user.ID))
 		return nil, domain.ErrInternalServer
 	}
 	// Mutable authorization state is authoritative in the database.

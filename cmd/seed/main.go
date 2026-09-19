@@ -1,15 +1,18 @@
 package main
 
 import (
+	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/auth"
 	"ZVideo/internal/infrastructure/config"
 	"ZVideo/internal/infrastructure/db/postgres"
 	pgmodels "ZVideo/internal/infrastructure/db/postgres/models"
+	applogger "ZVideo/internal/infrastructure/logger"
 	"ZVideo/internal/infrastructure/storage"
 	"context"
 	"flag"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -35,13 +38,17 @@ type seedAssets struct {
 }
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	cfg := config.LoadConfig()
+	appLogger, closeLog := applogger.NewConfigured(cfg.Logging)
+	defer closeLog()
+
+	if err := run(cfg, appLogger); err != nil {
+		appLogger.ErrorContext(context.Background(), "seed process failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run(cfg *config.Config, appLogger domain.Logger) error {
 	opts := parseFlags()
 	if opts.VideoDir == "" {
 		return fmt.Errorf("-video-dir is required")
@@ -50,7 +57,6 @@ func run() error {
 		return fmt.Errorf("-count must be positive")
 	}
 
-	cfg := config.LoadConfig()
 	if cfg == nil {
 		return fmt.Errorf("failed to load config")
 	}
@@ -90,6 +96,7 @@ func run() error {
 	default:
 		return fmt.Errorf("unsupported DB_DRIVER: %s", cfg.DatabaseDriver)
 	}
+	appLogger.InfoContext(context.Background(), "database seed completed", slog.Int("count", opts.Count), slog.String("driver", cfg.DatabaseDriver))
 	return nil
 }
 

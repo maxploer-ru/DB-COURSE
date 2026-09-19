@@ -16,33 +16,45 @@ func Logging(baseLogger domain.Logger) func(next http.Handler) http.Handler {
 			start := time.Now()
 			requestID := uuid.New().String()
 
-			logger := baseLogger.With(slog.String("requestID", requestID))
+			logger := baseLogger
 			ctx := domain.WithRequestID(r.Context(), requestID)
 			ctx = domain.WithLogger(ctx, logger)
 			r = r.WithContext(ctx)
 
-			logger.InfoContext(ctx, "HTTP request started",
+			logger.DebugContext(ctx, "HTTP request started",
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.String("remote_addr", r.RemoteAddr),
+				slog.String("user_agent", r.UserAgent()),
+				slog.Int64("content_length", r.ContentLength),
 			)
 
 			wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 			next.ServeHTTP(wrapped, r)
 
 			duration := time.Since(start)
-			logger.InfoContext(ctx, "HTTP request completed",
+			attrs := []any{
 				slog.Int("status", wrapped.statusCode),
 				slog.Duration("duration", duration),
-			)
+				slog.Int("bytes_written", wrapped.bytesWritten),
+			}
+			switch {
+			case wrapped.statusCode >= http.StatusInternalServerError:
+				logger.ErrorContext(ctx, "HTTP request completed", attrs...)
+			case wrapped.statusCode >= http.StatusBadRequest:
+				logger.WarnContext(ctx, "HTTP request completed", attrs...)
+			default:
+				logger.InfoContext(ctx, "HTTP request completed", attrs...)
+			}
 		})
 	}
 }
 
 type responseWriter struct {
 	http.ResponseWriter
-	statusCode  int
-	wroteHeader bool
+	statusCode   int
+	wroteHeader  bool
+	bytesWritten int
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
@@ -58,7 +70,9 @@ func (rw *responseWriter) Write(body []byte) (int, error) {
 	if !rw.wroteHeader {
 		rw.WriteHeader(http.StatusOK)
 	}
-	return rw.ResponseWriter.Write(body)
+	n, err := rw.ResponseWriter.Write(body)
+	rw.bytesWritten += n
+	return n, err
 }
 
 func (rw *responseWriter) Flush() {
@@ -79,7 +93,11 @@ func (rw *responseWriter) ReadFrom(src io.Reader) (int64, error) {
 		rw.WriteHeader(http.StatusOK)
 	}
 	if readerFrom, ok := rw.ResponseWriter.(io.ReaderFrom); ok {
-		return readerFrom.ReadFrom(src)
+		n, err := readerFrom.ReadFrom(src)
+		rw.bytesWritten += int(n)
+		return n, err
 	}
-	return io.Copy(rw.ResponseWriter, src)
+	n, err := io.Copy(rw.ResponseWriter, src)
+	rw.bytesWritten += int(n)
+	return n, err
 }

@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"ZVideo/internal/domain"
 	"ZVideo/internal/repository"
 	"context"
 	"fmt"
@@ -15,7 +16,7 @@ type ObjectDeleter interface {
 type StorageDeleteWorker struct {
 	tasks      repository.StorageDeleteTaskRepository
 	deleter    ObjectDeleter
-	logger     *slog.Logger
+	logger     domain.Logger
 	batchSize  int
 	interval   time.Duration
 	maxBackoff time.Duration
@@ -24,12 +25,12 @@ type StorageDeleteWorker struct {
 func NewStorageDeleteWorker(
 	tasks repository.StorageDeleteTaskRepository,
 	deleter ObjectDeleter,
-	logger *slog.Logger,
+	logger domain.Logger,
 	batchSize int,
 	interval time.Duration,
 ) *StorageDeleteWorker {
 	if logger == nil {
-		logger = slog.Default()
+		logger = domain.GetLogger(context.Background())
 	}
 	if batchSize <= 0 {
 		batchSize = 100
@@ -37,6 +38,7 @@ func NewStorageDeleteWorker(
 	if interval <= 0 {
 		interval = time.Minute
 	}
+	logger = logger.With(slog.String("component", "storage_delete_worker"))
 	return &StorageDeleteWorker{
 		tasks:      tasks,
 		deleter:    deleter,
@@ -69,8 +71,10 @@ func (w *StorageDeleteWorker) Run(ctx context.Context) error {
 func (w *StorageDeleteWorker) ProcessOnce(ctx context.Context) error {
 	tasks, err := w.tasks.ClaimBatch(ctx, w.batchSize)
 	if err != nil {
+		w.logger.ErrorContext(ctx, "failed to claim storage cleanup tasks", slog.Int("batch_size", w.batchSize), slog.Any("error", err))
 		return err
 	}
+	w.logger.DebugContext(ctx, "storage cleanup tasks claimed", slog.Int("count", len(tasks)))
 	for _, task := range tasks {
 		if err := w.deleter.DeleteObject(ctx, task.Filepath); err != nil {
 			backoff := w.retryBackoff(task.Attempts)
@@ -86,6 +90,7 @@ func (w *StorageDeleteWorker) ProcessOnce(ctx context.Context) error {
 			continue
 		}
 		if err := w.tasks.MarkDone(ctx, task.ID); err != nil {
+			w.logger.ErrorContext(ctx, "failed to mark storage cleanup task done", slog.Int("task_id", task.ID), slog.Any("error", err))
 			return fmt.Errorf("mark completed storage task %d: %w", task.ID, err)
 		}
 	}
