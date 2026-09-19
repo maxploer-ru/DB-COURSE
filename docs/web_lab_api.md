@@ -59,6 +59,13 @@ make openapi-generate
 WebSocket, gRPC или webhook не требуются: в заявленном функционале нет
 непрерывного серверного потока или двунаправленного сеанса.
 
+## Bonus #1: GraphQL
+
+Дополнительная альтернативная схема GraphQL находится в
+[graphql/schema.graphql](../graphql/schema.graphql), а правила её использования
+описаны в [graphql_api.md](graphql_api.md). Она спроектирована без реализации
+resolver-ов и не заменяет основной REST-контракт.
+
 ## HTTP-решения для защиты
 
 Используются `Authorization: Bearer`, `Content-Type`, `Accept`,

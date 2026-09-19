@@ -1,0 +1,395 @@
+"""UTC timestamp in RFC 3339 format."""
+scalar DateTime
+
+"""Absolute URL, including presigned object-storage URLs."""
+scalar URI
+
+"""Non-negative 64-bit integer."""
+scalar Long
+
+enum RoleName {
+  ADMIN
+  MODERATOR
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum VideoStatus {
+  PENDING
+  READY
+}
+
+enum PublicationStatus {
+  PUBLISHED
+}
+
+enum RatingValue {
+  LIKE
+  DISLIKE
+}
+
+type PageInfo {
+  limit: Int!
+  offset: Int!
+  totalCount: Long!
+}
+
+type Role {
+  id: ID!
+  name: RoleName!
+  isDefault: Boolean!
+}
+
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  isActive: Boolean!
+  notificationsEnabled: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  role: Role
+  channel: Channel
+  videos(limit: Int = 20, offset: Int = 0): VideoPage!
+  subscriptions(limit: Int = 20, offset: Int = 0): SubscriptionPage!
+  playlists(limit: Int = 20, offset: Int = 0): PlaylistPage!
+  community(limit: Int = 20, offset: Int = 0): Community
+}
+
+type Channel {
+  id: ID!
+  userId: ID!
+  ownerUsername: String!
+  name: String!
+  description: String!
+  createdAt: DateTime!
+  videos(limit: Int = 20, offset: Int = 0): VideoPage!
+  playlists(limit: Int = 20, offset: Int = 0): PlaylistPage!
+  community(limit: Int = 20, offset: Int = 0): Community!
+  subscribersCount: Int!
+}
+
+type Subscription {
+  userId: ID!
+  channelId: ID!
+  channelName: String!
+  newVideosCount: Int!
+  subscribedAt: DateTime!
+}
+
+type SubscriptionStatus {
+  subscribed: Boolean!
+}
+
+type Video {
+  id: ID!
+  channelId: ID!
+  channelName: String!
+  title: String!
+  description: String!
+  filepath: String!
+  originalFilename: String!
+  status: VideoStatus!
+  createdAt: DateTime!
+  stats: VideoStats!
+  media: PresignedUrl
+  comments(limit: Int = 20, offset: Int = 0): CommentPage!
+}
+
+type VideoStats {
+  views: Long!
+  likes: Long!
+  dislikes: Long!
+  comments: Long!
+}
+
+type PresignedUrl {
+  url: URI!
+  expiresAt: DateTime!
+}
+
+type RatingStats {
+  likes: Long!
+  dislikes: Long!
+}
+
+type Comment {
+  id: ID!
+  userId: ID!
+  username: String!
+  videoId: ID!
+  content: String!
+  createdAt: DateTime!
+  stats: RatingStats!
+}
+
+type Playlist {
+  id: ID!
+  channelId: ID!
+  name: String!
+  description: String!
+  createdAt: DateTime!
+  videos(limit: Int = 20, offset: Int = 0): PlaylistItemPage!
+}
+
+type PlaylistItem {
+  playlistId: ID!
+  videoId: ID!
+  number: Int!
+  addedAt: DateTime!
+  videoTitle: String!
+  channelName: String!
+  videoStatus: VideoStatus!
+}
+
+type Community {
+  channel: Channel!
+  posts: [CommunityPost!]!
+  pageInfo: PageInfo!
+}
+
+type CommunityPost {
+  id: ID!
+  channelId: ID!
+  userId: ID!
+  username: String!
+  content: String!
+  createdAt: DateTime!
+  comments(limit: Int = 20, offset: Int = 0): CommunityCommentPage!
+}
+
+type CommunityComment {
+  id: ID!
+  postId: ID!
+  userId: ID!
+  username: String!
+  content: String!
+  createdAt: DateTime!
+}
+
+type UserPage {
+  items: [User!]!
+  pageInfo: PageInfo!
+}
+
+type ChannelPage {
+  items: [Channel!]!
+  pageInfo: PageInfo!
+}
+
+type SubscriptionPage {
+  items: [Subscription!]!
+  pageInfo: PageInfo!
+}
+
+type VideoPage {
+  items: [Video!]!
+  pageInfo: PageInfo!
+}
+
+type CommentPage {
+  items: [Comment!]!
+  pageInfo: PageInfo!
+}
+
+type PlaylistPage {
+  items: [Playlist!]!
+  pageInfo: PageInfo!
+}
+
+type PlaylistItemPage {
+  items: [PlaylistItem!]!
+  pageInfo: PageInfo!
+}
+
+type CommunityCommentPage {
+  items: [CommunityComment!]!
+  pageInfo: PageInfo!
+}
+
+type AuthPayload {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+  refreshExpiresAt: DateTime!
+}
+
+type VideoUploadInitPayload {
+  video: Video!
+  uploadUrl: URI!
+  uploadExpiresAt: DateTime!
+}
+
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input RefreshTokenInput {
+  refreshToken: String!
+}
+
+input ChannelCreateInput {
+  name: String!
+  description: String = ""
+}
+
+"""At least one field must be supplied."""
+input ChannelUpdateInput {
+  name: String
+  description: String
+}
+
+input NotificationSettingsInput {
+  enabled: Boolean!
+}
+
+input UserStatusInput {
+  status: UserStatus!
+}
+
+input UserRoleInput {
+  role: RoleName!
+}
+
+input VideoUploadInitInput {
+  title: String!
+  description: String = ""
+  filename: String!
+  contentType: String!
+  sizeBytes: Long
+}
+
+"""At least one field must be supplied."""
+input VideoUpdateInput {
+  title: String
+  description: String
+}
+
+input PublicationInput {
+  status: PublicationStatus!
+}
+
+input RatingInput {
+  value: RatingValue!
+}
+
+input ContentInput {
+  content: String!
+}
+
+input PlaylistCreateInput {
+  name: String!
+  description: String = ""
+}
+
+"""At least one field must be supplied."""
+input PlaylistUpdateInput {
+  name: String
+  description: String
+}
+
+input AddPlaylistVideoInput {
+  videoId: ID!
+}
+
+input PlaylistVideoPositionInput {
+  position: Int!
+}
+
+type Query {
+  """Current authenticated user."""
+  me: User
+
+  """Requires the admin role."""
+  users(limit: Int = 20, offset: Int = 0): UserPage!
+  user(id: ID!): User
+  userChannel(userId: ID!): Channel
+
+  channels(name: String, limit: Int = 20, offset: Int = 0): ChannelPage!
+  myChannel: Channel
+  channel(id: ID!): Channel
+  channelSubscriptionStatus(channelId: ID!): SubscriptionStatus!
+  channelSubscribersCount(channelId: ID!): Int!
+  mySubscriptions(limit: Int = 20, offset: Int = 0): SubscriptionPage!
+
+  videos(limit: Int = 20, offset: Int = 0): VideoPage!
+  myVideos(limit: Int = 20, offset: Int = 0): VideoPage!
+  channelVideos(channelId: ID!, limit: Int = 20, offset: Int = 0): VideoPage!
+  video(id: ID!): Video
+  videoStats(videoId: ID!): VideoStats!
+  videoComments(videoId: ID!, limit: Int = 20, offset: Int = 0): CommentPage!
+
+  comment(id: ID!): Comment
+  commentStats(commentId: ID!): RatingStats!
+
+  channelPlaylists(channelId: ID!, limit: Int = 20, offset: Int = 0): PlaylistPage!
+  myPlaylists(limit: Int = 20, offset: Int = 0): PlaylistPage!
+  playlist(id: ID!): Playlist
+  playlistVideos(playlistId: ID!, limit: Int = 20, offset: Int = 0): PlaylistItemPage!
+
+  channelCommunity(channelId: ID!, limit: Int = 20, offset: Int = 0): Community
+  myCommunity(limit: Int = 20, offset: Int = 0): Community
+  communityPostComments(postId: ID!, limit: Int = 20, offset: Int = 0): CommunityCommentPage!
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  refreshToken(input: RefreshTokenInput!): AuthPayload!
+  logout(input: RefreshTokenInput!): Boolean!
+
+  deleteCurrentUser: Boolean!
+  updateNotificationSettings(input: NotificationSettingsInput!): Boolean!
+
+  """Requires the admin role."""
+  updateUserStatus(userId: ID!, input: UserStatusInput!): User!
+
+  """Requires the admin role."""
+  replaceUserRole(userId: ID!, input: UserRoleInput!): Boolean!
+
+  createChannel(input: ChannelCreateInput!): Channel!
+  updateChannel(channelId: ID!, input: ChannelUpdateInput!): Channel!
+  deleteChannel(channelId: ID!): Boolean!
+
+  subscribeToChannel(channelId: ID!): Boolean!
+  unsubscribeFromChannel(channelId: ID!): Boolean!
+  resetSubscriptionNewVideosCount(channelId: ID!): Boolean!
+
+  initializeVideoUpload(channelId: ID!, input: VideoUploadInitInput!): VideoUploadInitPayload!
+  updateVideo(videoId: ID!, input: VideoUpdateInput!): Video!
+  deleteVideo(videoId: ID!): Boolean!
+  updateVideoPublication(videoId: ID!, input: PublicationInput!): Video!
+  recordVideoView(videoId: ID!): Boolean!
+  rateVideo(videoId: ID!, input: RatingInput!): Boolean!
+  removeVideoRating(videoId: ID!): Boolean!
+  addVideoComment(videoId: ID!, input: ContentInput!): Comment!
+  updateComment(commentId: ID!, input: ContentInput!): Comment!
+  deleteComment(commentId: ID!): Boolean!
+  rateComment(commentId: ID!, input: RatingInput!): Boolean!
+  removeCommentRating(commentId: ID!): Boolean!
+
+  createPlaylist(channelId: ID!, input: PlaylistCreateInput!): Playlist!
+  updatePlaylist(playlistId: ID!, input: PlaylistUpdateInput!): Playlist!
+  deletePlaylist(playlistId: ID!): Boolean!
+  addVideoToPlaylist(playlistId: ID!, input: AddPlaylistVideoInput!): Boolean!
+  updatePlaylistVideoPosition(playlistId: ID!, videoId: ID!, input: PlaylistVideoPositionInput!): Boolean!
+  removeVideoFromPlaylist(playlistId: ID!, videoId: ID!): Boolean!
+
+  createCommunityPost(channelId: ID!, input: ContentInput!): CommunityPost!
+  updateCommunityPost(postId: ID!, input: ContentInput!): CommunityPost!
+  deleteCommunityPost(postId: ID!): Boolean!
+  createCommunityComment(postId: ID!, input: ContentInput!): CommunityComment!
+  updateCommunityComment(commentId: ID!, input: ContentInput!): CommunityComment!
+  deleteCommunityComment(commentId: ID!): Boolean!
+}
