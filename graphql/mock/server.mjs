@@ -275,7 +275,7 @@ const playground = `<!doctype html>
 <head><meta charset="utf-8"><title>ZVideo GraphQL mock</title>
 <style>body{font-family:system-ui;margin:2rem;max-width:1100px}textarea{width:100%;height:260px;font:14px monospace}button{margin:1rem 0;padding:.6rem 1rem}pre{background:#f4f4f4;padding:1rem;white-space:pre-wrap}</style>
 </head><body><h1>ZVideo GraphQL mock</h1>
-<p><a href="/graph">Graph view</a> · <a href="/schema.graphql">schema.graphql</a> · Endpoint: <code>/graphql</code></p>
+<p>Schema: <a href="/schema.graphql">schema.graphql</a> · Endpoint: <code>/graphql</code></p>
 <textarea id="query">query {
   channels(limit: 10) {
     items { id name description videos { items { id title status } } }
@@ -284,31 +284,6 @@ const playground = `<!doctype html>
 }</textarea><br><button id="run">Run query</button><pre id="result"></pre>
 <script>document.querySelector('#run').onclick=async()=>{const query=document.querySelector('#query').value;const response=await fetch('/graphql',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({query})});document.querySelector('#result').textContent=JSON.stringify(await response.json(),null,2)};</script>
 </body></html>`;
-
-const graphPage = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>ZVideo GraphQL type graph</title>
-<style>body{font-family:system-ui;margin:1.5rem;background:#f8fafc;color:#172033}a{color:#2563eb}svg{width:100%;height:auto;background:white;border:1px solid #cbd5e1;border-radius:12px}.edge{stroke:#64748b;stroke-width:2;fill:none;marker-end:url(#arrow)}.box{stroke-width:2;rx:12}.root{fill:#dbeafe;stroke:#2563eb}.resource{fill:#dcfce7;stroke:#16a34a}.relation{fill:#fef3c7;stroke:#d97706}.text{font-size:18px;font-weight:700;text-anchor:middle;dominant-baseline:middle}.small{font-size:13px;font-weight:400}</style></head>
-<body><h1>ZVideo GraphQL type graph</h1><p>Основные типы и связи GraphQL-схемы. <a href="/graphql">Открыть GraphQL-консоль</a></p>
-<svg viewBox="0 0 1200 720" role="img" aria-label="ZVideo GraphQL type relationships">
-<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#64748b"/></marker></defs>
-<path class="edge" d="M160 110 L370 110"/><path class="edge" d="M160 110 L160 300"/><path class="edge" d="M160 110 L160 500"/>
-<path class="edge" d="M500 110 L720 110"/><path class="edge" d="M500 110 L500 300"/><path class="edge" d="M500 110 L500 500"/>
-<path class="edge" d="M850 110 L1040 110"/><path class="edge" d="M850 110 L850 300"/><path class="edge" d="M720 360 L500 500"/>
-<path class="edge" d="M720 360 L850 500"/><path class="edge" d="M1040 360 L1040 500"/><path class="edge" d="M370 500 L160 620"/>
-<rect class="box root" x="55" y="70" width="210" height="80"/><text class="text" x="160" y="105">Query</text><text class="text small" x="160" y="130">read operations</text>
-<rect class="box root" x="55" y="260" width="210" height="80"/><text class="text" x="160" y="295">Mutation</text><text class="text small" x="160" y="320">write operations</text>
-<rect class="box root" x="55" y="460" width="210" height="80"/><text class="text" x="160" y="495">AuthPayload</text><text class="text small" x="160" y="520">tokens + User</text>
-<rect class="box resource" x="395" y="70" width="210" height="80"/><text class="text" x="500" y="105">User</text><text class="text small" x="500" y="130">role, channel, subscriptions</text>
-<rect class="box resource" x="745" y="70" width="210" height="80"/><text class="text" x="850" y="105">Channel</text><text class="text small" x="850" y="130">videos, playlists, community</text>
-<rect class="box resource" x="995" y="70" width="170" height="80"/><text class="text" x="1080" y="105">Subscription</text><text class="text small" x="1080" y="130">user ↔ channel</text>
-<rect class="box resource" x="395" y="260" width="210" height="80"/><text class="text" x="500" y="295">Video</text><text class="text small" x="500" y="320">stats, media, comments</text>
-<rect class="box resource" x="745" y="260" width="210" height="80"/><text class="text" x="850" y="295">Playlist</text><text class="text small" x="850" y="320">ordered videos</text>
-<rect class="box resource" x="995" y="260" width="170" height="80"/><text class="text" x="1080" y="295">Community</text><text class="text small" x="1080" y="320">posts + comments</text>
-<rect class="box relation" x="395" y="460" width="210" height="80"/><text class="text" x="500" y="495">Comment</text><text class="text small" x="500" y="520">rating stats</text>
-<rect class="box relation" x="745" y="460" width="210" height="80"/><text class="text" x="850" y="495">CommunityPost</text><text class="text small" x="850" y="520">post comments</text>
-<rect class="box relation" x="995" y="460" width="170" height="80"/><text class="text" x="1080" y="495">RatingStats</text><text class="text small" x="1080" y="520">likes / dislikes</text>
-<rect class="box relation" x="260" y="580" width="210" height="80"/><text class="text" x="365" y="615">PageInfo</text><text class="text small" x="365" y="640">limit / offset / total</text>
-</svg></body></html>`;
 
 function sendJSON(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
@@ -330,11 +305,6 @@ const server = createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/graphql') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(playground);
-    return;
-  }
-  if (req.method === 'GET' && url.pathname === '/graph') {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(graphPage);
     return;
   }
   if (req.method === 'GET' && url.pathname === '/schema.graphql') {
