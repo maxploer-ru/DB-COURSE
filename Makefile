@@ -13,11 +13,11 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 
 test-allure:
-	mkdir allure-results
+	mkdir -p allure-results
 	go test -shuffle=on -v ./... | go-junit-report > allure-results/report.xml
 	allure generate allure-results --clean -o allure-report
 	allure open allure-report
 
 
 clean:
-	rm -rf coverage.out allure-results allure-report report.xml
+	rm -rf coverage.out coverage.html allure-results allure-report report.xml
