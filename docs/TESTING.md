@@ -51,6 +51,9 @@ make test-allure
 
 # JUnit XML и Allure results только для offline unit-набора
 make test-allure-unit
+
+# Открыть уже сгенерированный HTML-отчёт в браузере
+make allure-open
 ```
 
 `make test` и `make test-unit` используют `-shuffle=on`, поэтому порядок тестов выбирается случайно. Для воспроизведения конкретного прогона Go печатает seed в выводе; его можно передать через `-shuffle=<seed>`.
@@ -72,6 +75,7 @@ Go пока не предоставляет branch coverage в штатном `g
 - `allure-report`, если установлен CLI `allure`.
 
 Отчёт генерируется даже при падении тестов; исходный exit code сохраняется.
+После генерации HTML-отчёт открывается командой `make allure-open`.
 
 ## Процессы и параллелизм
 

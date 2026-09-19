@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit mocks clean
+.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean
 
 UNIT_PACKAGES := ./internal/service ./internal/infrastructure/auth ./internal/infrastructure/logger ./internal/delivery/middleware
 GOBCO_VERSION ?= v1.3.4
@@ -33,6 +33,8 @@ test-allure:
 	go run ./scripts/testreport -input test-results.json -output allure-results; \
 	if command -v allure >/dev/null 2>&1; then allure generate allure-results --clean -o allure-report; \
 	else echo "allure CLI is not installed; allure-results was generated"; fi; \
+	echo "Allure report: $$(pwd)/allure-report"; \
+	echo "Open it with: make allure-open"; \
 	exit $$status
 
 test-allure-unit:
@@ -41,8 +43,14 @@ test-allure-unit:
 	go run ./scripts/testreport -input test-results.json -output allure-results; \
 	if command -v allure >/dev/null 2>&1; then allure generate allure-results --clean -o allure-report; \
 	else echo "allure CLI is not installed; allure-results was generated"; fi; \
+	echo "Allure report: $$(pwd)/allure-report"; \
+	echo "Open it with: make allure-open"; \
 	exit $$status
 
+allure-open:
+	@test -d allure-report || (echo "allure-report not found; run make test-allure first"; exit 1)
+	@command -v allure >/dev/null 2>&1 || (echo "allure CLI is not installed"; exit 1)
+	allure open allure-report
 
 clean:
 	rm -rf coverage.out coverage.html allure-results allure-report test-results.json
