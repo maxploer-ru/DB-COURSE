@@ -188,6 +188,69 @@ func (s *VideoRepositoryTestSuite) TestListByChannel_Negative_EquivalencePartiti
 	s.Len(list, 0)
 }
 
+func (s *VideoRepositoryTestSuite) TestCount_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	video := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	video.ID = 0
+	s.Require().NoError(s.repo.Create(ctx, video))
+
+	count, err := s.repo.Count(ctx)
+
+	s.NoError(err)
+	s.GreaterOrEqual(count, int64(1))
+}
+
+func (s *VideoRepositoryTestSuite) TestCount_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.Count(ctx)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
+func (s *VideoRepositoryTestSuite) TestCountByChannel_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	video := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	video.ID = 0
+	s.Require().NoError(s.repo.Create(ctx, video))
+
+	count, err := s.repo.CountByChannel(ctx, s.testChannel.ID)
+
+	s.NoError(err)
+	s.GreaterOrEqual(count, int64(1))
+}
+
+func (s *VideoRepositoryTestSuite) TestCountByChannel_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.CountByChannel(ctx, s.testChannel.ID)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
+func (s *VideoRepositoryTestSuite) TestListFilepathsByChannel_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	video := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
+	video.ID = 0
+	s.Require().NoError(s.repo.Create(ctx, video))
+
+	filepaths, err := s.repo.ListFilepathsByChannel(ctx, s.testChannel.ID)
+
+	s.NoError(err)
+	s.Equal([]string{video.Filepath}, filepaths)
+}
+
+func (s *VideoRepositoryTestSuite) TestListFilepathsByChannel_Negative_EquivalencePartitioning() {
+	filepaths, err := s.repo.ListFilepathsByChannel(context.Background(), 999999)
+
+	s.NoError(err)
+	s.Empty(filepaths)
+}
+
 func TestVideoRepositorySuite(t *testing.T) {
 	suite.Run(t, new(VideoRepositoryTestSuite))
 }

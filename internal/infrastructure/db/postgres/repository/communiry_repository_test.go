@@ -249,6 +249,44 @@ func (s *CommunityRepositoryTestSuite) TestDeleteComment_Negative_EquivalencePar
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
+func (s *CommunityRepositoryTestSuite) TestCountPostsByChannel_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+
+	count, err := s.repo.CountPostsByChannel(ctx, s.testChannel.ID)
+
+	s.NoError(err)
+	s.GreaterOrEqual(count, int64(1))
+}
+
+func (s *CommunityRepositoryTestSuite) TestCountPostsByChannel_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.CountPostsByChannel(ctx, s.testChannel.ID)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
+func (s *CommunityRepositoryTestSuite) TestCountCommentsByPost_Positive_BoundaryValueAnalysis() {
+	ctx := context.Background()
+
+	count, err := s.repo.CountCommentsByPost(ctx, s.testPost.ID)
+
+	s.NoError(err)
+	s.GreaterOrEqual(count, int64(0))
+}
+
+func (s *CommunityRepositoryTestSuite) TestCountCommentsByPost_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.CountCommentsByPost(ctx, s.testPost.ID)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
 func TestCommunityRepositorySuite(t *testing.T) {
 	suite.Run(t, new(CommunityRepositoryTestSuite))
 }

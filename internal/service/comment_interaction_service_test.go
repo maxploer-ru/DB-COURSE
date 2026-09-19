@@ -112,6 +112,19 @@ func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_DBFallback_Eq
 	s.Equal(int64(3), dislikes)
 }
 
+func (s *CommentInteractionServiceTestSuite) TestGetStats_Negative_RatingRepositoryError_EquivalencePartitioning() {
+	ctx := context.Background()
+
+	s.mockStatsCache.On("GetStats", ctx, 1).Return(int64(0), int64(0), false, nil)
+	s.mockRatingRepo.On("GetStats", ctx, 1).Return(int64(0), int64(0), domain.ErrInternalServer)
+
+	likes, dislikes, err := s.service.GetStats(ctx, 1)
+
+	s.ErrorIs(err, domain.ErrInternalServer)
+	s.Zero(likes)
+	s.Zero(dislikes)
+}
+
 func TestCommentInteractionServiceSuite(t *testing.T) {
 	suite.Run(t, new(CommentInteractionServiceTestSuite))
 }

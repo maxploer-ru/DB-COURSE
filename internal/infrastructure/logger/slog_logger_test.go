@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSlogLoggerPreservesStructuredAttributes(t *testing.T) {
+func TestSlogLoggerPreservesStructuredAttributes_EquivalencePartitioning(t *testing.T) {
 	var output bytes.Buffer
 	appLogger := NewSlogLogger(slog.LevelDebug, &output, false)
 	ctx := domain.WithUserID(domain.WithRequestID(context.Background(), "request-123"), 42)

@@ -46,26 +46,40 @@ func (s *ViewingRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *ViewingRepositoryTestSuite) TestCreateAndGetTotalViews_Positive_StateTransition() {
+func (s *ViewingRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
-	view1 := s.mother.ValidViewing()
-	view1.UserID = s.testUser.ID
-	view1.VideoID = s.testVideo.ID
+	view := s.mother.ValidViewing()
+	view.UserID = s.testUser.ID
+	view.VideoID = s.testVideo.ID
 
-	view2 := s.mother.ValidViewing()
-	view2.UserID = s.testUser.ID
-	view2.VideoID = s.testVideo.ID
+	err := s.repo.Create(ctx, view)
 
-	err1 := s.repo.Create(ctx, view1)
-	err2 := s.repo.Create(ctx, view2)
+	s.NoError(err)
+}
 
-	s.NoError(err1)
-	s.NoError(err2)
+func (s *ViewingRepositoryTestSuite) TestCreate_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	view := s.mother.ValidViewing()
+	view.UserID = s.testUser.ID
+	view.VideoID = s.testVideo.ID
+
+	err := s.repo.Create(ctx, view)
+
+	s.Error(err)
+}
+
+func (s *ViewingRepositoryTestSuite) TestGetTotalViews_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	view := s.mother.ValidViewing()
+	view.UserID = s.testUser.ID
+	view.VideoID = s.testVideo.ID
+	s.NoError(s.repo.Create(ctx, view))
 
 	totalViews, err := s.repo.GetTotalViews(ctx, s.testVideo.ID)
 
 	s.NoError(err)
-	s.Equal(2, totalViews)
+	s.Equal(1, totalViews)
 }
 
 func (s *ViewingRepositoryTestSuite) TestGetTotalViews_Negative_NoViews_EquivalencePartitioning() {

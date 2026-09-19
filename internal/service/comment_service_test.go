@@ -34,7 +34,7 @@ func (s *CommentServiceTestSuite) SetupTest() {
 	s.vidMother = mother.VideoMother{}
 }
 
-func (s *CommentServiceTestSuite) TestCreate_Positive() {
+func (s *CommentServiceTestSuite) TestCreateComment_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	video := s.vidMother.ReadyVideoForChannel(1)
 
@@ -49,7 +49,7 @@ func (s *CommentServiceTestSuite) TestCreate_Positive() {
 	s.Equal("Nice video!", comment.Content)
 }
 
-func (s *CommentServiceTestSuite) TestCreate_Negative_VideoNotFound() {
+func (s *CommentServiceTestSuite) TestCreateComment_Negative_VideoNotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -60,7 +60,7 @@ func (s *CommentServiceTestSuite) TestCreate_Negative_VideoNotFound() {
 	s.Nil(comment)
 }
 
-func (s *CommentServiceTestSuite) TestCreate_Negative_EmptyContent() {
+func (s *CommentServiceTestSuite) TestCreateComment_Negative_EmptyContent_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	video := s.vidMother.ReadyVideoForChannel(1)
 
@@ -72,7 +72,7 @@ func (s *CommentServiceTestSuite) TestCreate_Negative_EmptyContent() {
 	s.Nil(comment)
 }
 
-func (s *CommentServiceTestSuite) TestGetByID_Positive() {
+func (s *CommentServiceTestSuite) TestGetCommentByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.comMother.CommentForVideo(1, 1)
 
@@ -84,7 +84,7 @@ func (s *CommentServiceTestSuite) TestGetByID_Positive() {
 	s.Equal(expected.ID, comment.ID)
 }
 
-func (s *CommentServiceTestSuite) TestGetByID_Negative() {
+func (s *CommentServiceTestSuite) TestGetCommentByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCommentRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -95,7 +95,7 @@ func (s *CommentServiceTestSuite) TestGetByID_Negative() {
 	s.Nil(comment)
 }
 
-func (s *CommentServiceTestSuite) TestListByVideo_Positive() {
+func (s *CommentServiceTestSuite) TestListCommentsByVideo_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	video := s.vidMother.ReadyVideoForChannel(1)
 	expectedList := []*domain.Comment{s.comMother.CommentForVideo(1, video.ID)}
@@ -111,7 +111,7 @@ func (s *CommentServiceTestSuite) TestListByVideo_Positive() {
 	s.Equal(int64(1), list.TotalCount)
 }
 
-func (s *CommentServiceTestSuite) TestListByVideo_Negative() {
+func (s *CommentServiceTestSuite) TestListCommentsByVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -122,7 +122,7 @@ func (s *CommentServiceTestSuite) TestListByVideo_Negative() {
 	s.Nil(list)
 }
 
-func (s *CommentServiceTestSuite) TestUpdate_Positive() {
+func (s *CommentServiceTestSuite) TestUpdateComment_Positive_StateTransition() {
 	ctx := context.Background()
 	existing := s.comMother.CommentForVideo(1, 1)
 
@@ -135,7 +135,7 @@ func (s *CommentServiceTestSuite) TestUpdate_Positive() {
 	s.Equal("Updated text", updated.Content)
 }
 
-func (s *CommentServiceTestSuite) TestUpdate_Negative_Forbidden() {
+func (s *CommentServiceTestSuite) TestUpdateComment_Negative_Forbidden_Combinatorial() {
 	ctx := context.Background()
 	existing := s.comMother.CommentForVideo(1, 1)
 
@@ -147,7 +147,7 @@ func (s *CommentServiceTestSuite) TestUpdate_Negative_Forbidden() {
 	s.Nil(updated)
 }
 
-func (s *CommentServiceTestSuite) TestDelete_Positive_Author() {
+func (s *CommentServiceTestSuite) TestDeleteComment_Positive_Author_Combinatorial() {
 	ctx := context.Background()
 	existing := s.comMother.CommentForVideo(1, 1)
 
@@ -160,7 +160,7 @@ func (s *CommentServiceTestSuite) TestDelete_Positive_Author() {
 	s.NoError(err)
 }
 
-func (s *CommentServiceTestSuite) TestDelete_Positive_Moderator() {
+func (s *CommentServiceTestSuite) TestDeleteComment_Positive_Moderator_Combinatorial() {
 	ctx := context.Background()
 	existing := s.comMother.CommentForVideo(1, 1)
 
@@ -173,7 +173,7 @@ func (s *CommentServiceTestSuite) TestDelete_Positive_Moderator() {
 	s.NoError(err)
 }
 
-func (s *CommentServiceTestSuite) TestDelete_Negative_Forbidden() {
+func (s *CommentServiceTestSuite) TestDeleteComment_Negative_Forbidden_Combinatorial() {
 	ctx := context.Background()
 	existing := s.comMother.CommentForVideo(1, 1)
 	video := s.vidMother.ReadyVideoForChannel(1)
@@ -187,7 +187,7 @@ func (s *CommentServiceTestSuite) TestDelete_Negative_Forbidden() {
 	s.ErrorIs(err, domain.ErrForbidden)
 }
 
-func (s *CommentServiceTestSuite) TestGetCount_Positive_CacheHit() {
+func (s *CommentServiceTestSuite) TestGetCommentCount_Positive_CacheHit_StateTransition() {
 	ctx := context.Background()
 
 	s.mockCountCache.On("GetCommentsCount", ctx, 1).Return(int64(42), true, nil)
@@ -198,7 +198,7 @@ func (s *CommentServiceTestSuite) TestGetCount_Positive_CacheHit() {
 	s.Equal(int64(42), count)
 }
 
-func (s *CommentServiceTestSuite) TestGetCount_Positive_DBFallback() {
+func (s *CommentServiceTestSuite) TestGetCommentCount_Positive_DBFallback_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCountCache.On("GetCommentsCount", ctx, 1).Return(int64(0), false, errors.New("cache miss"))
@@ -211,7 +211,19 @@ func (s *CommentServiceTestSuite) TestGetCount_Positive_DBFallback() {
 	s.Equal(int64(15), count)
 }
 
-func (s *CommentServiceTestSuite) TestDelete_Negative_MissingVideo() {
+func (s *CommentServiceTestSuite) TestGetCommentCount_Negative_DatabaseError_EquivalencePartitioning() {
+	ctx := context.Background()
+
+	s.mockCountCache.On("GetCommentsCount", ctx, 1).Return(int64(0), false, errors.New("cache miss"))
+	s.mockCommentRepo.On("CountByVideo", ctx, 1).Return(int64(0), domain.ErrInternalServer)
+
+	count, err := s.service.GetCount(ctx, 1)
+
+	s.ErrorIs(err, domain.ErrInternalServer)
+	s.Zero(count)
+}
+
+func (s *CommentServiceTestSuite) TestDeleteComment_Negative_MissingVideo_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	existing := s.comMother.CommentForVideo(1, 1)

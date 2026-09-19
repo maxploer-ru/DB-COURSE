@@ -58,6 +58,59 @@ func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative_Equivalence
 	s.Nil(community)
 }
 
+func (s *CommunityServiceTestSuite) TestGetMyCommunity_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	channel := s.chanMother.ChannelForUser(1)
+	posts := []*domain.CommunityPost{s.mother.PostForChannel(channel.ID, channel.UserID)}
+
+	s.mockChanSvc.On("GetChannelByUserID", ctx, channel.UserID).Return(channel, nil)
+	s.mockChanSvc.On("GetChannel", ctx, channel.ID).Return(channel, nil)
+	s.mockRepo.On("ListPostsByChannel", ctx, channel.ID, 10, 0).Return(posts, nil)
+	s.mockRepo.On("CountPostsByChannel", ctx, channel.ID).Return(int64(1), nil)
+
+	community, err := s.service.GetMyCommunity(ctx, channel.UserID, 10, 0)
+
+	s.NoError(err)
+	s.NotNil(community)
+	s.Equal(channel.ID, community.Channel.ID)
+}
+
+func (s *CommunityServiceTestSuite) TestGetMyCommunity_Negative_ChannelNotFound_EquivalencePartitioning() {
+	ctx := context.Background()
+	s.mockChanSvc.On("GetChannelByUserID", ctx, 999).Return(nil, domain.ErrChannelNotFound)
+
+	community, err := s.service.GetMyCommunity(ctx, 999, 10, 0)
+
+	s.ErrorIs(err, domain.ErrChannelNotFound)
+	s.Nil(community)
+}
+
+func (s *CommunityServiceTestSuite) TestGetPostComments_Positive_BoundaryValueAnalysis() {
+	ctx := context.Background()
+	post := s.mother.PostForChannel(1, 1)
+	comments := []*domain.CommunityComment{s.mother.CommentForPost(post.ID, 2)}
+
+	s.mockRepo.On("GetPostByID", ctx, post.ID).Return(post, nil)
+	s.mockRepo.On("ListCommentsByPost", ctx, post.ID, 10, 0).Return(comments, nil)
+	s.mockRepo.On("CountCommentsByPost", ctx, post.ID).Return(int64(1), nil)
+
+	page, err := s.service.GetPostComments(ctx, post.ID, 10, 0)
+
+	s.NoError(err)
+	s.Len(page.Items, 1)
+	s.Equal(int64(1), page.TotalCount)
+}
+
+func (s *CommunityServiceTestSuite) TestGetPostComments_Negative_PostNotFound_EquivalencePartitioning() {
+	ctx := context.Background()
+	s.mockRepo.On("GetPostByID", ctx, 999).Return(nil, nil)
+
+	page, err := s.service.GetPostComments(ctx, 999, 10, 0)
+
+	s.ErrorIs(err, domain.ErrCommunityPostNotFound)
+	s.Nil(page)
+}
+
 func (s *CommunityServiceTestSuite) TestCreatePost_Positive_StateTransition() {
 	ctx := context.Background()
 

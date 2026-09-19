@@ -223,6 +223,28 @@ func (s *ChannelRepositoryTestSuite) TestListChannels_Negative_BoundaryValueAnal
 	s.Len(list, 0)
 }
 
+func (s *ChannelRepositoryTestSuite) TestCountChannels_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	channel := s.chanMother.ChannelForUser(s.testUser.ID)
+	channel.ID = 0
+	s.Require().NoError(s.repo.Create(ctx, channel))
+
+	count, err := s.repo.CountChannels(ctx)
+
+	s.NoError(err)
+	s.GreaterOrEqual(count, int64(1))
+}
+
+func (s *ChannelRepositoryTestSuite) TestCountChannels_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.CountChannels(ctx)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
 func TestChannelRepositorySuite(t *testing.T) {
 	suite.Run(t, new(ChannelRepositoryTestSuite))
 }

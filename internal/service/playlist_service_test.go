@@ -31,7 +31,7 @@ func (s *PlaylistServiceTestSuite) SetupTest() {
 	s.vidMother = mother.VideoMother{}
 }
 
-func (s *PlaylistServiceTestSuite) TestCreate_Positive_StateTransition() {
+func (s *PlaylistServiceTestSuite) TestCreatePlaylist_Positive_StateTransition() {
 	ctx := context.Background()
 	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
 	s.mockPlaylistRepo.On("Create", ctx, mock.AnythingOfType("*domain.Playlist")).Return(nil)
@@ -43,7 +43,7 @@ func (s *PlaylistServiceTestSuite) TestCreate_Positive_StateTransition() {
 	s.Equal("Name", pl.Name)
 }
 
-func (s *PlaylistServiceTestSuite) TestCreate_Negative_EquivalencePartitioning() {
+func (s *PlaylistServiceTestSuite) TestCreatePlaylist_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	pl, err := s.service.Create(ctx, 1, 1, "", "Desc")
@@ -52,7 +52,7 @@ func (s *PlaylistServiceTestSuite) TestCreate_Negative_EquivalencePartitioning()
 	s.Nil(pl)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
+func (s *PlaylistServiceTestSuite) TestGetPlaylistByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, expected.ID).Return(expected, nil)
@@ -63,7 +63,7 @@ func (s *PlaylistServiceTestSuite) TestGetByID_Positive_EquivalencePartitioning(
 	s.Equal(expected.ID, pl.ID)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
+func (s *PlaylistServiceTestSuite) TestGetPlaylistByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -73,7 +73,7 @@ func (s *PlaylistServiceTestSuite) TestGetByID_Negative_EquivalencePartitioning(
 	s.Nil(pl)
 }
 
-func (s *PlaylistServiceTestSuite) TestListByChannel_Positive_BoundaryValueAnalysis() {
+func (s *PlaylistServiceTestSuite) TestListPlaylistsByChannel_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Playlist{s.mother.PlaylistForChannel(1)}
 	s.mockChanSvc.On("Exists", ctx, 1).Return(true, nil)
@@ -87,7 +87,7 @@ func (s *PlaylistServiceTestSuite) TestListByChannel_Positive_BoundaryValueAnaly
 	s.Equal(int64(1), list.TotalCount)
 }
 
-func (s *PlaylistServiceTestSuite) TestListByChannel_Negative_EquivalencePartitioning() {
+func (s *PlaylistServiceTestSuite) TestListPlaylistsByChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockChanSvc.On("Exists", ctx, 999).Return(false, nil)
 
@@ -97,7 +97,7 @@ func (s *PlaylistServiceTestSuite) TestListByChannel_Negative_EquivalencePartiti
 	s.Nil(list)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdate_Positive_StateTransition() {
+func (s *PlaylistServiceTestSuite) TestUpdatePlaylist_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	newName := "New Name"
@@ -111,7 +111,7 @@ func (s *PlaylistServiceTestSuite) TestUpdate_Positive_StateTransition() {
 	s.Equal(newName, updated.Name)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdate_Negative_Combinatorial() {
+func (s *PlaylistServiceTestSuite) TestUpdatePlaylist_Negative_Combinatorial() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	newName := "New Name"
@@ -124,7 +124,7 @@ func (s *PlaylistServiceTestSuite) TestUpdate_Negative_Combinatorial() {
 	s.Nil(updated)
 }
 
-func (s *PlaylistServiceTestSuite) TestDelete_Positive_StateTransition() {
+func (s *PlaylistServiceTestSuite) TestDeletePlaylist_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
@@ -136,7 +136,7 @@ func (s *PlaylistServiceTestSuite) TestDelete_Positive_StateTransition() {
 	s.NoError(err)
 }
 
-func (s *PlaylistServiceTestSuite) TestDelete_Negative_EquivalencePartitioning() {
+func (s *PlaylistServiceTestSuite) TestDeletePlaylist_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 

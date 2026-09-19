@@ -41,6 +41,9 @@ type refreshClaims struct {
 
 func (s *JwtService) GenerateAccessToken(ctx context.Context, data *domain.AccessTokenData) (string, error) {
 	_ = ctx
+	if data == nil || data.UserID <= 0 {
+		return "", fmt.Errorf("invalid access token data")
+	}
 	now := time.Now()
 	claims := accessClaims{
 		UserID:   data.UserID,
@@ -61,6 +64,9 @@ func (s *JwtService) GenerateAccessToken(ctx context.Context, data *domain.Acces
 
 func (s *JwtService) GenerateRefreshToken(ctx context.Context, userID int) (string, *domain.RefreshTokenData, error) {
 	_ = ctx
+	if userID <= 0 {
+		return "", nil, fmt.Errorf("invalid user id")
+	}
 	now := time.Now()
 	tokenID := uuid.NewString()
 	expiresAt := now.Add(s.refreshTTL)

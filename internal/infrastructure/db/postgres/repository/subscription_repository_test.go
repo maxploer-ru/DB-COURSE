@@ -145,6 +145,27 @@ func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Negative_Equi
 	s.Len(subs, 0)
 }
 
+func (s *SubscriptionRepositoryTestSuite) TestCountUserSubscriptions_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	_, err := s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
+	s.Require().NoError(err)
+
+	count, err := s.repo.CountUserSubscriptions(ctx, s.testSubscriber.ID)
+
+	s.NoError(err)
+	s.Equal(int64(1), count)
+}
+
+func (s *SubscriptionRepositoryTestSuite) TestCountUserSubscriptions_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	count, err := s.repo.CountUserSubscriptions(ctx, s.testSubscriber.ID)
+
+	s.Error(err)
+	s.Zero(count)
+}
+
 func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)

@@ -124,6 +124,57 @@ func (s *CommentRatingRepositoryTestSuite) TestUpdate_Negative_EquivalencePartit
 	s.Error(err)
 }
 
+func (s *CommentRatingRepositoryTestSuite) TestUpsert_Positive_StateTransition() {
+	ctx := context.Background()
+	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
+
+	previous, created, err := s.repo.Upsert(ctx, rating)
+
+	s.NoError(err)
+	s.True(created)
+	s.Nil(previous)
+
+	rating.Liked = false
+	previous, created, err = s.repo.Upsert(ctx, rating)
+
+	s.NoError(err)
+	s.False(created)
+	s.True(previous.Liked)
+}
+
+func (s *CommentRatingRepositoryTestSuite) TestUpsert_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
+
+	previous, created, err := s.repo.Upsert(ctx, rating)
+
+	s.Error(err)
+	s.Nil(previous)
+	s.False(created)
+}
+
+func (s *CommentRatingRepositoryTestSuite) TestDeleteAndGet_Positive_StateTransition() {
+	ctx := context.Background()
+	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
+	s.NoError(s.repo.Create(ctx, rating))
+
+	previous, found, err := s.repo.DeleteAndGet(ctx, rating.UserID, rating.CommentID)
+
+	s.NoError(err)
+	s.True(found)
+	s.NotNil(previous)
+	s.True(previous.Liked)
+}
+
+func (s *CommentRatingRepositoryTestSuite) TestDeleteAndGet_Negative_NotFound_EquivalencePartitioning() {
+	previous, found, err := s.repo.DeleteAndGet(context.Background(), 999999, 999999)
+
+	s.NoError(err)
+	s.False(found)
+	s.Nil(previous)
+}
+
 func (s *CommentRatingRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)

@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"ZVideo/internal/domain"
 	"ZVideo/internal/infrastructure/db/postgres/repository"
 	"ZVideo/internal/testing/db"
 	"ZVideo/internal/testing/mother"
@@ -34,7 +35,7 @@ func (s *RoleRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive_StateTransition() {
+func (s *RoleRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	role := s.mother.AdminRole()
 	role.ID = 0
@@ -43,10 +44,49 @@ func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive_StateTransitio
 	err := s.repo.Create(ctx, role)
 	s.NoError(err)
 	s.NotZero(role.ID)
+}
+
+func (s *RoleRepositoryTestSuite) TestCreate_Negative_AlreadyExists_EquivalencePartitioning() {
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "admin"
+
+	err := s.repo.Create(context.Background(), role)
+
+	s.Error(err)
+}
+
+func (s *RoleRepositoryTestSuite) TestGetByName_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "super_admin"
+	s.NoError(s.repo.Create(ctx, role))
 
 	found, err := s.repo.GetByName(ctx, "super_admin")
 	s.NoError(err)
 	s.Equal(role.Name, found.Name)
+}
+
+func (s *RoleRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
+	ctx := context.Background()
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "temporary_admin"
+
+	s.NoError(s.repo.Create(ctx, role))
+
+	found, err := s.repo.GetByID(ctx, role.ID)
+
+	s.NoError(err)
+	s.Equal(role.Name, found.Name)
+}
+
+func (s *RoleRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
+	found, err := s.repo.GetByID(context.Background(), 99999)
+
+	s.NoError(err)
+	s.Nil(found)
 }
 
 func (s *RoleRepositoryTestSuite) TestGetByName_Negative_NotFound_EquivalencePartitioning() {
@@ -56,6 +96,73 @@ func (s *RoleRepositoryTestSuite) TestGetByName_Negative_NotFound_EquivalencePar
 
 	s.NoError(err)
 	s.Nil(found)
+}
+
+func (s *RoleRepositoryTestSuite) TestGetDefaultRole_Positive_EquivalencePartitioning() {
+	found, err := s.repo.GetDefaultRole(context.Background())
+
+	s.NoError(err)
+	s.NotNil(found)
+	s.True(found.IsDefault)
+}
+
+func (s *RoleRepositoryTestSuite) TestGetDefaultRole_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	found, err := s.repo.GetDefaultRole(ctx)
+
+	s.Error(err)
+	s.Nil(found)
+}
+
+func (s *RoleRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
+	ctx := context.Background()
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "role_before_update"
+	s.NoError(s.repo.Create(ctx, role))
+	role.Name = "role_after_update"
+
+	err := s.repo.Update(ctx, role)
+	found, getErr := s.repo.GetByID(ctx, role.ID)
+
+	s.NoError(err)
+	s.NoError(getErr)
+	s.Equal("role_after_update", found.Name)
+}
+
+func (s *RoleRepositoryTestSuite) TestUpdate_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := s.repo.Update(ctx, &domain.Role{ID: 99999, Name: "cancelled"})
+
+	s.Error(err)
+}
+
+func (s *RoleRepositoryTestSuite) TestDelete_Positive_StateTransition() {
+	ctx := context.Background()
+	role := s.mother.AdminRole()
+	role.ID = 0
+	role.Name = "role_to_delete"
+	s.NoError(s.repo.Create(ctx, role))
+
+	err := s.repo.Delete(ctx, role.ID)
+	found, getErr := s.repo.GetByID(ctx, role.ID)
+
+	s.NoError(err)
+	s.NoError(getErr)
+	s.Nil(found)
+}
+
+func (s *RoleRepositoryTestSuite) TestDelete_Negative_CancelledContext_Exception() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := s.repo.Delete(ctx, 99999)
+
+	s.Error(err)
 }
 
 func TestRoleRepositorySuite(t *testing.T) {

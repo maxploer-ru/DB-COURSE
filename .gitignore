@@ -14,3 +14,9 @@
 frontend/node_modules
 frontend/dist
 frontend/.env
+
+coverage.out
+coverage.html
+test-results.json
+allure-results/
+allure-report/

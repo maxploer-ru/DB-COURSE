@@ -34,6 +34,15 @@ func (s *JwtServiceTestSuite) TestGenerateAccessToken_Positive_StateTransition()
 	s.NotEmpty(token)
 }
 
+func (s *JwtServiceTestSuite) TestGenerateAccessToken_Negative_InvalidData_EquivalencePartitioning() {
+	ctx := context.Background()
+
+	token, err := s.service.GenerateAccessToken(ctx, nil)
+
+	s.Error(err)
+	s.Empty(token)
+}
+
 func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Positive_StateTransition() {
 	ctx := context.Background()
 	userID := 1
@@ -45,6 +54,16 @@ func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Positive_StateTransition(
 	s.NotNil(data)
 	s.Equal(userID, data.UserID)
 	s.NotEmpty(data.TokenID)
+}
+
+func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Negative_InvalidUserID_BoundaryValueAnalysis() {
+	ctx := context.Background()
+
+	token, data, err := s.service.GenerateRefreshToken(ctx, 0)
+
+	s.Error(err)
+	s.Empty(token)
+	s.Nil(data)
 }
 
 func (s *JwtServiceTestSuite) TestValidateAccessToken_Positive_Combinatorial() {
@@ -74,7 +93,7 @@ func (s *JwtServiceTestSuite) TestValidateAccessToken_Negative_EquivalencePartit
 	s.Nil(claims)
 }
 
-func (s *JwtServiceTestSuite) TestValidateAccessToken_RejectsDifferentHMACAlgorithm() {
+func (s *JwtServiceTestSuite) TestValidateAccessToken_Negative_DifferentHMACAlgorithm_Combinatorial() {
 	ctx := context.Background()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"user_id":  1,

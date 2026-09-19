@@ -90,6 +90,61 @@ func (s *VideoInteractionServiceTestSuite) TestRecordView_Positive_StateTransiti
 	s.mockViewingRepo.AssertExpectations(s.T())
 }
 
+func (s *VideoInteractionServiceTestSuite) TestRecordView_Negative_VideoNotFound_EquivalencePartitioning() {
+	ctx := context.Background()
+	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
+
+	err := s.service.RecordView(ctx, 1, 999)
+
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+	s.mockViewingRepo.AssertNotCalled(s.T(), "Create")
+}
+
+func (s *VideoInteractionServiceTestSuite) TestGetStats_Positive_CacheHit_EquivalencePartitioning() {
+	ctx := context.Background()
+	expected := &domain.VideoStats{Views: 12, Likes: 4, Dislikes: 1, Comments: 3}
+	s.mockStatsCache.On("GetStats", ctx, 1).Return(expected, true, nil)
+
+	stats, err := s.service.GetStats(ctx, 1)
+
+	s.NoError(err)
+	s.Equal(expected, stats)
+}
+
+func (s *VideoInteractionServiceTestSuite) TestGetStats_Negative_RatingRepositoryError_EquivalencePartitioning() {
+	ctx := context.Background()
+	s.mockStatsCache.On("GetStats", ctx, 1).Return((*domain.VideoStats)(nil), false, nil)
+	s.mockRatingRepo.On("GetStats", ctx, 1).Return(0, 0, domain.ErrInternalServer)
+
+	stats, err := s.service.GetStats(ctx, 1)
+
+	s.ErrorIs(err, domain.ErrInternalServer)
+	s.Nil(stats)
+}
+
+func (s *VideoInteractionServiceTestSuite) TestGetStatsBatch_Positive_CacheHit_EquivalencePartitioning() {
+	ctx := context.Background()
+	first := &domain.VideoStats{Views: 1}
+	second := &domain.VideoStats{Views: 2}
+	s.mockStatsCache.On("GetStats", ctx, 1).Return(first, true, nil)
+	s.mockStatsCache.On("GetStats", ctx, 2).Return(second, true, nil)
+
+	stats, err := s.service.GetStatsBatch(ctx, []int{1, 2})
+
+	s.NoError(err)
+	s.Equal(first, stats[1])
+	s.Equal(second, stats[2])
+}
+
+func (s *VideoInteractionServiceTestSuite) TestGetStatsBatch_Negative_EmptyInput_BoundaryValueAnalysis() {
+	ctx := context.Background()
+
+	stats, err := s.service.GetStatsBatch(ctx, nil)
+
+	s.NoError(err)
+	s.Empty(stats)
+}
+
 func TestVideoInteractionServiceSuite(t *testing.T) {
 	suite.Run(t, new(VideoInteractionServiceTestSuite))
 }
