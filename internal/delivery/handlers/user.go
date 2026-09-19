@@ -73,7 +73,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request, params opena
 	})
 }
 
-func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request, userID openapi.UserId) {
+func (h *Handler) UpdateUserStatus(w http.ResponseWriter, r *http.Request, userID openapi.UserId) {
 	adminID, ok := requireAdmin(w, r)
 	if !ok {
 		return
@@ -82,27 +82,30 @@ func (h *Handler) BanUser(w http.ResponseWriter, r *http.Request, userID openapi
 		badID(w)
 		return
 	}
-	if err := h.admin.BanUser(r.Context(), adminID, int(userID)); err != nil {
-		handleError(w, err)
-		return
-	}
-	writeNoContent(w)
-}
-
-func (h *Handler) UnbanUser(w http.ResponseWriter, r *http.Request, userID openapi.UserId) {
-	adminID, ok := requireAdmin(w, r)
+	body, ok := decodeJSON[openapi.UpdateUserStatusJSONRequestBody](w, r)
 	if !ok {
 		return
 	}
-	if !validID(int(userID)) {
-		badID(w)
+	var err error
+	switch body.Status {
+	case openapi.Banned:
+		err = h.admin.BanUser(r.Context(), adminID, int(userID))
+	case openapi.Active:
+		err = h.admin.UnbanUser(r.Context(), adminID, int(userID))
+	default:
+		badRequest(w, "INVALID_USER_STATUS", "Unsupported user status")
 		return
 	}
-	if err := h.admin.UnbanUser(r.Context(), adminID, int(userID)); err != nil {
+	if err != nil {
 		handleError(w, err)
 		return
 	}
-	writeNoContent(w)
+	updated, err := h.user.GetProfile(r.Context(), int(userID))
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	response.RespondWithJSON(w, http.StatusOK, toUser(updated))
 }
 
 func (h *Handler) ReplaceUserRole(w http.ResponseWriter, r *http.Request, userID openapi.UserId) {

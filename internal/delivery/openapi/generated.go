@@ -25,11 +25,15 @@ const (
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
-// Defines values for RatingAction.
+// Defines values for PublicationStatus.
 const (
-	Dislike RatingAction = "dislike"
-	Like    RatingAction = "like"
-	Remove  RatingAction = "remove"
+	Published PublicationStatus = "published"
+)
+
+// Defines values for RatingValue.
+const (
+	Dislike RatingValue = "dislike"
+	Like    RatingValue = "like"
 )
 
 // Defines values for RoleName.
@@ -37,6 +41,12 @@ const (
 	RoleNameAdmin     RoleName = "admin"
 	RoleNameModerator RoleName = "moderator"
 	RoleNameUser      RoleName = "user"
+)
+
+// Defines values for UserStatus.
+const (
+	Active UserStatus = "active"
+	Banned UserStatus = "banned"
 )
 
 // Defines values for VideoStatus.
@@ -241,12 +251,17 @@ type PresignedUrlResponse struct {
 	Url       string    `json:"url"`
 }
 
-// RatingAction defines model for RatingAction.
-type RatingAction string
+// PublicationStatus defines model for PublicationStatus.
+type PublicationStatus string
+
+// PublicationUpdateRequest defines model for PublicationUpdateRequest.
+type PublicationUpdateRequest struct {
+	Status PublicationStatus `json:"status"`
+}
 
 // RatingRequest defines model for RatingRequest.
 type RatingRequest struct {
-	Action RatingAction `json:"action"`
+	Value RatingValue `json:"value"`
 }
 
 // RatingStats defines model for RatingStats.
@@ -254,6 +269,9 @@ type RatingStats struct {
 	Dislikes int `json:"dislikes"`
 	Likes    int `json:"likes"`
 }
+
+// RatingValue defines model for RatingValue.
+type RatingValue string
 
 // RefreshRequest defines model for RefreshRequest.
 type RefreshRequest struct {
@@ -324,6 +342,14 @@ type UserPage struct {
 	TotalCount int64  `json:"totalCount"`
 }
 
+// UserStatus defines model for UserStatus.
+type UserStatus string
+
+// UserStatusUpdateRequest defines model for UserStatusUpdateRequest.
+type UserStatusUpdateRequest struct {
+	Status UserStatus `json:"status"`
+}
+
 // Video defines model for Video.
 type Video struct {
 	ChannelId   int       `json:"channelId"`
@@ -367,9 +393,13 @@ type VideoUpdateRequest struct {
 
 // VideoUploadInitRequest defines model for VideoUploadInitRequest.
 type VideoUploadInitRequest struct {
+	ContentType string  `json:"contentType"`
 	Description *string `json:"description,omitempty"`
 	Filename    string  `json:"filename"`
-	Title       string  `json:"title"`
+
+	// SizeBytes Optional size used to enforce upload limits.
+	SizeBytes *int   `json:"sizeBytes,omitempty"`
+	Title     string `json:"title"`
 }
 
 // VideoUploadInitResponse defines model for VideoUploadInitResponse.
@@ -381,6 +411,9 @@ type VideoUploadInitResponse struct {
 
 // ChannelId defines model for ChannelId.
 type ChannelId = int
+
+// ChannelName defines model for ChannelName.
+type ChannelName = string
 
 // CommentId defines model for CommentId.
 type CommentId = int
@@ -428,6 +461,9 @@ type Unauthorized = ErrorResponse
 type ListChannelsParams struct {
 	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
 	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Name Exact channel name filter.
+	Name *ChannelName `form:"name,omitempty" json:"name,omitempty"`
 }
 
 // GetChannelCommunityParams defines parameters for GetChannelCommunity.
@@ -559,11 +595,17 @@ type UpdateCurrentUserNotificationSettingsJSONRequestBody = NotificationSettings
 // ReplaceUserRoleJSONRequestBody defines body for ReplaceUserRole for application/json ContentType.
 type ReplaceUserRoleJSONRequestBody = ChangeUserRoleRequest
 
+// UpdateUserStatusJSONRequestBody defines body for UpdateUserStatus for application/json ContentType.
+type UpdateUserStatusJSONRequestBody = UserStatusUpdateRequest
+
 // UpdateVideoJSONRequestBody defines body for UpdateVideo for application/json ContentType.
 type UpdateVideoJSONRequestBody = VideoUpdateRequest
 
 // CreateVideoCommentJSONRequestBody defines body for CreateVideoComment for application/json ContentType.
 type CreateVideoCommentJSONRequestBody = ContentRequest
+
+// UpdateVideoPublicationJSONRequestBody defines body for UpdateVideoPublication for application/json ContentType.
+type UpdateVideoPublicationJSONRequestBody = PublicationUpdateRequest
 
 // RateVideoJSONRequestBody defines body for RateVideo for application/json ContentType.
 type RateVideoJSONRequestBody = RatingRequest
@@ -571,193 +613,193 @@ type RateVideoJSONRequestBody = RatingRequest
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Login with email and password
-	// (POST /auth/login)
+	// (POST /api/v1/auth/login)
 	Login(w http.ResponseWriter, r *http.Request)
 	// Revoke current refresh token
-	// (POST /auth/logout)
+	// (POST /api/v1/auth/logout)
 	Logout(w http.ResponseWriter, r *http.Request)
 	// Rotate refresh token and issue new tokens
-	// (POST /auth/refresh)
+	// (POST /api/v1/auth/refresh)
 	RefreshTokens(w http.ResponseWriter, r *http.Request)
 	// Register a new user
-	// (POST /auth/register)
+	// (POST /api/v1/auth/register)
 	RegisterUser(w http.ResponseWriter, r *http.Request)
 	// List channels
-	// (GET /channels)
+	// (GET /api/v1/channels)
 	ListChannels(w http.ResponseWriter, r *http.Request, params ListChannelsParams)
 	// Create current user's channel
-	// (POST /channels)
+	// (POST /api/v1/channels)
 	CreateChannel(w http.ResponseWriter, r *http.Request)
-	// Get channel by name
-	// (GET /channels/by-name/{name})
-	GetChannelByName(w http.ResponseWriter, r *http.Request, name string)
 	// Get current user's channel
-	// (GET /channels/me)
+	// (GET /api/v1/channels/me)
 	GetMyChannel(w http.ResponseWriter, r *http.Request)
 	// Delete channel
-	// (DELETE /channels/{channelId})
+	// (DELETE /api/v1/channels/{channelId})
 	DeleteChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Get channel by id
-	// (GET /channels/{channelId})
+	// (GET /api/v1/channels/{channelId})
 	GetChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Update channel
-	// (PATCH /channels/{channelId})
+	// (PATCH /api/v1/channels/{channelId})
 	UpdateChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Get channel community with posts
-	// (GET /channels/{channelId}/community)
+	// (GET /api/v1/channels/{channelId}/community)
 	GetChannelCommunity(w http.ResponseWriter, r *http.Request, channelId ChannelId, params GetChannelCommunityParams)
 	// Create community post
-	// (POST /channels/{channelId}/community/posts)
+	// (POST /api/v1/channels/{channelId}/community/posts)
 	CreateCommunityPost(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// List channel playlists
-	// (GET /channels/{channelId}/playlists)
+	// (GET /api/v1/channels/{channelId}/playlists)
 	ListChannelPlaylists(w http.ResponseWriter, r *http.Request, channelId ChannelId, params ListChannelPlaylistsParams)
 	// Create playlist in channel
-	// (POST /channels/{channelId}/playlists)
+	// (POST /api/v1/channels/{channelId}/playlists)
 	CreatePlaylist(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Get channel subscribers count
-	// (GET /channels/{channelId}/subscribers/count)
+	// (GET /api/v1/channels/{channelId}/subscribers/count)
 	GetChannelSubscribersCount(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Unsubscribe from channel
-	// (DELETE /channels/{channelId}/subscriptions)
+	// (DELETE /api/v1/channels/{channelId}/subscriptions)
 	UnsubscribeFromChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Subscribe to channel
-	// (PUT /channels/{channelId}/subscriptions)
+	// (PUT /api/v1/channels/{channelId}/subscriptions)
 	SubscribeToChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Check current user's subscription to channel
-	// (GET /channels/{channelId}/subscriptions/status)
+	// (GET /api/v1/channels/{channelId}/subscriptions/status)
 	GetChannelSubscriptionStatus(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// List channel videos
-	// (GET /channels/{channelId}/videos)
+	// (GET /api/v1/channels/{channelId}/videos)
 	ListChannelVideos(w http.ResponseWriter, r *http.Request, channelId ChannelId, params ListChannelVideosParams)
 	// Initialize video upload
-	// (POST /channels/{channelId}/videos/uploads)
+	// (POST /api/v1/channels/{channelId}/videos/uploads)
 	InitVideoUpload(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// Delete comment
-	// (DELETE /comments/{commentId})
+	// (DELETE /api/v1/comments/{commentId})
 	DeleteComment(w http.ResponseWriter, r *http.Request, commentId CommentId)
 	// Get comment
-	// (GET /comments/{commentId})
+	// (GET /api/v1/comments/{commentId})
 	GetComment(w http.ResponseWriter, r *http.Request, commentId CommentId)
 	// Update comment
-	// (PATCH /comments/{commentId})
+	// (PATCH /api/v1/comments/{commentId})
 	UpdateComment(w http.ResponseWriter, r *http.Request, commentId CommentId)
+	// Remove current user's comment rating
+	// (DELETE /api/v1/comments/{commentId}/rating)
+	DeleteCommentRating(w http.ResponseWriter, r *http.Request, commentId CommentId)
 	// Replace current user's comment rating
-	// (PUT /comments/{commentId}/rating)
+	// (PUT /api/v1/comments/{commentId}/rating)
 	RateComment(w http.ResponseWriter, r *http.Request, commentId CommentId)
 	// Get comment rating stats
-	// (GET /comments/{commentId}/stats)
+	// (GET /api/v1/comments/{commentId}/stats)
 	GetCommentStats(w http.ResponseWriter, r *http.Request, commentId CommentId)
 	// Delete community comment
-	// (DELETE /community/comments/{commentId})
+	// (DELETE /api/v1/community/comments/{commentId})
 	DeleteCommunityComment(w http.ResponseWriter, r *http.Request, commentId CommunityCommentId)
 	// Update community comment
-	// (PATCH /community/comments/{commentId})
+	// (PATCH /api/v1/community/comments/{commentId})
 	UpdateCommunityComment(w http.ResponseWriter, r *http.Request, commentId CommunityCommentId)
 	// Delete community post
-	// (DELETE /community/posts/{postId})
+	// (DELETE /api/v1/community/posts/{postId})
 	DeleteCommunityPost(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Update community post
-	// (PATCH /community/posts/{postId})
+	// (PATCH /api/v1/community/posts/{postId})
 	UpdateCommunityPost(w http.ResponseWriter, r *http.Request, postId PostId)
 	// List community post comments
-	// (GET /community/posts/{postId}/comments)
+	// (GET /api/v1/community/posts/{postId}/comments)
 	ListCommunityPostComments(w http.ResponseWriter, r *http.Request, postId PostId, params ListCommunityPostCommentsParams)
 	// Create community post comment
-	// (POST /community/posts/{postId}/comments)
+	// (POST /api/v1/community/posts/{postId}/comments)
 	CreateCommunityComment(w http.ResponseWriter, r *http.Request, postId PostId)
 	// Delete playlist
-	// (DELETE /playlists/{playlistId})
+	// (DELETE /api/v1/playlists/{playlistId})
 	DeletePlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId)
 	// Get playlist
-	// (GET /playlists/{playlistId})
+	// (GET /api/v1/playlists/{playlistId})
 	GetPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId)
 	// Update playlist
-	// (PATCH /playlists/{playlistId})
+	// (PATCH /api/v1/playlists/{playlistId})
 	UpdatePlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId)
 	// List playlist videos
-	// (GET /playlists/{playlistId}/videos)
+	// (GET /api/v1/playlists/{playlistId}/videos)
 	ListPlaylistVideos(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, params ListPlaylistVideosParams)
 	// Add video to playlist
-	// (POST /playlists/{playlistId}/videos)
+	// (POST /api/v1/playlists/{playlistId}/videos)
 	AddVideoToPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId)
 	// Remove video from playlist
-	// (DELETE /playlists/{playlistId}/videos/{videoId})
+	// (DELETE /api/v1/playlists/{playlistId}/videos/{videoId})
 	RemoveVideoFromPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, videoId VideoId)
 	// Update video position in playlist
-	// (PATCH /playlists/{playlistId}/videos/{videoId})
+	// (PATCH /api/v1/playlists/{playlistId}/videos/{videoId})
 	UpdatePlaylistVideoPosition(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, videoId VideoId)
 	// List users
-	// (GET /users)
+	// (GET /api/v1/users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 	// Delete current user account
-	// (DELETE /users/me)
+	// (DELETE /api/v1/users/me)
 	DeleteCurrentUser(w http.ResponseWriter, r *http.Request)
 	// Get current user profile
-	// (GET /users/me)
+	// (GET /api/v1/users/me)
 	GetCurrentUser(w http.ResponseWriter, r *http.Request)
 	// Get current user's channel community
-	// (GET /users/me/community)
+	// (GET /api/v1/users/me/community)
 	GetMyCommunity(w http.ResponseWriter, r *http.Request, params GetMyCommunityParams)
 	// Update current user's notification settings
-	// (PATCH /users/me/notification-settings)
+	// (PATCH /api/v1/users/me/notification-settings)
 	UpdateCurrentUserNotificationSettings(w http.ResponseWriter, r *http.Request)
 	// List current user's playlists
-	// (GET /users/me/playlists)
+	// (GET /api/v1/users/me/playlists)
 	ListMyPlaylists(w http.ResponseWriter, r *http.Request, params ListMyPlaylistsParams)
 	// List current user's subscriptions
-	// (GET /users/me/subscriptions)
+	// (GET /api/v1/users/me/subscriptions)
 	ListMySubscriptions(w http.ResponseWriter, r *http.Request, params ListMySubscriptionsParams)
 	// Reset unread new videos count for subscription
-	// (DELETE /users/me/subscriptions/{channelId}/new-videos-count)
+	// (DELETE /api/v1/users/me/subscriptions/{channelId}/new-videos-count)
 	ResetSubscriptionNewVideosCount(w http.ResponseWriter, r *http.Request, channelId ChannelId)
 	// List current user's channel videos
-	// (GET /users/me/videos)
+	// (GET /api/v1/users/me/videos)
 	ListMyVideos(w http.ResponseWriter, r *http.Request, params ListMyVideosParams)
-	// Ban a user
-	// (POST /users/{userId}/ban)
-	BanUser(w http.ResponseWriter, r *http.Request, userId UserId)
 	// Get a user's channel
-	// (GET /users/{userId}/channel)
+	// (GET /api/v1/users/{userId}/channel)
 	GetUserChannel(w http.ResponseWriter, r *http.Request, userId UserId)
 	// Replace user role
-	// (PUT /users/{userId}/role)
+	// (PUT /api/v1/users/{userId}/role)
 	ReplaceUserRole(w http.ResponseWriter, r *http.Request, userId UserId)
-	// Unban a user
-	// (POST /users/{userId}/unban)
-	UnbanUser(w http.ResponseWriter, r *http.Request, userId UserId)
+	// Update user account status
+	// (PATCH /api/v1/users/{userId}/status)
+	UpdateUserStatus(w http.ResponseWriter, r *http.Request, userId UserId)
 	// List videos
-	// (GET /videos)
+	// (GET /api/v1/videos)
 	ListVideos(w http.ResponseWriter, r *http.Request, params ListVideosParams)
 	// Delete video
-	// (DELETE /videos/{videoId})
+	// (DELETE /api/v1/videos/{videoId})
 	DeleteVideo(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// Get video metadata
-	// (GET /videos/{videoId})
+	// (GET /api/v1/videos/{videoId})
 	GetVideo(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// Update video metadata
-	// (PATCH /videos/{videoId})
+	// (PATCH /api/v1/videos/{videoId})
 	UpdateVideo(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// List video comments
-	// (GET /videos/{videoId}/comments)
+	// (GET /api/v1/videos/{videoId}/comments)
 	ListVideoComments(w http.ResponseWriter, r *http.Request, videoId VideoId, params ListVideoCommentsParams)
 	// Create video comment
-	// (POST /videos/{videoId}/comments)
+	// (POST /api/v1/videos/{videoId}/comments)
 	CreateVideoComment(w http.ResponseWriter, r *http.Request, videoId VideoId)
-	// Confirm uploaded video and publish it
-	// (POST /videos/{videoId}/confirm)
-	ConfirmVideoUpload(w http.ResponseWriter, r *http.Request, videoId VideoId)
+	// Get video streaming URL
+	// (GET /api/v1/videos/{videoId}/media)
+	GetVideoMedia(w http.ResponseWriter, r *http.Request, videoId VideoId)
+	// Set video publication state
+	// (PUT /api/v1/videos/{videoId}/publication)
+	UpdateVideoPublication(w http.ResponseWriter, r *http.Request, videoId VideoId)
+	// Remove current user's video rating
+	// (DELETE /api/v1/videos/{videoId}/rating)
+	DeleteVideoRating(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// Replace current user's video rating
-	// (PUT /videos/{videoId}/rating)
+	// (PUT /api/v1/videos/{videoId}/rating)
 	RateVideo(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// Get video stats
-	// (GET /videos/{videoId}/stats)
+	// (GET /api/v1/videos/{videoId}/stats)
 	GetVideoStats(w http.ResponseWriter, r *http.Request, videoId VideoId)
-	// Get video streaming URL
-	// (GET /videos/{videoId}/stream-url)
-	GetVideoStreamUrl(w http.ResponseWriter, r *http.Request, videoId VideoId)
 	// Record a video view
-	// (POST /videos/{videoId}/views)
+	// (POST /api/v1/videos/{videoId}/views)
 	RecordVideoView(w http.ResponseWriter, r *http.Request, videoId VideoId)
 }
 
@@ -766,379 +808,379 @@ type ServerInterface interface {
 type Unimplemented struct{}
 
 // Login with email and password
-// (POST /auth/login)
+// (POST /api/v1/auth/login)
 func (_ Unimplemented) Login(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Revoke current refresh token
-// (POST /auth/logout)
+// (POST /api/v1/auth/logout)
 func (_ Unimplemented) Logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Rotate refresh token and issue new tokens
-// (POST /auth/refresh)
+// (POST /api/v1/auth/refresh)
 func (_ Unimplemented) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Register a new user
-// (POST /auth/register)
+// (POST /api/v1/auth/register)
 func (_ Unimplemented) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List channels
-// (GET /channels)
+// (GET /api/v1/channels)
 func (_ Unimplemented) ListChannels(w http.ResponseWriter, r *http.Request, params ListChannelsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Create current user's channel
-// (POST /channels)
+// (POST /api/v1/channels)
 func (_ Unimplemented) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get channel by name
-// (GET /channels/by-name/{name})
-func (_ Unimplemented) GetChannelByName(w http.ResponseWriter, r *http.Request, name string) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Get current user's channel
-// (GET /channels/me)
+// (GET /api/v1/channels/me)
 func (_ Unimplemented) GetMyChannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete channel
-// (DELETE /channels/{channelId})
+// (DELETE /api/v1/channels/{channelId})
 func (_ Unimplemented) DeleteChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get channel by id
-// (GET /channels/{channelId})
+// (GET /api/v1/channels/{channelId})
 func (_ Unimplemented) GetChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update channel
-// (PATCH /channels/{channelId})
+// (PATCH /api/v1/channels/{channelId})
 func (_ Unimplemented) UpdateChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get channel community with posts
-// (GET /channels/{channelId}/community)
+// (GET /api/v1/channels/{channelId}/community)
 func (_ Unimplemented) GetChannelCommunity(w http.ResponseWriter, r *http.Request, channelId ChannelId, params GetChannelCommunityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Create community post
-// (POST /channels/{channelId}/community/posts)
+// (POST /api/v1/channels/{channelId}/community/posts)
 func (_ Unimplemented) CreateCommunityPost(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List channel playlists
-// (GET /channels/{channelId}/playlists)
+// (GET /api/v1/channels/{channelId}/playlists)
 func (_ Unimplemented) ListChannelPlaylists(w http.ResponseWriter, r *http.Request, channelId ChannelId, params ListChannelPlaylistsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Create playlist in channel
-// (POST /channels/{channelId}/playlists)
+// (POST /api/v1/channels/{channelId}/playlists)
 func (_ Unimplemented) CreatePlaylist(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get channel subscribers count
-// (GET /channels/{channelId}/subscribers/count)
+// (GET /api/v1/channels/{channelId}/subscribers/count)
 func (_ Unimplemented) GetChannelSubscribersCount(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Unsubscribe from channel
-// (DELETE /channels/{channelId}/subscriptions)
+// (DELETE /api/v1/channels/{channelId}/subscriptions)
 func (_ Unimplemented) UnsubscribeFromChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Subscribe to channel
-// (PUT /channels/{channelId}/subscriptions)
+// (PUT /api/v1/channels/{channelId}/subscriptions)
 func (_ Unimplemented) SubscribeToChannel(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Check current user's subscription to channel
-// (GET /channels/{channelId}/subscriptions/status)
+// (GET /api/v1/channels/{channelId}/subscriptions/status)
 func (_ Unimplemented) GetChannelSubscriptionStatus(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List channel videos
-// (GET /channels/{channelId}/videos)
+// (GET /api/v1/channels/{channelId}/videos)
 func (_ Unimplemented) ListChannelVideos(w http.ResponseWriter, r *http.Request, channelId ChannelId, params ListChannelVideosParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Initialize video upload
-// (POST /channels/{channelId}/videos/uploads)
+// (POST /api/v1/channels/{channelId}/videos/uploads)
 func (_ Unimplemented) InitVideoUpload(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete comment
-// (DELETE /comments/{commentId})
+// (DELETE /api/v1/comments/{commentId})
 func (_ Unimplemented) DeleteComment(w http.ResponseWriter, r *http.Request, commentId CommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get comment
-// (GET /comments/{commentId})
+// (GET /api/v1/comments/{commentId})
 func (_ Unimplemented) GetComment(w http.ResponseWriter, r *http.Request, commentId CommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update comment
-// (PATCH /comments/{commentId})
+// (PATCH /api/v1/comments/{commentId})
 func (_ Unimplemented) UpdateComment(w http.ResponseWriter, r *http.Request, commentId CommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Remove current user's comment rating
+// (DELETE /api/v1/comments/{commentId}/rating)
+func (_ Unimplemented) DeleteCommentRating(w http.ResponseWriter, r *http.Request, commentId CommentId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Replace current user's comment rating
-// (PUT /comments/{commentId}/rating)
+// (PUT /api/v1/comments/{commentId}/rating)
 func (_ Unimplemented) RateComment(w http.ResponseWriter, r *http.Request, commentId CommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get comment rating stats
-// (GET /comments/{commentId}/stats)
+// (GET /api/v1/comments/{commentId}/stats)
 func (_ Unimplemented) GetCommentStats(w http.ResponseWriter, r *http.Request, commentId CommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete community comment
-// (DELETE /community/comments/{commentId})
+// (DELETE /api/v1/community/comments/{commentId})
 func (_ Unimplemented) DeleteCommunityComment(w http.ResponseWriter, r *http.Request, commentId CommunityCommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update community comment
-// (PATCH /community/comments/{commentId})
+// (PATCH /api/v1/community/comments/{commentId})
 func (_ Unimplemented) UpdateCommunityComment(w http.ResponseWriter, r *http.Request, commentId CommunityCommentId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete community post
-// (DELETE /community/posts/{postId})
+// (DELETE /api/v1/community/posts/{postId})
 func (_ Unimplemented) DeleteCommunityPost(w http.ResponseWriter, r *http.Request, postId PostId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update community post
-// (PATCH /community/posts/{postId})
+// (PATCH /api/v1/community/posts/{postId})
 func (_ Unimplemented) UpdateCommunityPost(w http.ResponseWriter, r *http.Request, postId PostId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List community post comments
-// (GET /community/posts/{postId}/comments)
+// (GET /api/v1/community/posts/{postId}/comments)
 func (_ Unimplemented) ListCommunityPostComments(w http.ResponseWriter, r *http.Request, postId PostId, params ListCommunityPostCommentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Create community post comment
-// (POST /community/posts/{postId}/comments)
+// (POST /api/v1/community/posts/{postId}/comments)
 func (_ Unimplemented) CreateCommunityComment(w http.ResponseWriter, r *http.Request, postId PostId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete playlist
-// (DELETE /playlists/{playlistId})
+// (DELETE /api/v1/playlists/{playlistId})
 func (_ Unimplemented) DeletePlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get playlist
-// (GET /playlists/{playlistId})
+// (GET /api/v1/playlists/{playlistId})
 func (_ Unimplemented) GetPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update playlist
-// (PATCH /playlists/{playlistId})
+// (PATCH /api/v1/playlists/{playlistId})
 func (_ Unimplemented) UpdatePlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List playlist videos
-// (GET /playlists/{playlistId}/videos)
+// (GET /api/v1/playlists/{playlistId}/videos)
 func (_ Unimplemented) ListPlaylistVideos(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, params ListPlaylistVideosParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Add video to playlist
-// (POST /playlists/{playlistId}/videos)
+// (POST /api/v1/playlists/{playlistId}/videos)
 func (_ Unimplemented) AddVideoToPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Remove video from playlist
-// (DELETE /playlists/{playlistId}/videos/{videoId})
+// (DELETE /api/v1/playlists/{playlistId}/videos/{videoId})
 func (_ Unimplemented) RemoveVideoFromPlaylist(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update video position in playlist
-// (PATCH /playlists/{playlistId}/videos/{videoId})
+// (PATCH /api/v1/playlists/{playlistId}/videos/{videoId})
 func (_ Unimplemented) UpdatePlaylistVideoPosition(w http.ResponseWriter, r *http.Request, playlistId PlaylistId, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List users
-// (GET /users)
+// (GET /api/v1/users)
 func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete current user account
-// (DELETE /users/me)
+// (DELETE /api/v1/users/me)
 func (_ Unimplemented) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get current user profile
-// (GET /users/me)
+// (GET /api/v1/users/me)
 func (_ Unimplemented) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get current user's channel community
-// (GET /users/me/community)
+// (GET /api/v1/users/me/community)
 func (_ Unimplemented) GetMyCommunity(w http.ResponseWriter, r *http.Request, params GetMyCommunityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update current user's notification settings
-// (PATCH /users/me/notification-settings)
+// (PATCH /api/v1/users/me/notification-settings)
 func (_ Unimplemented) UpdateCurrentUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List current user's playlists
-// (GET /users/me/playlists)
+// (GET /api/v1/users/me/playlists)
 func (_ Unimplemented) ListMyPlaylists(w http.ResponseWriter, r *http.Request, params ListMyPlaylistsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List current user's subscriptions
-// (GET /users/me/subscriptions)
+// (GET /api/v1/users/me/subscriptions)
 func (_ Unimplemented) ListMySubscriptions(w http.ResponseWriter, r *http.Request, params ListMySubscriptionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Reset unread new videos count for subscription
-// (DELETE /users/me/subscriptions/{channelId}/new-videos-count)
+// (DELETE /api/v1/users/me/subscriptions/{channelId}/new-videos-count)
 func (_ Unimplemented) ResetSubscriptionNewVideosCount(w http.ResponseWriter, r *http.Request, channelId ChannelId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List current user's channel videos
-// (GET /users/me/videos)
+// (GET /api/v1/users/me/videos)
 func (_ Unimplemented) ListMyVideos(w http.ResponseWriter, r *http.Request, params ListMyVideosParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Ban a user
-// (POST /users/{userId}/ban)
-func (_ Unimplemented) BanUser(w http.ResponseWriter, r *http.Request, userId UserId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Get a user's channel
-// (GET /users/{userId}/channel)
+// (GET /api/v1/users/{userId}/channel)
 func (_ Unimplemented) GetUserChannel(w http.ResponseWriter, r *http.Request, userId UserId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Replace user role
-// (PUT /users/{userId}/role)
+// (PUT /api/v1/users/{userId}/role)
 func (_ Unimplemented) ReplaceUserRole(w http.ResponseWriter, r *http.Request, userId UserId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Unban a user
-// (POST /users/{userId}/unban)
-func (_ Unimplemented) UnbanUser(w http.ResponseWriter, r *http.Request, userId UserId) {
+// Update user account status
+// (PATCH /api/v1/users/{userId}/status)
+func (_ Unimplemented) UpdateUserStatus(w http.ResponseWriter, r *http.Request, userId UserId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List videos
-// (GET /videos)
+// (GET /api/v1/videos)
 func (_ Unimplemented) ListVideos(w http.ResponseWriter, r *http.Request, params ListVideosParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Delete video
-// (DELETE /videos/{videoId})
+// (DELETE /api/v1/videos/{videoId})
 func (_ Unimplemented) DeleteVideo(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get video metadata
-// (GET /videos/{videoId})
+// (GET /api/v1/videos/{videoId})
 func (_ Unimplemented) GetVideo(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Update video metadata
-// (PATCH /videos/{videoId})
+// (PATCH /api/v1/videos/{videoId})
 func (_ Unimplemented) UpdateVideo(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // List video comments
-// (GET /videos/{videoId}/comments)
+// (GET /api/v1/videos/{videoId}/comments)
 func (_ Unimplemented) ListVideoComments(w http.ResponseWriter, r *http.Request, videoId VideoId, params ListVideoCommentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Create video comment
-// (POST /videos/{videoId}/comments)
+// (POST /api/v1/videos/{videoId}/comments)
 func (_ Unimplemented) CreateVideoComment(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Confirm uploaded video and publish it
-// (POST /videos/{videoId}/confirm)
-func (_ Unimplemented) ConfirmVideoUpload(w http.ResponseWriter, r *http.Request, videoId VideoId) {
+// Get video streaming URL
+// (GET /api/v1/videos/{videoId}/media)
+func (_ Unimplemented) GetVideoMedia(w http.ResponseWriter, r *http.Request, videoId VideoId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set video publication state
+// (PUT /api/v1/videos/{videoId}/publication)
+func (_ Unimplemented) UpdateVideoPublication(w http.ResponseWriter, r *http.Request, videoId VideoId) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove current user's video rating
+// (DELETE /api/v1/videos/{videoId}/rating)
+func (_ Unimplemented) DeleteVideoRating(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Replace current user's video rating
-// (PUT /videos/{videoId}/rating)
+// (PUT /api/v1/videos/{videoId}/rating)
 func (_ Unimplemented) RateVideo(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Get video stats
-// (GET /videos/{videoId}/stats)
+// (GET /api/v1/videos/{videoId}/stats)
 func (_ Unimplemented) GetVideoStats(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Get video streaming URL
-// (GET /videos/{videoId}/stream-url)
-func (_ Unimplemented) GetVideoStreamUrl(w http.ResponseWriter, r *http.Request, videoId VideoId) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Record a video view
-// (POST /videos/{videoId}/views)
+// (POST /api/v1/videos/{videoId}/views)
 func (_ Unimplemented) RecordVideoView(w http.ResponseWriter, r *http.Request, videoId VideoId) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
@@ -1238,6 +1280,14 @@ func (siw *ServerInterfaceWrapper) ListChannels(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannels(w, r, params)
 	}))
@@ -1260,31 +1310,6 @@ func (siw *ServerInterfaceWrapper) CreateChannel(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateChannel(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetChannelByName operation middleware
-func (siw *ServerInterfaceWrapper) GetChannelByName(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "name" -------------
-	var name string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetChannelByName(w, r, name)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1822,6 +1847,37 @@ func (siw *ServerInterfaceWrapper) UpdateComment(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateComment(w, r, commentId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCommentRating operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCommentRating(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "commentId" -------------
+	var commentId CommentId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "commentId", chi.URLParam(r, "commentId"), &commentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "commentId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCommentRating(w, r, commentId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2624,37 +2680,6 @@ func (siw *ServerInterfaceWrapper) ListMyVideos(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
-// BanUser operation middleware
-func (siw *ServerInterfaceWrapper) BanUser(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "userId" -------------
-	var userId UserId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "userId", chi.URLParam(r, "userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "userId", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.BanUser(w, r, userId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetUserChannel operation middleware
 func (siw *ServerInterfaceWrapper) GetUserChannel(w http.ResponseWriter, r *http.Request) {
 
@@ -2711,8 +2736,8 @@ func (siw *ServerInterfaceWrapper) ReplaceUserRole(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
-// UnbanUser operation middleware
-func (siw *ServerInterfaceWrapper) UnbanUser(w http.ResponseWriter, r *http.Request) {
+// UpdateUserStatus operation middleware
+func (siw *ServerInterfaceWrapper) UpdateUserStatus(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
@@ -2732,7 +2757,7 @@ func (siw *ServerInterfaceWrapper) UnbanUser(w http.ResponseWriter, r *http.Requ
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UnbanUser(w, r, userId)
+		siw.Handler.UpdateUserStatus(w, r, userId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2939,8 +2964,33 @@ func (siw *ServerInterfaceWrapper) CreateVideoComment(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
-// ConfirmVideoUpload operation middleware
-func (siw *ServerInterfaceWrapper) ConfirmVideoUpload(w http.ResponseWriter, r *http.Request) {
+// GetVideoMedia operation middleware
+func (siw *ServerInterfaceWrapper) GetVideoMedia(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "videoId" -------------
+	var videoId VideoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "videoId", chi.URLParam(r, "videoId"), &videoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "videoId", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetVideoMedia(w, r, videoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateVideoPublication operation middleware
+func (siw *ServerInterfaceWrapper) UpdateVideoPublication(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
@@ -2960,7 +3010,38 @@ func (siw *ServerInterfaceWrapper) ConfirmVideoUpload(w http.ResponseWriter, r *
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ConfirmVideoUpload(w, r, videoId)
+		siw.Handler.UpdateVideoPublication(w, r, videoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteVideoRating operation middleware
+func (siw *ServerInterfaceWrapper) DeleteVideoRating(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "videoId" -------------
+	var videoId VideoId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "videoId", chi.URLParam(r, "videoId"), &videoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "videoId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteVideoRating(w, r, videoId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3017,31 +3098,6 @@ func (siw *ServerInterfaceWrapper) GetVideoStats(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetVideoStats(w, r, videoId)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// GetVideoStreamUrl operation middleware
-func (siw *ServerInterfaceWrapper) GetVideoStreamUrl(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-
-	// ------------- Path parameter "videoId" -------------
-	var videoId VideoId
-
-	err = runtime.BindStyledParameterWithOptions("simple", "videoId", chi.URLParam(r, "videoId"), &videoId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "videoId", Err: err})
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetVideoStreamUrl(w, r, videoId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3196,193 +3252,193 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/auth/login", wrapper.Login)
+		r.Post(options.BaseURL+"/api/v1/auth/login", wrapper.Login)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/auth/logout", wrapper.Logout)
+		r.Post(options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/auth/refresh", wrapper.RefreshTokens)
+		r.Post(options.BaseURL+"/api/v1/auth/refresh", wrapper.RefreshTokens)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/auth/register", wrapper.RegisterUser)
+		r.Post(options.BaseURL+"/api/v1/auth/register", wrapper.RegisterUser)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels", wrapper.ListChannels)
+		r.Get(options.BaseURL+"/api/v1/channels", wrapper.ListChannels)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/channels", wrapper.CreateChannel)
+		r.Post(options.BaseURL+"/api/v1/channels", wrapper.CreateChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/by-name/{name}", wrapper.GetChannelByName)
+		r.Get(options.BaseURL+"/api/v1/channels/me", wrapper.GetMyChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/me", wrapper.GetMyChannel)
+		r.Delete(options.BaseURL+"/api/v1/channels/{channelId}", wrapper.DeleteChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/channels/{channelId}", wrapper.DeleteChannel)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}", wrapper.GetChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}", wrapper.GetChannel)
+		r.Patch(options.BaseURL+"/api/v1/channels/{channelId}", wrapper.UpdateChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/channels/{channelId}", wrapper.UpdateChannel)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}/community", wrapper.GetChannelCommunity)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}/community", wrapper.GetChannelCommunity)
+		r.Post(options.BaseURL+"/api/v1/channels/{channelId}/community/posts", wrapper.CreateCommunityPost)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/channels/{channelId}/community/posts", wrapper.CreateCommunityPost)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}/playlists", wrapper.ListChannelPlaylists)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}/playlists", wrapper.ListChannelPlaylists)
+		r.Post(options.BaseURL+"/api/v1/channels/{channelId}/playlists", wrapper.CreatePlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/channels/{channelId}/playlists", wrapper.CreatePlaylist)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}/subscribers/count", wrapper.GetChannelSubscribersCount)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}/subscribers/count", wrapper.GetChannelSubscribersCount)
+		r.Delete(options.BaseURL+"/api/v1/channels/{channelId}/subscriptions", wrapper.UnsubscribeFromChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/channels/{channelId}/subscriptions", wrapper.UnsubscribeFromChannel)
+		r.Put(options.BaseURL+"/api/v1/channels/{channelId}/subscriptions", wrapper.SubscribeToChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/channels/{channelId}/subscriptions", wrapper.SubscribeToChannel)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}/subscriptions/status", wrapper.GetChannelSubscriptionStatus)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}/subscriptions/status", wrapper.GetChannelSubscriptionStatus)
+		r.Get(options.BaseURL+"/api/v1/channels/{channelId}/videos", wrapper.ListChannelVideos)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/channels/{channelId}/videos", wrapper.ListChannelVideos)
+		r.Post(options.BaseURL+"/api/v1/channels/{channelId}/videos/uploads", wrapper.InitVideoUpload)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/channels/{channelId}/videos/uploads", wrapper.InitVideoUpload)
+		r.Delete(options.BaseURL+"/api/v1/comments/{commentId}", wrapper.DeleteComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/comments/{commentId}", wrapper.DeleteComment)
+		r.Get(options.BaseURL+"/api/v1/comments/{commentId}", wrapper.GetComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/comments/{commentId}", wrapper.GetComment)
+		r.Patch(options.BaseURL+"/api/v1/comments/{commentId}", wrapper.UpdateComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/comments/{commentId}", wrapper.UpdateComment)
+		r.Delete(options.BaseURL+"/api/v1/comments/{commentId}/rating", wrapper.DeleteCommentRating)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/comments/{commentId}/rating", wrapper.RateComment)
+		r.Put(options.BaseURL+"/api/v1/comments/{commentId}/rating", wrapper.RateComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/comments/{commentId}/stats", wrapper.GetCommentStats)
+		r.Get(options.BaseURL+"/api/v1/comments/{commentId}/stats", wrapper.GetCommentStats)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/community/comments/{commentId}", wrapper.DeleteCommunityComment)
+		r.Delete(options.BaseURL+"/api/v1/community/comments/{commentId}", wrapper.DeleteCommunityComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/community/comments/{commentId}", wrapper.UpdateCommunityComment)
+		r.Patch(options.BaseURL+"/api/v1/community/comments/{commentId}", wrapper.UpdateCommunityComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/community/posts/{postId}", wrapper.DeleteCommunityPost)
+		r.Delete(options.BaseURL+"/api/v1/community/posts/{postId}", wrapper.DeleteCommunityPost)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/community/posts/{postId}", wrapper.UpdateCommunityPost)
+		r.Patch(options.BaseURL+"/api/v1/community/posts/{postId}", wrapper.UpdateCommunityPost)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/community/posts/{postId}/comments", wrapper.ListCommunityPostComments)
+		r.Get(options.BaseURL+"/api/v1/community/posts/{postId}/comments", wrapper.ListCommunityPostComments)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/community/posts/{postId}/comments", wrapper.CreateCommunityComment)
+		r.Post(options.BaseURL+"/api/v1/community/posts/{postId}/comments", wrapper.CreateCommunityComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/playlists/{playlistId}", wrapper.DeletePlaylist)
+		r.Delete(options.BaseURL+"/api/v1/playlists/{playlistId}", wrapper.DeletePlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/playlists/{playlistId}", wrapper.GetPlaylist)
+		r.Get(options.BaseURL+"/api/v1/playlists/{playlistId}", wrapper.GetPlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/playlists/{playlistId}", wrapper.UpdatePlaylist)
+		r.Patch(options.BaseURL+"/api/v1/playlists/{playlistId}", wrapper.UpdatePlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/playlists/{playlistId}/videos", wrapper.ListPlaylistVideos)
+		r.Get(options.BaseURL+"/api/v1/playlists/{playlistId}/videos", wrapper.ListPlaylistVideos)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/playlists/{playlistId}/videos", wrapper.AddVideoToPlaylist)
+		r.Post(options.BaseURL+"/api/v1/playlists/{playlistId}/videos", wrapper.AddVideoToPlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/playlists/{playlistId}/videos/{videoId}", wrapper.RemoveVideoFromPlaylist)
+		r.Delete(options.BaseURL+"/api/v1/playlists/{playlistId}/videos/{videoId}", wrapper.RemoveVideoFromPlaylist)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/playlists/{playlistId}/videos/{videoId}", wrapper.UpdatePlaylistVideoPosition)
+		r.Patch(options.BaseURL+"/api/v1/playlists/{playlistId}/videos/{videoId}", wrapper.UpdatePlaylistVideoPosition)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users", wrapper.ListUsers)
+		r.Get(options.BaseURL+"/api/v1/users", wrapper.ListUsers)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/users/me", wrapper.DeleteCurrentUser)
+		r.Delete(options.BaseURL+"/api/v1/users/me", wrapper.DeleteCurrentUser)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/me", wrapper.GetCurrentUser)
+		r.Get(options.BaseURL+"/api/v1/users/me", wrapper.GetCurrentUser)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/me/community", wrapper.GetMyCommunity)
+		r.Get(options.BaseURL+"/api/v1/users/me/community", wrapper.GetMyCommunity)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/users/me/notification-settings", wrapper.UpdateCurrentUserNotificationSettings)
+		r.Patch(options.BaseURL+"/api/v1/users/me/notification-settings", wrapper.UpdateCurrentUserNotificationSettings)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/me/playlists", wrapper.ListMyPlaylists)
+		r.Get(options.BaseURL+"/api/v1/users/me/playlists", wrapper.ListMyPlaylists)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/me/subscriptions", wrapper.ListMySubscriptions)
+		r.Get(options.BaseURL+"/api/v1/users/me/subscriptions", wrapper.ListMySubscriptions)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/users/me/subscriptions/{channelId}/new-videos-count", wrapper.ResetSubscriptionNewVideosCount)
+		r.Delete(options.BaseURL+"/api/v1/users/me/subscriptions/{channelId}/new-videos-count", wrapper.ResetSubscriptionNewVideosCount)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/me/videos", wrapper.ListMyVideos)
+		r.Get(options.BaseURL+"/api/v1/users/me/videos", wrapper.ListMyVideos)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/{userId}/ban", wrapper.BanUser)
+		r.Get(options.BaseURL+"/api/v1/users/{userId}/channel", wrapper.GetUserChannel)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/users/{userId}/channel", wrapper.GetUserChannel)
+		r.Put(options.BaseURL+"/api/v1/users/{userId}/role", wrapper.ReplaceUserRole)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/users/{userId}/role", wrapper.ReplaceUserRole)
+		r.Patch(options.BaseURL+"/api/v1/users/{userId}/status", wrapper.UpdateUserStatus)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/users/{userId}/unban", wrapper.UnbanUser)
+		r.Get(options.BaseURL+"/api/v1/videos", wrapper.ListVideos)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/videos", wrapper.ListVideos)
+		r.Delete(options.BaseURL+"/api/v1/videos/{videoId}", wrapper.DeleteVideo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/videos/{videoId}", wrapper.DeleteVideo)
+		r.Get(options.BaseURL+"/api/v1/videos/{videoId}", wrapper.GetVideo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/videos/{videoId}", wrapper.GetVideo)
+		r.Patch(options.BaseURL+"/api/v1/videos/{videoId}", wrapper.UpdateVideo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/videos/{videoId}", wrapper.UpdateVideo)
+		r.Get(options.BaseURL+"/api/v1/videos/{videoId}/comments", wrapper.ListVideoComments)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/videos/{videoId}/comments", wrapper.ListVideoComments)
+		r.Post(options.BaseURL+"/api/v1/videos/{videoId}/comments", wrapper.CreateVideoComment)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/videos/{videoId}/comments", wrapper.CreateVideoComment)
+		r.Get(options.BaseURL+"/api/v1/videos/{videoId}/media", wrapper.GetVideoMedia)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/videos/{videoId}/confirm", wrapper.ConfirmVideoUpload)
+		r.Put(options.BaseURL+"/api/v1/videos/{videoId}/publication", wrapper.UpdateVideoPublication)
 	})
 	r.Group(func(r chi.Router) {
-		r.Put(options.BaseURL+"/videos/{videoId}/rating", wrapper.RateVideo)
+		r.Delete(options.BaseURL+"/api/v1/videos/{videoId}/rating", wrapper.DeleteVideoRating)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/videos/{videoId}/stats", wrapper.GetVideoStats)
+		r.Put(options.BaseURL+"/api/v1/videos/{videoId}/rating", wrapper.RateVideo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/videos/{videoId}/stream-url", wrapper.GetVideoStreamUrl)
+		r.Get(options.BaseURL+"/api/v1/videos/{videoId}/stats", wrapper.GetVideoStats)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/videos/{videoId}/views", wrapper.RecordVideoView)
+		r.Post(options.BaseURL+"/api/v1/videos/{videoId}/views", wrapper.RecordVideoView)
 	})
 
 	return r
@@ -3391,98 +3447,121 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"v7cEswAA",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

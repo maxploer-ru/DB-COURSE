@@ -131,7 +131,8 @@ func run(cfg *config.Config, baseLogger domain.Logger) error {
 	router.Use(middleware.Logging(baseLogger))
 	router.Use(middleware.Recovery)
 	apiHandler := openapi.HandlerWithOptions(handler, openapi.ChiServerOptions{
-		BaseURL:    "/api/v1",
+		// The generated paths already contain the /api/v1 version prefix.
+		BaseURL:    "",
 		BaseRouter: router,
 		Middlewares: []openapi.MiddlewareFunc{
 			selectiveAuthMiddleware(authService),

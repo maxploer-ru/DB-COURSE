@@ -1,7 +1,14 @@
-.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean
+.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean openapi-check openapi-generate
 
 UNIT_PACKAGES := ./internal/service ./internal/infrastructure/auth ./internal/infrastructure/logger ./internal/delivery/middleware
 GOBCO_VERSION ?= v1.3.4
+OAPI_CODEGEN_VERSION ?= v2.4.1
+
+openapi-check:
+	bash scripts/check_openapi.sh
+
+openapi-generate:
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config openapi/oapi-codegen.yaml -o internal/delivery/openapi/generated.go openapi/openapi.yaml
 
 mocks:
 	mockery --all --dir=./internal --output=./internal/testing/mocks --outpkg=mocks

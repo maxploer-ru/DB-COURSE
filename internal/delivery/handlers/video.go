@@ -137,7 +137,7 @@ func (h *Handler) DeleteVideo(w http.ResponseWriter, r *http.Request, videoID op
 	writeNoContent(w)
 }
 
-func (h *Handler) ConfirmVideoUpload(w http.ResponseWriter, r *http.Request, videoID openapi.VideoId) {
+func (h *Handler) UpdateVideoPublication(w http.ResponseWriter, r *http.Request, videoID openapi.VideoId) {
 	userID, _, ok := requireCurrentUser(w, r)
 	if !ok {
 		return
@@ -146,14 +146,27 @@ func (h *Handler) ConfirmVideoUpload(w http.ResponseWriter, r *http.Request, vid
 		badID(w)
 		return
 	}
+	body, ok := decodeJSON[openapi.UpdateVideoPublicationJSONRequestBody](w, r)
+	if !ok {
+		return
+	}
+	if body.Status != openapi.Published {
+		badRequest(w, "INVALID_PUBLICATION_STATUS", "Unsupported publication status")
+		return
+	}
 	if err := h.video.ConfirmUpload(r.Context(), int(videoID), userID); err != nil {
 		handleError(w, err)
 		return
 	}
-	writeNoContent(w)
+	video, err := h.video.GetVideo(r.Context(), int(videoID))
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	response.RespondWithJSON(w, http.StatusOK, toVideo(video))
 }
 
-func (h *Handler) GetVideoStreamUrl(w http.ResponseWriter, r *http.Request, videoID openapi.VideoId) {
+func (h *Handler) GetVideoMedia(w http.ResponseWriter, r *http.Request, videoID openapi.VideoId) {
 	if !validID(int(videoID)) {
 		badID(w)
 		return
@@ -197,7 +210,23 @@ func (h *Handler) RateVideo(w http.ResponseWriter, r *http.Request, videoID open
 	if !ok {
 		return
 	}
-	if err := h.videoInteraction.Rate(r.Context(), userID, int(videoID), domain.RatingAction(body.Action)); err != nil {
+	if err := h.videoInteraction.Rate(r.Context(), userID, int(videoID), domain.RatingAction(body.Value)); err != nil {
+		handleError(w, err)
+		return
+	}
+	writeNoContent(w)
+}
+
+func (h *Handler) DeleteVideoRating(w http.ResponseWriter, r *http.Request, videoID openapi.VideoId) {
+	userID, _, ok := requireCurrentUser(w, r)
+	if !ok {
+		return
+	}
+	if !validID(int(videoID)) {
+		badID(w)
+		return
+	}
+	if err := h.videoInteraction.Rate(r.Context(), userID, int(videoID), domain.RatingActionRemove); err != nil {
 		handleError(w, err)
 		return
 	}

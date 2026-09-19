@@ -117,7 +117,23 @@ func (h *Handler) RateComment(w http.ResponseWriter, r *http.Request, commentID 
 	if !ok {
 		return
 	}
-	if err := h.commentInteraction.Rate(r.Context(), userID, int(commentID), domain.RatingAction(body.Action)); err != nil {
+	if err := h.commentInteraction.Rate(r.Context(), userID, int(commentID), domain.RatingAction(body.Value)); err != nil {
+		handleError(w, err)
+		return
+	}
+	writeNoContent(w)
+}
+
+func (h *Handler) DeleteCommentRating(w http.ResponseWriter, r *http.Request, commentID openapi.CommentId) {
+	userID, _, ok := requireCurrentUser(w, r)
+	if !ok {
+		return
+	}
+	if !validID(int(commentID)) {
+		badID(w)
+		return
+	}
+	if err := h.commentInteraction.Rate(r.Context(), userID, int(commentID), domain.RatingActionRemove); err != nil {
 		handleError(w, err)
 		return
 	}
