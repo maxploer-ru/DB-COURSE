@@ -27,6 +27,15 @@ make openapi-check
 make openapi-generate
 ```
 
+Для демонстрации REST-контракта без backend можно запустить mock-сервер Prism:
+
+```bash
+make rest-mock-install
+make rest-mock
+```
+
+Подробные примеры запросов находятся в [rest_mock.md](rest_mock.md).
+
 ## Почему это REST
 
 - `channels` — коллекция: `GET /api/v1/channels` и `POST /api/v1/channels`;

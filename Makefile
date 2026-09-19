@@ -1,4 +1,4 @@
-.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean openapi-check openapi-generate graphql-install graphql-mock
+.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean openapi-check openapi-generate graphql-install graphql-mock rest-mock-install rest-mock
 
 UNIT_PACKAGES := ./internal/service ./internal/infrastructure/auth ./internal/infrastructure/logger ./internal/delivery/middleware
 GOBCO_VERSION ?= v1.3.4
@@ -15,6 +15,12 @@ graphql-install:
 
 graphql-mock:
 	npm --prefix graphql/mock start
+
+rest-mock-install:
+	npm --prefix openapi/mock install
+
+rest-mock:
+	npm --prefix openapi/mock start
 
 mocks:
 	mockery --all --dir=./internal --output=./internal/testing/mocks --outpkg=mocks

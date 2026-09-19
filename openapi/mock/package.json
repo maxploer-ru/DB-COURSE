@@ -1,0 +1,11 @@
+{
+  "name": "zvideo-rest-mock",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "prism mock ../openapi.yaml -h 0.0.0.0 -p ${PORT:-4010}"
+  },
+  "dependencies": {
+    "@stoplight/prism-cli": "^5.14.2"
+  }
+}
