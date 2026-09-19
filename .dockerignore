@@ -9,7 +9,12 @@
 report
 docs
 samples
-scripts
+scripts/*
+!scripts/run-tests-in-container.sh
+!scripts/testreport/
+!scripts/testreport/**
+!tests/
+!tests/**
 *.pdf
 *.pptx
 **/*.log

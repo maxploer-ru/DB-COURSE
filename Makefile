@@ -1,11 +1,12 @@
-.PHONY: test test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit allure-open mocks clean openapi-check openapi-generate graphql-mock rest-mock
+.PHONY: test test-all test-unit test-offline test-coverage branch-coverage test-allure test-allure-unit test-allure-report allure-open test-unit-container test-integration test-e2e mocks clean openapi-check openapi-generate graphql-mock rest-mock
 
-UNIT_PACKAGES := ./internal/service ./internal/infrastructure/auth ./internal/infrastructure/logger ./internal/delivery/middleware
+UNIT_PACKAGES := ./internal/service ./internal/infrastructure/auth ./internal/infrastructure/logger ./internal/delivery/middleware ./internal/worker
+TEST_PACKAGES ?= ./...
 GOBCO_VERSION ?= v1.3.4
 OAPI_CODEGEN_VERSION ?= v2.4.1
 
 openapi-check:
-	bash scripts/check_openapi.sh
+	npx @redocly/cli@latest lint openapi/openapi.yaml
 
 openapi-generate:
 	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION) --config openapi/oapi-codegen.yaml -o internal/delivery/openapi/generated.go openapi/openapi.yaml
@@ -21,14 +22,29 @@ rest-mock:
 mocks:
 	mockery --all --dir=./internal --output=./internal/testing/mocks --outpkg=mocks
 
-test:
-	go test -v -shuffle=on ./...
+# Fast local checks: no Docker, database, Redis, MinIO or running API required.
+test: test-unit
+
+# Full test pipeline in the same order as CI. A failed stage stops the following stages.
+test-all:
+	$(MAKE) test-unit-container
+	$(MAKE) test-integration
+	$(MAKE) test-e2e
 
 test-unit:
 	go test -v -shuffle=on $(UNIT_PACKAGES)
 
 test-offline:
 	GOPROXY=off GOSUMDB=off go test -v -shuffle=on $(UNIT_PACKAGES)
+
+test-unit-container:
+	./scripts/run-compose-tests.sh unit
+
+test-integration:
+	./scripts/run-compose-tests.sh integration
+
+test-e2e:
+	./scripts/run-compose-tests.sh e2e
 
 test-coverage:
 	go test -shuffle=on -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/... $(UNIT_PACKAGES)
@@ -42,19 +58,13 @@ branch-coverage:
 		(cd "$$package" && go run github.com/rillig/gobco@$(GOBCO_VERSION)); \
 	done
 
-test-allure:
-	rm -rf allure-results allure-report test-results.json
-	set +e; go test -shuffle=on -json ./... > test-results.json; status=$$?; set -e; \
-	go run ./scripts/testreport -input test-results.json -output allure-results; \
-	if command -v allure >/dev/null 2>&1; then allure generate allure-results --clean -o allure-report; \
-	else echo "allure CLI is not installed; allure-results was generated"; fi; \
-	echo "Allure report: $$(pwd)/allure-report"; \
-	echo "Open it with: make allure-open"; \
-	exit $$status
+test-allure: TEST_PACKAGES := ./...
+test-allure-unit: TEST_PACKAGES := $(UNIT_PACKAGES)
+test-allure test-allure-unit: test-allure-report
 
-test-allure-unit:
+test-allure-report:
 	rm -rf allure-results allure-report test-results.json
-	set +e; go test -shuffle=on -json $(UNIT_PACKAGES) > test-results.json; status=$$?; set -e; \
+	set +e; go test -shuffle=on -json $(TEST_PACKAGES) > test-results.json; status=$$?; set -e; \
 	go run ./scripts/testreport -input test-results.json -output allure-results; \
 	if command -v allure >/dev/null 2>&1; then allure generate allure-results --clean -o allure-report; \
 	else echo "allure CLI is not installed; allure-results was generated"; fi; \

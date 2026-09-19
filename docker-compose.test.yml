@@ -1,0 +1,158 @@
+x-test-build: &test-build
+  context: .
+  dockerfile: docker/Dockerfile.test
+  target: test-runner
+
+x-test-environment: &test-environment
+  DB_DRIVER: postgres
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: zvideo_test
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_SSLMODE: disable
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ""
+  REDIS_DB: "0"
+  MINIO_ENDPOINT: minio:9000
+  MINIO_EXTERNAL_ENDPOINT: minio:9000
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin
+  MINIO_BUCKET: zvideo-test
+  MINIO_USE_SSL: "false"
+  HTTP_PORT: "8080"
+  APP_ENV: test
+  JWT_SECRET: zvideo-test-secret-key-that-is-long-enough-2026
+  JWT_ACCESS_TTL: 15m
+  JWT_REFRESH_TTL: 1h
+  HTTP_READ_TIMEOUT: 15s
+  HTTP_WRITE_TIMEOUT: 15s
+  HTTP_IDLE_TIMEOUT: 30s
+  HTTP_SHUTDOWN_TIMEOUT: 10s
+  LOG_LEVEL: warn
+  LOG_OUTPUT: stdout
+  LOG_ADD_SOURCE: "false"
+  TEST_DATABASE_EXTERNAL: "true"
+
+x-artifacts-volume: &artifacts-volume
+  - test_artifacts:/artifacts
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: zvideo_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zvideo_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: ["server", "/data", "--console-address", ":9001"]
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  migrate:
+    image: zvideo-test-migrate:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: migrate
+    environment: *test-environment
+    command: ["-direction=up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  unit-runner:
+    image: zvideo-test-runner:local
+    build: *test-build
+    command: ["/workspace/scripts/run-tests-in-container.sh", "unit"]
+    environment: *test-environment
+    volumes: *artifacts-volume
+    profiles: [unit]
+
+  integration-runner:
+    image: zvideo-test-runner:local
+    build: *test-build
+    command: ["/workspace/scripts/run-tests-in-container.sh", "integration"]
+    environment: *test-environment
+    volumes: *artifacts-volume
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: [integration]
+
+  api:
+    image: zvideo-test-api:local
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: api
+    environment: *test-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  traffic-capture:
+    image: zvideo-test-runner:local
+    network_mode: service:api
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    entrypoint: ["tcpdump"]
+    command: ["-i", "any", "-U", "-w", "/artifacts/e2e.pcap", "tcp port 8080"]
+    volumes: *artifacts-volume
+    depends_on:
+      api:
+        condition: service_started
+    profiles: [e2e]
+
+  e2e-runner:
+    image: zvideo-test-runner:local
+    build: *test-build
+    command: ["/workspace/scripts/run-tests-in-container.sh", "e2e"]
+    environment:
+      <<: *test-environment
+      E2E_BASE_URL: http://api:8080
+    volumes: *artifacts-volume
+    depends_on:
+      api:
+        condition: service_started
+      traffic-capture:
+        condition: service_started
+    profiles: [e2e]
+
+volumes:
+  test_artifacts:

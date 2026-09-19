@@ -1,0 +1,127 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Allure history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/unit
+          key: allure-history-unit-${{ github.ref }}-${{ github.run_id }}
+          restore-keys: allure-history-unit-${{ github.ref }}-
+
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          npm install --global allure-commandline@2.34.1
+
+      - name: Run unit tests in a test container
+        run: make test-unit-container
+
+      - name: Save Allure history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/unit
+          key: allure-history-unit-${{ github.ref }}-${{ github.run_id }}
+
+      - name: Upload unit report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-artifacts
+          path: test-artifacts/
+          if-no-files-found: warn
+
+  integration:
+    name: Integration tests
+    needs: unit
+    if: needs.unit.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Allure history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/integration
+          key: allure-history-integration-${{ github.ref }}-${{ github.run_id }}
+          restore-keys: allure-history-integration-${{ github.ref }}-
+
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          npm install --global allure-commandline@2.34.1
+
+      - name: Run integration tests in the isolated Compose environment
+        run: make test-integration
+
+      - name: Save Allure history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/integration
+          key: allure-history-integration-${{ github.ref }}-${{ github.run_id }}
+
+      - name: Upload integration report and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-artifacts
+          path: test-artifacts/
+          if-no-files-found: warn
+
+  e2e:
+    name: E2E tests
+    needs: integration
+    if: needs.integration.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore Allure history
+        uses: actions/cache/restore@v4
+        with:
+          path: .allure-history/e2e
+          key: allure-history-e2e-${{ github.ref }}-${{ github.run_id }}
+          restore-keys: allure-history-e2e-${{ github.ref }}-
+
+      - name: Install Allure CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          npm install --global allure-commandline@2.34.1
+
+      - name: Run E2E tests against the deployed Compose environment
+        run: make test-e2e
+
+      - name: Save Allure history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .allure-history/e2e
+          key: allure-history-e2e-${{ github.ref }}-${{ github.run_id }}
+
+      - name: Upload E2E report, traffic capture and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-artifacts
+          path: test-artifacts/
+          if-no-files-found: warn

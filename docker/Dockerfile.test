@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.25-bookworm AS test-runner
+
+WORKDIR /workspace
+
+ENV CGO_ENABLED=0 \
+    GOFLAGS=-mod=readonly
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tcpdump \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . ./
+RUN chmod +x /workspace/scripts/run-tests-in-container.sh
+
+ENTRYPOINT ["bash"]

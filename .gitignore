@@ -22,3 +22,5 @@ coverage.html
 test-results.json
 allure-results/
 allure-report/
+test-artifacts/
+.allure-history/
