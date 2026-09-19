@@ -30,7 +30,6 @@ make openapi-generate
 Для демонстрации REST-контракта без backend можно запустить mock-сервер Prism:
 
 ```bash
-make rest-mock-install
 make rest-mock
 ```
 

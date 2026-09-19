@@ -10,7 +10,6 @@ REST mock запускается на Linux/WSL непосредственно �
 Из корня проекта:
 
 ```bash
-make rest-mock-install
 make rest-mock
 ```
 

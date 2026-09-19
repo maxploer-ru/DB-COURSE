@@ -18,7 +18,6 @@ Mock-сервер предназначен для демонстрации ко�
 backend-сервисов. Он запускается в Linux/WSL из корня проекта:
 
 ```bash
-make graphql-install
 make graphql-mock
 ```
 
