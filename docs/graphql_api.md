@@ -12,6 +12,35 @@ REST API остаётся основным публичным API проекта
 POST /graphql
 ```
 
+## Запуск mock-сервера
+
+Mock-сервер предназначен для демонстрации контракта без базы данных и
+backend-сервисов. Он запускается в Linux/WSL из корня проекта:
+
+```bash
+make graphql-install
+make graphql-mock
+```
+
+После запуска откройте в браузере:
+
+```text
+http://localhost:4000/graphql
+```
+
+На странице есть минимальная GraphQL-консоль с примером запроса. Сервер также
+поддерживает introspection, поэтому GraphQL-клиент может построить дерево типов
+и документацию автоматически. Данные хранятся только в памяти и сбрасываются
+после перезапуска.
+
+Проверка из терминала:
+
+```bash
+curl -s http://localhost:4000/graphql \
+  -H 'Content-Type: application/json' \
+  --data-binary '{"query":"{ channels(limit: 10) { items { id name } } }"}'
+```
+
 Запрос содержит стандартные GraphQL-поля `query`, `variables` и, при
 необходимости, `operationName`. Для защищённых query и mutation используется
 тот же заголовок, что и в REST:
