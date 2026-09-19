@@ -88,16 +88,19 @@ func (s *JwtService) ValidateAccessToken(ctx context.Context, tokenString string
 	_ = ctx
 	claims := &accessClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if t.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.accessSecret, nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
 		return nil, fmt.Errorf("parse access token: %w", err)
 	}
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid access token")
+	}
+	if claims.UserID <= 0 {
+		return nil, fmt.Errorf("invalid access token claims")
 	}
 	return &domain.AccessTokenData{
 		UserID:   claims.UserID,
@@ -110,18 +113,18 @@ func (s *JwtService) ValidateRefreshToken(ctx context.Context, tokenString strin
 	_ = ctx
 	claims := &refreshClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if t.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.refreshSecret, nil
-	})
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
 		return nil, fmt.Errorf("parse refresh token: %w", err)
 	}
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid refresh token")
 	}
-	if claims.ID == "" || claims.ExpiresAt == nil {
+	if claims.UserID <= 0 || claims.ID == "" || claims.ExpiresAt == nil {
 		return nil, fmt.Errorf("invalid refresh token claims")
 	}
 	return &domain.RefreshTokenData{

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -68,6 +69,8 @@ func NewAuthService(
 }
 
 func (s *authService) Register(ctx context.Context, username, email, password string) (*domain.User, error) {
+	username = strings.TrimSpace(username)
+	email = strings.ToLower(strings.TrimSpace(email))
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "AuthService"),
 		slog.String("operation", "Register"),
@@ -139,6 +142,7 @@ func (s *authService) Register(ctx context.Context, username, email, password st
 }
 
 func (s *authService) Login(ctx context.Context, email, password string) (*AuthResult, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "AuthService"),
 		slog.String("operation", "Login"),
@@ -197,8 +201,10 @@ func (s *authService) Login(ctx context.Context, email, password string) (*AuthR
 	}
 
 	logger.InfoContext(ctx, "User logged in successfully")
+	publicUser := *user
+	publicUser.PasswordHash = ""
 	return &AuthResult{
-		User:             user,
+		User:             &publicUser,
 		AccessToken:      accessToken,
 		RefreshToken:     refreshToken,
 		RefreshExpiresAt: refreshData.ExpiresAt,
@@ -278,27 +284,37 @@ func (s *authService) Refresh(ctx context.Context, refreshToken string) (*AuthRe
 	}
 
 	logger.InfoContext(ctx, "Tokens refreshed successfully")
+	publicUser := *user
+	publicUser.PasswordHash = ""
 	return &AuthResult{
-		User:             user,
+		User:             &publicUser,
 		AccessToken:      accessToken,
 		RefreshToken:     newRefreshToken,
 		RefreshExpiresAt: newRefreshData.ExpiresAt,
 	}, nil
 }
 
-func (s *authService) Logout(ctx context.Context, _, refreshToken string) error {
+func (s *authService) Logout(ctx context.Context, accessToken, refreshToken string) error {
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "AuthService"),
 		slog.String("operation", "Logout"),
 	)
+	if accessToken == "" {
+		return domain.ErrInvalidAccessToken
+	}
+	accessData, err := s.jwtSvc.ValidateAccessToken(ctx, accessToken)
+	if err != nil {
+		return domain.ErrInvalidAccessToken
+	}
 	if refreshToken == "" {
-		logger.DebugContext(ctx, "Logout called without refresh token")
-		return nil
+		return domain.ErrInvalidRefreshToken
 	}
 	refreshData, err := s.jwtSvc.ValidateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		logger.WarnContext(ctx, "Refresh token is invalid on logout", slog.String("error", err.Error()))
-		return nil
+		return domain.ErrInvalidRefreshToken
+	}
+	if refreshData.UserID != accessData.UserID {
+		return domain.ErrForbidden
 	}
 	if err := s.refreshRepo.Delete(ctx, refreshData.TokenID); err != nil {
 		logger.ErrorContext(ctx, "Failed to delete refresh session", slog.String("error", err.Error()))
@@ -320,5 +336,21 @@ func (s *authService) ValidateAccessToken(ctx context.Context, token string) (*d
 		return nil, domain.ErrInvalidAccessToken
 	}
 
+	user, err := s.userRepo.GetByID(ctx, tokenData.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("load authenticated user: %w", err)
+	}
+	if user == nil {
+		return nil, domain.ErrInvalidAccessToken
+	}
+	if !user.IsActive {
+		return nil, domain.ErrUserIsBanned
+	}
+	if user.Role == nil {
+		return nil, domain.ErrInternalServer
+	}
+	// Mutable authorization state is authoritative in the database.
+	tokenData.Role = user.Role.Name
+	tokenData.UserName = user.Username
 	return tokenData, nil
 }

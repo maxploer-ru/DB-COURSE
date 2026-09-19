@@ -9,16 +9,16 @@ const (
 )
 
 type User struct {
-	ID                   int
-	Username             string
-	Email                string
-	PasswordHash         string
-	IsActive             bool
-	NotificationsEnabled bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                   int       `json:"id"`
+	Username             string    `json:"username"`
+	Email                string    `json:"email"`
+	PasswordHash         string    `json:"-"`
+	IsActive             bool      `json:"isActive"`
+	NotificationsEnabled bool      `json:"notificationsEnabled"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 
-	Role *Role
+	Role *Role `json:"role,omitempty"`
 }
 
 type Role struct {

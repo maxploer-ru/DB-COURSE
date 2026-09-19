@@ -34,7 +34,7 @@ func (s *RoleRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive() {
+func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive_StateTransition() {
 	ctx := context.Background()
 	role := s.mother.AdminRole()
 	role.ID = 0
@@ -49,7 +49,7 @@ func (s *RoleRepositoryTestSuite) TestCreateAndGetByName_Positive() {
 	s.Equal(role.Name, found.Name)
 }
 
-func (s *RoleRepositoryTestSuite) TestGetByName_Negative_NotFound() {
+func (s *RoleRepositoryTestSuite) TestGetByName_Negative_NotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByName(ctx, "non_existent")

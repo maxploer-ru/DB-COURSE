@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"ZVideo/internal/domain"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,7 +17,8 @@ func Logging(baseLogger domain.Logger) func(next http.Handler) http.Handler {
 			requestID := uuid.New().String()
 
 			logger := baseLogger.With(slog.String("requestID", requestID))
-			ctx := domain.WithLogger(r.Context(), logger)
+			ctx := domain.WithRequestID(r.Context(), requestID)
+			ctx = domain.WithLogger(ctx, logger)
 			r = r.WithContext(ctx)
 
 			logger.InfoContext(ctx, "HTTP request started",
@@ -39,10 +41,45 @@ func Logging(baseLogger domain.Logger) func(next http.Handler) http.Handler {
 
 type responseWriter struct {
 	http.ResponseWriter
-	statusCode int
+	statusCode  int
+	wroteHeader bool
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
+	if rw.wroteHeader {
+		return
+	}
+	rw.wroteHeader = true
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(body []byte) (int, error) {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	return rw.ResponseWriter.Write(body)
+}
+
+func (rw *responseWriter) Flush() {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+func (rw *responseWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
+func (rw *responseWriter) ReadFrom(src io.Reader) (int64, error) {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	if readerFrom, ok := rw.ResponseWriter.(io.ReaderFrom); ok {
+		return readerFrom.ReadFrom(src)
+	}
+	return io.Copy(rw.ResponseWriter, src)
 }

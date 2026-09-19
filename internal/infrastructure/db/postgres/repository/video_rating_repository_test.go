@@ -47,7 +47,7 @@ func (s *VideoRatingRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *VideoRatingRepositoryTestSuite) TestCreateAndGetStats_Positive() {
+func (s *VideoRatingRepositoryTestSuite) TestCreateAndGetStats_Positive_StateTransition() {
 	ctx := context.Background()
 	rating := s.mother.LikedRating()
 	rating.UserID = s.testUser.ID
@@ -63,7 +63,7 @@ func (s *VideoRatingRepositoryTestSuite) TestCreateAndGetStats_Positive() {
 	s.Equal(0, dislikes)
 }
 
-func (s *VideoRatingRepositoryTestSuite) TestDelete_Negative_NotFound() {
+func (s *VideoRatingRepositoryTestSuite) TestDelete_Negative_NotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, s.testUser.ID, s.testVideo.ID)

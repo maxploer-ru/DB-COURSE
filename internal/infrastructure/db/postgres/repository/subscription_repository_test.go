@@ -45,7 +45,7 @@ func (s *SubscriptionRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Positive_StateTransition() {
 	ctx := context.Background()
 
 	created, err := s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
@@ -59,7 +59,7 @@ func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Positive() {
 	s.False(createdAgain)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	created, err := s.repo.Subscribe(ctx, s.testSubscriber.ID, 999999)
@@ -68,7 +68,7 @@ func (s *SubscriptionRepositoryTestSuite) TestSubscribe_Negative() {
 	s.False(created)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Positive_StateTransition() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
@@ -78,7 +78,7 @@ func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Positive() {
 	s.True(deleted)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	deleted, err := s.repo.Unsubscribe(ctx, s.testSubscriber.ID, 999999)
@@ -87,7 +87,7 @@ func (s *SubscriptionRepositoryTestSuite) TestUnsubscribe_Negative() {
 	s.False(deleted)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
@@ -97,7 +97,7 @@ func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Positive() {
 	s.True(ok)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	ok, err := s.repo.IsSubscribed(ctx, s.testSubscriber.ID, 999999)
@@ -106,7 +106,7 @@ func (s *SubscriptionRepositoryTestSuite) TestIsSubscribed_Negative() {
 	s.False(ok)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
@@ -116,7 +116,7 @@ func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Positive() {
 	s.Equal(1, count)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	count, err := s.repo.GetSubscribersCount(ctx, 999999)
@@ -125,7 +125,7 @@ func (s *SubscriptionRepositoryTestSuite) TestGetSubscribersCount_Negative() {
 	s.Equal(0, count)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
@@ -136,7 +136,7 @@ func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Positive() {
 	s.Equal(s.testChannel.Name, subs[0].ChannelName)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	subs, err := s.repo.GetUserSubscriptions(ctx, 999999, 10, 0)
@@ -145,7 +145,7 @@ func (s *SubscriptionRepositoryTestSuite) TestGetUserSubscriptions_Negative() {
 	s.Len(subs, 0)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 
@@ -156,7 +156,7 @@ func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Pos
 	s.Equal(1, subs[0].NewVideosCount)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.NotifySubscribersAboutNewVideo(ctx, 999999)
@@ -164,7 +164,7 @@ func (s *SubscriptionRepositoryTestSuite) TestNotifySubscribersAboutNewVideo_Neg
 	s.NoError(err)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestResetNewVideosCount_Positive() {
+func (s *SubscriptionRepositoryTestSuite) TestResetNewVideosCount_Positive_StateTransition() {
 	ctx := context.Background()
 	_, _ = s.repo.Subscribe(ctx, s.testSubscriber.ID, s.testChannel.ID)
 	_ = s.repo.NotifySubscribersAboutNewVideo(ctx, s.testChannel.ID)
@@ -176,7 +176,7 @@ func (s *SubscriptionRepositoryTestSuite) TestResetNewVideosCount_Positive() {
 	s.Equal(0, subs[0].NewVideosCount)
 }
 
-func (s *SubscriptionRepositoryTestSuite) TestResetNewVideosCount_Negative() {
+func (s *SubscriptionRepositoryTestSuite) TestResetNewVideosCount_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.ResetNewVideosCount(ctx, 999999, s.testChannel.ID)

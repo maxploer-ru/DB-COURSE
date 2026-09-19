@@ -1569,7 +1569,7 @@ components:
         username:
           type: string
           minLength: 3
-          maxLength: 64
+          maxLength: 32
         email:
           type: string
           format: email
@@ -1677,6 +1677,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 32
         description:
           type: string
           default: ''
@@ -1686,6 +1688,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 32
         description:
           type: string
     Subscription:
@@ -1768,11 +1772,14 @@ components:
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 64
         description:
           type: string
           default: ''
         filename:
           type: string
+          minLength: 1
           example: video.mp4
     VideoUploadInitResponse:
       type: object
@@ -1792,6 +1799,8 @@ components:
       properties:
         title:
           type: string
+          minLength: 1
+          maxLength: 64
         description:
           type: string
     PresignedUrlResponse:
@@ -1868,6 +1877,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 64
         description:
           type: string
           default: ''
@@ -1877,6 +1888,8 @@ components:
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 64
         description:
           type: string
     AddPlaylistVideoRequest:

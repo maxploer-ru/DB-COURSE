@@ -31,7 +31,7 @@ func (s *CommentInteractionServiceTestSuite) SetupTest() {
 	s.rateMother = mother.CommentRatingMother{}
 }
 
-func (s *CommentInteractionServiceTestSuite) TestRate_Positive_NewLike() {
+func (s *CommentInteractionServiceTestSuite) TestRate_Positive_NewLike_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(1, 1)
 
@@ -45,7 +45,7 @@ func (s *CommentInteractionServiceTestSuite) TestRate_Positive_NewLike() {
 	s.NoError(err)
 }
 
-func (s *CommentInteractionServiceTestSuite) TestRate_Positive_ChangeLikeToDislike() {
+func (s *CommentInteractionServiceTestSuite) TestRate_Positive_ChangeLikeToDislike_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(1, 1)
 	existing := s.rateMother.LikeForComment(2, comment.ID)
@@ -61,7 +61,7 @@ func (s *CommentInteractionServiceTestSuite) TestRate_Positive_ChangeLikeToDisli
 	s.NoError(err)
 }
 
-func (s *CommentInteractionServiceTestSuite) TestRate_Positive_RemoveRating() {
+func (s *CommentInteractionServiceTestSuite) TestRate_Positive_RemoveRating_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(1, 1)
 	existing := s.rateMother.LikeForComment(2, comment.ID)
@@ -76,7 +76,7 @@ func (s *CommentInteractionServiceTestSuite) TestRate_Positive_RemoveRating() {
 	s.NoError(err)
 }
 
-func (s *CommentInteractionServiceTestSuite) TestRate_Negative_CommentNotFound() {
+func (s *CommentInteractionServiceTestSuite) TestRate_Negative_CommentNotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCommentRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -86,7 +86,7 @@ func (s *CommentInteractionServiceTestSuite) TestRate_Negative_CommentNotFound()
 	s.ErrorIs(err, domain.ErrCommentNotFound)
 }
 
-func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_CacheHit() {
+func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_CacheHit_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockStatsCache.On("GetStats", ctx, 1).Return(int64(10), int64(2), true, nil)
@@ -98,7 +98,7 @@ func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_CacheHit() {
 	s.Equal(int64(2), dislikes)
 }
 
-func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_DBFallback() {
+func (s *CommentInteractionServiceTestSuite) TestGetStats_Positive_DBFallback_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockStatsCache.On("GetStats", ctx, 1).Return(int64(0), int64(0), false, nil)

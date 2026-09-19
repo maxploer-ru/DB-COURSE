@@ -106,7 +106,10 @@ func (s *videoService) ConfirmUpload(ctx context.Context, videoID, userID int) e
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return fmt.Errorf("check channel owner: %w", err)
+	}
+	if !isOwner {
 		return domain.ErrForbidden
 	}
 
@@ -138,7 +141,7 @@ func (s *videoService) DeleteVideo(ctx context.Context, videoID, userID int, rol
 		return domain.ErrVideoNotFound
 	}
 
-	allowed := role == domain.RoleModerator || role == domain.RoleAdmin
+	allowed := strings.EqualFold(role, domain.RoleModerator) || strings.EqualFold(role, domain.RoleAdmin)
 	if !allowed {
 		isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
 		if err != nil {
@@ -171,12 +174,18 @@ func (s *videoService) GetVideo(ctx context.Context, videoID int) (*domain.Video
 
 func (s *videoService) UpdateVideo(ctx context.Context, videoID, userID int, title, description *string) (*domain.Video, error) {
 	video, err := s.videoRepo.GetByID(ctx, videoID)
-	if err != nil || video == nil {
+	if err != nil {
+		return nil, fmt.Errorf("get video: %w", err)
+	}
+	if video == nil {
 		return nil, domain.ErrVideoNotFound
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return nil, fmt.Errorf("check channel owner: %w", err)
+	}
+	if !isOwner {
 		return nil, domain.ErrForbidden
 	}
 
@@ -200,7 +209,10 @@ func (s *videoService) UpdateVideo(ctx context.Context, videoID, userID int, tit
 
 func (s *videoService) ListChannelVideos(ctx context.Context, channelID int, limit, offset int) (*domain.PageResponse[*domain.Video], error) {
 	exists, err := s.channelSvc.Exists(ctx, channelID)
-	if err != nil || !exists {
+	if err != nil {
+		return nil, fmt.Errorf("check channel exists: %w", err)
+	}
+	if !exists {
 		return nil, domain.ErrChannelNotFound
 	}
 	videos, err := s.videoRepo.ListByChannel(ctx, channelID, limit, offset)
@@ -224,6 +236,9 @@ func (s *videoService) ListMyVideos(ctx context.Context, userID int, limit, offs
 	if err != nil {
 		return nil, fmt.Errorf("get channel by user id: %w", err)
 	}
+	if channel == nil {
+		return nil, domain.ErrChannelNotFound
+	}
 	return s.ListChannelVideos(ctx, channel.ID, limit, offset)
 }
 
@@ -246,12 +261,15 @@ func (s *videoService) ListAllVideos(ctx context.Context, limit, offset int) (*d
 
 func (s *videoService) GetStreamingPresignedURL(ctx context.Context, videoID int) (string, error) {
 	video, err := s.videoRepo.GetByID(ctx, videoID)
-	if err != nil || video == nil {
+	if err != nil {
+		return "", fmt.Errorf("get video: %w", err)
+	}
+	if video == nil {
 		return "", domain.ErrVideoNotFound
 	}
 
 	if video.Status != domain.VideoStatusReady {
-		return "", fmt.Errorf("video is not ready yet")
+		return "", domain.ErrVideoNotReady
 	}
 
 	url, err := s.storageSvc.GenerateAccessPresignedURL(ctx, video.Filepath, 1*time.Hour)

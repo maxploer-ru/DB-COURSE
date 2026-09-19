@@ -17,6 +17,8 @@ func ToDomainUser(model *models.User) *domain.User {
 		PasswordHash:         model.PasswordHash,
 		IsActive:             model.IsActive,
 		NotificationsEnabled: model.NotificationsEnabled,
+		CreatedAt:            model.CreatedAt,
+		UpdatedAt:            model.UpdatedAt,
 	}
 	user.Role = &domain.Role{
 		ID:        model.Role.ID,
@@ -46,6 +48,8 @@ func FromDomainUser(user *domain.User) *models.User {
 		PasswordHash:         user.PasswordHash,
 		IsActive:             user.IsActive,
 		NotificationsEnabled: user.NotificationsEnabled,
+		CreatedAt:            user.CreatedAt,
+		UpdatedAt:            user.UpdatedAt,
 	}
 
 	if user.Role != nil {

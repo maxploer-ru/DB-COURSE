@@ -46,7 +46,7 @@ func (s *ViewingRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *ViewingRepositoryTestSuite) TestCreateAndGetTotalViews_Positive() {
+func (s *ViewingRepositoryTestSuite) TestCreateAndGetTotalViews_Positive_StateTransition() {
 	ctx := context.Background()
 	view1 := s.mother.ValidViewing()
 	view1.UserID = s.testUser.ID
@@ -68,7 +68,7 @@ func (s *ViewingRepositoryTestSuite) TestCreateAndGetTotalViews_Positive() {
 	s.Equal(2, totalViews)
 }
 
-func (s *ViewingRepositoryTestSuite) TestGetTotalViews_Negative_NoViews() {
+func (s *ViewingRepositoryTestSuite) TestGetTotalViews_Negative_NoViews_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	totalViews, err := s.repo.GetTotalViews(ctx, 99999)

@@ -85,7 +85,10 @@ CREATE TABLE IF NOT EXISTS playlist_items
     video_id    INT         NOT NULL REFERENCES videos (id) ON DELETE CASCADE,
     PRIMARY KEY (playlist_id, video_id),
     number      INT         NOT NULL,
-    added_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    added_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT playlist_items_number_positive CHECK (number > 0),
+    CONSTRAINT playlist_items_playlist_number_unique UNIQUE (playlist_id, number)
+        DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE IF NOT EXISTS video_ratings
@@ -108,11 +111,20 @@ CREATE TABLE IF NOT EXISTS comment_ratings
 
 CREATE TABLE IF NOT EXISTS delete_s3_tasks
 (
-    id         SERIAL PRIMARY KEY,
-    filepath   TEXT        NOT NULL,
-    is_done    BOOLEAN     NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id             SERIAL PRIMARY KEY,
+    filepath       TEXT        NOT NULL,
+    is_done        BOOLEAN     NOT NULL DEFAULT FALSE,
+    attempts       INT         NOT NULL DEFAULT 0,
+    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_error     TEXT,
+    locked_at      TIMESTAMPTZ,
+    processed_at   TIMESTAMPTZ,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_delete_s3_tasks_ready
+    ON delete_s3_tasks (next_attempt_at, id)
+    WHERE is_done = FALSE;
 
 CREATE OR REPLACE FUNCTION log_deleted_video_to_outbox()
     RETURNS TRIGGER AS

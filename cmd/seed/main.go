@@ -6,7 +6,7 @@ import (
 	"ZVideo/internal/infrastructure/db/postgres"
 	pgmodels "ZVideo/internal/infrastructure/db/postgres/models"
 	"ZVideo/internal/infrastructure/storage"
-	context "context"
+	"context"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -35,14 +35,27 @@ type seedAssets struct {
 }
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	opts := parseFlags()
 	if opts.VideoDir == "" {
-		panic("-video-dir is required")
+		return fmt.Errorf("-video-dir is required")
+	}
+	if opts.Count <= 0 {
+		return fmt.Errorf("-count must be positive")
 	}
 
 	cfg := config.LoadConfig()
 	if cfg == nil {
-		panic("failed to load config")
+		return fmt.Errorf("failed to load config")
+	}
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("validate config: %w", err)
 	}
 	if opts.Driver != "" {
 		cfg.DatabaseDriver = opts.Driver
@@ -50,7 +63,7 @@ func main() {
 
 	videoFiles, err := collectVideoFiles(opts.VideoDir)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("collect video files: %w", err)
 	}
 
 	gofakeit.Seed(opts.Seed)
@@ -61,23 +74,23 @@ func main() {
 
 	minioClient, _, err := storage.NewMinioClient(cfg.Minio)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("connect to MinIO: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	if err := storage.EnsureBucketExists(ctx, minioClient, cfg.Minio.Bucket); err != nil {
-		cancel()
-		panic(err)
+		return fmt.Errorf("ensure MinIO bucket: %w", err)
 	}
-	cancel()
 
 	switch strings.ToLower(cfg.DatabaseDriver) {
 	case "postgres", "pg":
 		if err := seedPostgres(cfg, minioClient, assets, opts.Count); err != nil {
-			panic(err)
+			return fmt.Errorf("seed postgres: %w", err)
 		}
 	default:
-		panic("unsupported DB_DRIVER: " + cfg.DatabaseDriver)
+		return fmt.Errorf("unsupported DB_DRIVER: %s", cfg.DatabaseDriver)
 	}
+	return nil
 }
 
 func parseFlags() seedOptions {
@@ -118,8 +131,13 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 	if err != nil {
 		return err
 	}
+	sqlDB, err := pgDB.DB()
+	if err != nil {
+		return fmt.Errorf("get postgres sql connection: %w", err)
+	}
+	defer func() { _ = sqlDB.Close() }()
 
-	defaultRole, err := ensurePostgresRoles(pgDB, count)
+	defaultRole, err := ensurePostgresRoles(pgDB)
 	if err != nil {
 		return err
 	}
@@ -202,9 +220,10 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		return err
 	}
 
-	playlistItems := make([]pgmodels.PlaylistItem, 0, count)
+	playlistItemTarget := min(count, len(playlists)*len(videos))
+	playlistItems := make([]pgmodels.PlaylistItem, 0, playlistItemTarget)
 	usedPlaylistPairs := map[string]struct{}{}
-	for len(playlistItems) < count {
+	for len(playlistItems) < playlistItemTarget {
 		playlist := playlists[assets.Rng.Intn(len(playlists))]
 		video := videos[assets.Rng.Intn(len(videos))]
 		key := fmt.Sprintf("%d:%d", playlist.ID, video.ID)
@@ -252,9 +271,10 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		return err
 	}
 
-	videoRatings := make([]pgmodels.VideoRating, 0, count*65)
+	videoRatingTarget := min(count*65, len(users)*len(videos))
+	videoRatings := make([]pgmodels.VideoRating, 0, videoRatingTarget)
 	usedVideoPairs := map[string]struct{}{}
-	for len(videoRatings) < count*65 {
+	for len(videoRatings) < videoRatingTarget {
 		user := users[assets.Rng.Intn(len(users))]
 		video := videos[assets.Rng.Intn(len(videos))]
 		key := fmt.Sprintf("%d:%d", user.ID, video.ID)
@@ -273,9 +293,10 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		return err
 	}
 
-	commentRatings := make([]pgmodels.CommentRating, 0, count*65)
+	commentRatingTarget := min(count*65, len(users)*len(comments))
+	commentRatings := make([]pgmodels.CommentRating, 0, commentRatingTarget)
 	usedCommentPairs := map[string]struct{}{}
-	for len(commentRatings) < count*65 {
+	for len(commentRatings) < commentRatingTarget {
 		user := users[assets.Rng.Intn(len(users))]
 		comment := comments[assets.Rng.Intn(len(comments))]
 		key := fmt.Sprintf("%d:%d", user.ID, comment.ID)
@@ -294,9 +315,10 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 		return err
 	}
 
-	subscriptions := make([]pgmodels.Subscription, 0, count*10)
+	subscriptionTarget := min(count*10, len(users)*max(0, len(channelOwner)-1))
+	subscriptions := make([]pgmodels.Subscription, 0, subscriptionTarget)
 	usedSubPairs := map[string]struct{}{}
-	for len(subscriptions) < count*10 {
+	for len(subscriptions) < subscriptionTarget {
 		user := users[assets.Rng.Intn(len(users))]
 		channelID := pickRandomChannel(channelOwner, assets)
 		if channelOwner[channelID] == user.ID {
@@ -321,26 +343,12 @@ func seedPostgres(cfg *config.Config, minioClient *minio.Client, assets seedAsse
 	return nil
 }
 
-func ensurePostgresRoles(db *gorm.DB, count int) (*pgmodels.Role, error) {
-	//seedRoles := []pgmodels.Role{{Name: "admin"}, {Name: "moderator"}, {Name: "user", IsDefault: true}}
-	//if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&seedRoles).Error; err != nil {
-	//	return nil, err
-	//}
-
+func ensurePostgresRoles(db *gorm.DB) (*pgmodels.Role, error) {
 	var defaultRole pgmodels.Role
 	if err := db.Where("is_default = ?", true).First(&defaultRole).Error; err != nil {
 		return nil, err
 	}
 
-	//extraRoles := make([]pgmodels.Role, 0, max(0, count-3))
-	//for i := 0; i < count-3; i++ {
-	//	extraRoles = append(extraRoles, pgmodels.Role{Name: uniqueName("role", i)})
-	//}
-	//if len(extraRoles) > 0 {
-	//	if err := db.Create(&extraRoles).Error; err != nil {
-	//		return nil, err
-	//	}
-	//}
 	return &defaultRole, nil
 }
 
@@ -390,11 +398,4 @@ func pickRandomChannel(channelOwner map[int]int, assets seedAssets) int {
 func uniqueName(prefix string, i int) string {
 	suffix := strings.ReplaceAll(uuid.New().String(), "-", "")
 	return fmt.Sprintf("%s_%d_%s", prefix, i, suffix[:8])
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

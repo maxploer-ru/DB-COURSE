@@ -17,7 +17,7 @@ func (s *UserValidatorTestSuite) SetupTest() {
 	s.validator = auth.NewUserValidator()
 }
 
-func (s *UserValidatorTestSuite) TestValidateNewUser_Positive() {
+func (s *UserValidatorTestSuite) TestValidateNewUser_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	email := "user@example.com"
 	nickname := "validUser"
@@ -28,7 +28,7 @@ func (s *UserValidatorTestSuite) TestValidateNewUser_Positive() {
 	s.NoError(err)
 }
 
-func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Email() {
+func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Email_EquivalencePartitioning() {
 	ctx := context.Background()
 	email := "invalid-email"
 	nickname := "validUser"
@@ -39,7 +39,7 @@ func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Email() {
 	s.Error(err)
 }
 
-func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Username() {
+func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Username_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	email := "user@example.com"
 	nickname := "u"
@@ -50,7 +50,7 @@ func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Username() {
 	s.Error(err)
 }
 
-func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Password() {
+func (s *UserValidatorTestSuite) TestValidateNewUser_Negative_Password_EquivalencePartitioning() {
 	ctx := context.Background()
 	email := "user@example.com"
 	nickname := "validUser"

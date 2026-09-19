@@ -25,7 +25,7 @@ func (s *ChannelServiceTestSuite) SetupTest() {
 	s.mother = mother.ChannelMother{}
 }
 
-func (s *ChannelServiceTestSuite) TestCreateChannel_Positive() {
+func (s *ChannelServiceTestSuite) TestCreateChannel_Positive_StateTransition() {
 	ctx := context.Background()
 	userID := 1
 	name := "new_channel"
@@ -43,7 +43,7 @@ func (s *ChannelServiceTestSuite) TestCreateChannel_Positive() {
 	s.mockRepo.AssertExpectations(s.T())
 }
 
-func (s *ChannelServiceTestSuite) TestCreateChannel_Negative() {
+func (s *ChannelServiceTestSuite) TestCreateChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	existingChannel := s.mother.ValidChannel()
 
@@ -55,7 +55,7 @@ func (s *ChannelServiceTestSuite) TestCreateChannel_Negative() {
 	s.Nil(ch)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannel_Positive() {
+func (s *ChannelServiceTestSuite) TestGetChannel_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.ValidChannel()
 	s.mockRepo.On("GetByID", ctx, expected.ID).Return(expected, nil)
@@ -66,7 +66,7 @@ func (s *ChannelServiceTestSuite) TestGetChannel_Positive() {
 	s.Equal(expected.ID, ch.ID)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannel_Negative() {
+func (s *ChannelServiceTestSuite) TestGetChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -76,7 +76,7 @@ func (s *ChannelServiceTestSuite) TestGetChannel_Negative() {
 	s.Nil(ch)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannelByName_Positive() {
+func (s *ChannelServiceTestSuite) TestGetChannelByName_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.ValidChannel()
 	s.mockRepo.On("GetByName", ctx, expected.Name).Return(expected, nil)
@@ -87,7 +87,7 @@ func (s *ChannelServiceTestSuite) TestGetChannelByName_Positive() {
 	s.Equal(expected.Name, ch.Name)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannelByName_Negative() {
+func (s *ChannelServiceTestSuite) TestGetChannelByName_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("GetByName", ctx, "unknown").Return(nil, nil)
 
@@ -97,7 +97,7 @@ func (s *ChannelServiceTestSuite) TestGetChannelByName_Negative() {
 	s.Nil(ch)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Positive() {
+func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.ValidChannel()
 	s.mockRepo.On("GetByUserID", ctx, expected.UserID).Return(expected, nil)
@@ -108,7 +108,7 @@ func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Positive() {
 	s.Equal(expected.UserID, ch.UserID)
 }
 
-func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Negative() {
+func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("GetByUserID", ctx, 999).Return(nil, nil)
 
@@ -118,7 +118,7 @@ func (s *ChannelServiceTestSuite) TestGetChannelByUserID_Negative() {
 	s.Nil(ch)
 }
 
-func (s *ChannelServiceTestSuite) TestUpdateChannel_Positive() {
+func (s *ChannelServiceTestSuite) TestUpdateChannel_Positive_StateTransition() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	newName := "updated_name"
@@ -133,7 +133,7 @@ func (s *ChannelServiceTestSuite) TestUpdateChannel_Positive() {
 	s.Equal(newName, ch.Name)
 }
 
-func (s *ChannelServiceTestSuite) TestUpdateChannel_Negative() {
+func (s *ChannelServiceTestSuite) TestUpdateChannel_Negative_Combinatorial() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	wrongUserID := 999
@@ -147,7 +147,7 @@ func (s *ChannelServiceTestSuite) TestUpdateChannel_Negative() {
 	s.Nil(ch)
 }
 
-func (s *ChannelServiceTestSuite) TestDeleteChannel_Positive() {
+func (s *ChannelServiceTestSuite) TestDeleteChannel_Positive_StateTransition() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 
@@ -159,7 +159,7 @@ func (s *ChannelServiceTestSuite) TestDeleteChannel_Positive() {
 	s.NoError(err)
 }
 
-func (s *ChannelServiceTestSuite) TestDeleteChannel_Negative() {
+func (s *ChannelServiceTestSuite) TestDeleteChannel_Negative_Combinatorial() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	wrongUserID := 999
@@ -171,7 +171,7 @@ func (s *ChannelServiceTestSuite) TestDeleteChannel_Negative() {
 	s.ErrorIs(err, domain.ErrForbidden)
 }
 
-func (s *ChannelServiceTestSuite) TestExists_Positive() {
+func (s *ChannelServiceTestSuite) TestExists_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
@@ -182,7 +182,7 @@ func (s *ChannelServiceTestSuite) TestExists_Positive() {
 	s.True(exists)
 }
 
-func (s *ChannelServiceTestSuite) TestExists_Negative() {
+func (s *ChannelServiceTestSuite) TestExists_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -192,7 +192,7 @@ func (s *ChannelServiceTestSuite) TestExists_Negative() {
 	s.False(exists)
 }
 
-func (s *ChannelServiceTestSuite) TestIsOwner_Positive() {
+func (s *ChannelServiceTestSuite) TestIsOwner_Positive_Combinatorial() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	s.mockRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
@@ -203,7 +203,7 @@ func (s *ChannelServiceTestSuite) TestIsOwner_Positive() {
 	s.True(isOwner)
 }
 
-func (s *ChannelServiceTestSuite) TestIsOwner_Negative() {
+func (s *ChannelServiceTestSuite) TestIsOwner_Negative_Combinatorial() {
 	ctx := context.Background()
 	existing := s.mother.ValidChannel()
 	wrongUserID := 999
@@ -215,7 +215,7 @@ func (s *ChannelServiceTestSuite) TestIsOwner_Negative() {
 	s.False(isOwner)
 }
 
-func (s *ChannelServiceTestSuite) TestListChannels_Positive() {
+func (s *ChannelServiceTestSuite) TestListChannels_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Channel{s.mother.ValidChannel()}
 	s.mockRepo.On("ListChannels", ctx, 10, 0).Return(expected, nil)
@@ -228,7 +228,7 @@ func (s *ChannelServiceTestSuite) TestListChannels_Positive() {
 	s.Equal(int64(1), channels.TotalCount)
 }
 
-func (s *ChannelServiceTestSuite) TestListChannels_Negative() {
+func (s *ChannelServiceTestSuite) TestListChannels_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("ListChannels", ctx, 10, 0).Return(nil, domain.ErrInternalServer)
 

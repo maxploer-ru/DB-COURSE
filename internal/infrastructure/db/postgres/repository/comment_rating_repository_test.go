@@ -82,7 +82,7 @@ func (s *CommentRatingRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestCreate_Positive() {
+func (s *CommentRatingRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
 
@@ -91,7 +91,7 @@ func (s *CommentRatingRepositoryTestSuite) TestCreate_Positive() {
 	s.NoError(err)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestCreate_Negative() {
+func (s *CommentRatingRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
 	_ = s.repo.Create(ctx, rating)
@@ -102,7 +102,7 @@ func (s *CommentRatingRepositoryTestSuite) TestCreate_Negative() {
 	s.ErrorIs(err, domain.ErrAlreadyRated)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestUpdate_Positive() {
+func (s *CommentRatingRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
 	_ = s.repo.Create(ctx, rating)
@@ -115,7 +115,7 @@ func (s *CommentRatingRepositoryTestSuite) TestUpdate_Positive() {
 	s.False(found.Liked)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestUpdate_Negative() {
+func (s *CommentRatingRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(999999, s.testComment.ID)
 
@@ -124,7 +124,7 @@ func (s *CommentRatingRepositoryTestSuite) TestUpdate_Negative() {
 	s.Error(err)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestDelete_Positive() {
+func (s *CommentRatingRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
 	_ = s.repo.Create(ctx, rating)
@@ -134,7 +134,7 @@ func (s *CommentRatingRepositoryTestSuite) TestDelete_Positive() {
 	s.NoError(err)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestDelete_Negative() {
+func (s *CommentRatingRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999999, 999999)
@@ -142,7 +142,7 @@ func (s *CommentRatingRepositoryTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, domain.ErrCommentRatingNotFound)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Positive() {
+func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	rating := s.rateMother.LikeForComment(s.testUser2.ID, s.testComment.ID)
 	_ = s.repo.Create(ctx, rating)
@@ -154,7 +154,7 @@ func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Positive() {
 	s.True(found.Liked)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Negative() {
+func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByUserAndComment(ctx, 999999, 999999)
@@ -163,7 +163,7 @@ func (s *CommentRatingRepositoryTestSuite) TestGetByUserAndComment_Negative() {
 	s.Nil(found)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestGetStats_Positive() {
+func (s *CommentRatingRepositoryTestSuite) TestGetStats_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	r1 := s.rateMother.LikeForComment(s.testUser1.ID, s.testComment.ID)
 	_ = s.repo.Create(ctx, r1)
@@ -177,7 +177,7 @@ func (s *CommentRatingRepositoryTestSuite) TestGetStats_Positive() {
 	s.Equal(int64(1), dislikes)
 }
 
-func (s *CommentRatingRepositoryTestSuite) TestGetStats_Negative() {
+func (s *CommentRatingRepositoryTestSuite) TestGetStats_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	likes, dislikes, err := s.repo.GetStats(ctx, 999999)

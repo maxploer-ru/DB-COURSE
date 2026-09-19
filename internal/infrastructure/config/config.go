@@ -1,8 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -11,10 +13,8 @@ import (
 type Config struct {
 	DatabaseDriver string
 	Database       DatabaseConfig
-	Mongo          MongoConfig
 	Redis          RedisConfig
 	JWT            JWTConfig
-	Server         ServerConfig
 	HTTP           HTTPConfig
 	Auth           AuthConfig
 	Minio          MinioConfig
@@ -59,20 +59,7 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	DBName   string
-}
-
-type MongoConfig struct {
-	URI                    string
-	Host                   string
-	Port                   int
-	User                   string
-	Password               string
-	Database               string
-	AuthSource             string
-	ConnectTimeout         time.Duration
-	ServerSelectionTimeout time.Duration
-	MaxPoolSize            uint64
-	MinPoolSize            uint64
+	SSLMode  string
 }
 
 type RedisConfig struct {
@@ -88,11 +75,6 @@ type JWTConfig struct {
 	RefreshTokenTTL time.Duration
 }
 
-type ServerConfig struct {
-	Port string
-	Env  string
-}
-
 func LoadConfig() *Config {
 	_ = godotenv.Load()
 
@@ -104,19 +86,7 @@ func LoadConfig() *Config {
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "1488"),
 			DBName:   getEnv("DB_NAME", "zvideo"),
-		},
-		Mongo: MongoConfig{
-			URI:                    getEnv("MONGO_URI", ""),
-			Host:                   getEnv("MONGO_HOST", "localhost"),
-			Port:                   getEnvAsInt("MONGO_PORT", 27017),
-			User:                   getEnv("MONGO_USER", ""),
-			Password:               getEnv("MONGO_PASSWORD", ""),
-			Database:               getEnv("MONGO_DB", "zvideo"),
-			AuthSource:             getEnv("MONGO_AUTH_SOURCE", "zvideo"),
-			ConnectTimeout:         getEnvAsDuration("MONGO_CONNECT_TIMEOUT", 10*time.Second),
-			ServerSelectionTimeout: getEnvAsDuration("MONGO_SERVER_SELECTION_TIMEOUT", 5*time.Second),
-			MaxPoolSize:            uint64(getEnvAsInt("MONGO_MAX_POOL_SIZE", 50)),
-			MinPoolSize:            uint64(getEnvAsInt("MONGO_MIN_POOL_SIZE", 0)),
+			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},
 		Redis: RedisConfig{
 			Host:     getEnv("REDIS_HOST", "localhost"),
@@ -128,10 +98,6 @@ func LoadConfig() *Config {
 			Secret:          getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 			AccessTokenTTL:  getEnvAsDuration("JWT_ACCESS_TTL", 15*time.Minute),
 			RefreshTokenTTL: getEnvAsDuration("JWT_REFRESH_TTL", 168*time.Hour),
-		},
-		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
-			Env:  getEnv("APP_ENV", "development"),
 		},
 		HTTP: HTTPConfig{
 			Port:            getEnv("HTTP_PORT", "8080"),
@@ -160,6 +126,47 @@ func LoadConfig() *Config {
 			AddSource:  getEnvAsBool("LOG_ADD_SOURCE", false),
 		},
 	}
+}
+
+// Validate rejects credentials and settings that are unsafe to run in production.
+// Development defaults remain available for local development and tests.
+func (c *Config) Validate() error {
+	if c == nil {
+		return fmt.Errorf("config is nil")
+	}
+	if c.Database.Host == "" || c.Database.Port <= 0 || c.Database.User == "" || c.Database.DBName == "" {
+		return fmt.Errorf("database connection settings are incomplete")
+	}
+	if c.Minio.Endpoint == "" || c.Minio.Bucket == "" {
+		return fmt.Errorf("minio settings are incomplete")
+	}
+	if !strings.EqualFold(strings.TrimSpace(c.HTTP.Env), "production") {
+		return nil
+	}
+
+	if len(c.JWT.Secret) < 32 || isPlaceholder(c.JWT.Secret, "your-secret-key-change-in-production") {
+		return fmt.Errorf("JWT_SECRET must be a non-default secret of at least 32 characters in production")
+	}
+	if c.Database.Password == "" || isPlaceholder(c.Database.Password, "1488") {
+		return fmt.Errorf("DB_PASSWORD must be configured in production")
+	}
+	if isPlaceholder(c.Minio.AccessKey, "minioadmin") || isPlaceholder(c.Minio.SecretKey, "minioadmin") {
+		return fmt.Errorf("MinIO credentials must be configured in production")
+	}
+	if strings.EqualFold(strings.TrimSpace(c.Database.SSLMode), "disable") {
+		return fmt.Errorf("DB_SSLMODE must enable transport security in production")
+	}
+	return nil
+}
+
+func isPlaceholder(value string, placeholders ...string) bool {
+	value = strings.TrimSpace(value)
+	for _, placeholder := range placeholders {
+		if strings.EqualFold(value, placeholder) {
+			return true
+		}
+	}
+	return false
 }
 
 func getEnv(key, defaultValue string) string {

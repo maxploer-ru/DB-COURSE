@@ -36,7 +36,7 @@ func (s *UserRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *UserRepositoryTestSuite) TestCreate_Positive() {
+func (s *UserRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -51,7 +51,7 @@ func (s *UserRepositoryTestSuite) TestCreate_Positive() {
 	s.Equal(user.Email, savedUser.Email)
 }
 
-func (s *UserRepositoryTestSuite) TestCreate_Negative() {
+func (s *UserRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	user1 := s.mother.ValidActiveUser()
 	user1.ID = 0
@@ -65,7 +65,7 @@ func (s *UserRepositoryTestSuite) TestCreate_Negative() {
 	s.Error(err)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByID_Positive() {
+func (s *UserRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -79,7 +79,7 @@ func (s *UserRepositoryTestSuite) TestGetByID_Positive() {
 	s.NotNil(foundUser.Role)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByID_Negative() {
+func (s *UserRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	foundUser, err := s.repo.GetByID(ctx, 999)
@@ -88,7 +88,7 @@ func (s *UserRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(foundUser)
 }
 
-func (s *UserRepositoryTestSuite) TestListUsers_Positive() {
+func (s *UserRepositoryTestSuite) TestListUsers_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -100,7 +100,7 @@ func (s *UserRepositoryTestSuite) TestListUsers_Positive() {
 	s.GreaterOrEqual(len(list), 1)
 }
 
-func (s *UserRepositoryTestSuite) TestListUsers_Negative() {
+func (s *UserRepositoryTestSuite) TestListUsers_Negative_BoundaryValueAnalysis() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListUsers(ctx, 10, 999)
@@ -109,7 +109,7 @@ func (s *UserRepositoryTestSuite) TestListUsers_Negative() {
 	s.Len(list, 0)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByIDs_Positive() {
+func (s *UserRepositoryTestSuite) TestGetByIDs_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -122,7 +122,7 @@ func (s *UserRepositoryTestSuite) TestGetByIDs_Positive() {
 	s.Equal(user.Username, foundUsers[0].Username)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByIDs_Negative() {
+func (s *UserRepositoryTestSuite) TestGetByIDs_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	foundUsers, err := s.repo.GetByIDs(ctx, []int{999})
@@ -131,7 +131,7 @@ func (s *UserRepositoryTestSuite) TestGetByIDs_Negative() {
 	s.Len(foundUsers, 0)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByUsername_Positive() {
+func (s *UserRepositoryTestSuite) TestGetByUsername_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -144,7 +144,7 @@ func (s *UserRepositoryTestSuite) TestGetByUsername_Positive() {
 	s.Equal(user.ID, foundUser.ID)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByUsername_Negative() {
+func (s *UserRepositoryTestSuite) TestGetByUsername_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	foundUser, err := s.repo.GetByUsername(ctx, "unknown")
@@ -153,7 +153,7 @@ func (s *UserRepositoryTestSuite) TestGetByUsername_Negative() {
 	s.Nil(foundUser)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByEmail_Positive() {
+func (s *UserRepositoryTestSuite) TestGetByEmail_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -166,7 +166,7 @@ func (s *UserRepositoryTestSuite) TestGetByEmail_Positive() {
 	s.Equal(user.ID, foundUser.ID)
 }
 
-func (s *UserRepositoryTestSuite) TestGetByEmail_Negative() {
+func (s *UserRepositoryTestSuite) TestGetByEmail_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	foundUser, err := s.repo.GetByEmail(ctx, "unknown@test.com")
@@ -175,7 +175,7 @@ func (s *UserRepositoryTestSuite) TestGetByEmail_Negative() {
 	s.Nil(foundUser)
 }
 
-func (s *UserRepositoryTestSuite) TestUpdate_Positive() {
+func (s *UserRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -189,7 +189,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_Positive() {
 	s.Equal("updated_name", foundUser.Username)
 }
 
-func (s *UserRepositoryTestSuite) TestUpdate_Negative() {
+func (s *UserRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	user1 := s.mother.ValidActiveUser()
 	user1.ID = 0
@@ -206,7 +206,7 @@ func (s *UserRepositoryTestSuite) TestUpdate_Negative() {
 	s.Error(err)
 }
 
-func (s *UserRepositoryTestSuite) TestDelete_Positive() {
+func (s *UserRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -220,7 +220,7 @@ func (s *UserRepositoryTestSuite) TestDelete_Positive() {
 	s.Equal(int64(0), count)
 }
 
-func (s *UserRepositoryTestSuite) TestDelete_Negative() {
+func (s *UserRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999)
@@ -228,7 +228,7 @@ func (s *UserRepositoryTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, domain.ErrUserNotFound)
 }
 
-func (s *UserRepositoryTestSuite) TestExistsByEmail_Positive() {
+func (s *UserRepositoryTestSuite) TestExistsByEmail_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -240,7 +240,7 @@ func (s *UserRepositoryTestSuite) TestExistsByEmail_Positive() {
 	s.True(exists)
 }
 
-func (s *UserRepositoryTestSuite) TestExistsByEmail_Negative() {
+func (s *UserRepositoryTestSuite) TestExistsByEmail_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	exists, err := s.repo.ExistsByEmail(ctx, "unknown@test.com")
@@ -249,7 +249,7 @@ func (s *UserRepositoryTestSuite) TestExistsByEmail_Negative() {
 	s.False(exists)
 }
 
-func (s *UserRepositoryTestSuite) TestExistsByUsername_Positive() {
+func (s *UserRepositoryTestSuite) TestExistsByUsername_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -261,7 +261,7 @@ func (s *UserRepositoryTestSuite) TestExistsByUsername_Positive() {
 	s.True(exists)
 }
 
-func (s *UserRepositoryTestSuite) TestExistsByUsername_Negative() {
+func (s *UserRepositoryTestSuite) TestExistsByUsername_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	exists, err := s.repo.ExistsByUsername(ctx, "unknown")
@@ -270,7 +270,7 @@ func (s *UserRepositoryTestSuite) TestExistsByUsername_Negative() {
 	s.False(exists)
 }
 
-func (s *UserRepositoryTestSuite) TestBan_Positive() {
+func (s *UserRepositoryTestSuite) TestBan_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -283,7 +283,7 @@ func (s *UserRepositoryTestSuite) TestBan_Positive() {
 	s.False(found.IsActive)
 }
 
-func (s *UserRepositoryTestSuite) TestBan_Negative() {
+func (s *UserRepositoryTestSuite) TestBan_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Ban(ctx, 999)
@@ -291,7 +291,7 @@ func (s *UserRepositoryTestSuite) TestBan_Negative() {
 	s.ErrorIs(err, domain.ErrUserNotFound)
 }
 
-func (s *UserRepositoryTestSuite) TestUnban_Positive() {
+func (s *UserRepositoryTestSuite) TestUnban_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.BannedUser()
 	user.ID = 0
@@ -304,7 +304,7 @@ func (s *UserRepositoryTestSuite) TestUnban_Positive() {
 	s.True(found.IsActive)
 }
 
-func (s *UserRepositoryTestSuite) TestUnban_Negative() {
+func (s *UserRepositoryTestSuite) TestUnban_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Unban(ctx, 999)
@@ -312,7 +312,7 @@ func (s *UserRepositoryTestSuite) TestUnban_Negative() {
 	s.ErrorIs(err, domain.ErrUserNotFound)
 }
 
-func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Positive() {
+func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Positive_StateTransition() {
 	ctx := context.Background()
 	user := s.mother.ValidActiveUser()
 	user.ID = 0
@@ -325,7 +325,7 @@ func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Positive() {
 	s.False(found.NotificationsEnabled)
 }
 
-func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Negative() {
+func (s *UserRepositoryTestSuite) TestSetNotificationsEnabled_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.SetNotificationsEnabled(ctx, 999, false)

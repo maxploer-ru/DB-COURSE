@@ -23,6 +23,7 @@ var (
 	ErrChannelNameAlreadyExists    = errors.New("channel name already exists")
 	ErrSelfSubscription            = errors.New("self subscription")
 	ErrInvalidNotificationSettings = errors.New("invalid notification settings")
+	ErrInvalidChannelName          = errors.New("invalid channel name")
 )
 
 var (
@@ -30,6 +31,7 @@ var (
 	ErrPlaylistNotFound             = errors.New("playlist not found")
 	ErrPlaylistNameEmpty            = errors.New("playlist name cannot be empty")
 	ErrPlaylistVideoChannelMismatch = errors.New("video belongs to another channel")
+	ErrVideoNotReady                = errors.New("video is not ready yet")
 )
 
 var (
@@ -39,11 +41,13 @@ var (
 
 var (
 	ErrCommentNotFound              = errors.New("comment not found")
+	ErrInvalidCommentContent        = errors.New("comment content cannot be empty")
 	ErrCommentRatingNotFound        = errors.New("comment rating not found")
 	ErrCommunityPostNotFound        = errors.New("community post not found")
 	ErrCommunityCommentNotFound     = errors.New("community comment not found")
 	ErrCommunityPostContentEmpty    = errors.New("community post content cannot be empty")
 	ErrCommunityCommentContentEmpty = errors.New("community comment content cannot be empty")
+	ErrInvalidRatingAction          = errors.New("invalid rating action")
 )
 
 var (

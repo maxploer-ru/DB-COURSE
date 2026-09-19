@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -26,6 +26,9 @@ func (repo *UserRepository) Create(ctx context.Context, user *domain.User) error
 	model := mappers.FromDomainUser(user)
 
 	if err := repo.db.WithContext(ctx).Create(model).Error; err != nil {
+		if mapped := mapUserConstraintError(err); mapped != nil {
+			return mapped
+		}
 		return fmt.Errorf("create user failed: %w", err)
 	}
 
@@ -117,18 +120,35 @@ func (repo *UserRepository) GetByEmail(ctx context.Context, email string) (*doma
 		}
 		return nil, fmt.Errorf("get user by email failed: %w", err)
 	}
-	log.Print(model)
 	return mappers.ToDomainUser(&model), nil
 }
 
 func (repo *UserRepository) Update(ctx context.Context, user *domain.User) error {
-	model := mappers.FromDomainUser(user)
-
-	if err := repo.db.WithContext(ctx).Save(model).Error; err != nil {
-		return fmt.Errorf("update user failed: %w", err)
+	now := time.Now().UTC()
+	updates := map[string]any{
+		"username":              user.Username,
+		"email":                 user.Email,
+		"is_active":             user.IsActive,
+		"notifications_enabled": user.NotificationsEnabled,
+		"updated_at":            now,
 	}
-
-	user.ID = model.ID
+	if user.PasswordHash != "" {
+		updates["password_hash"] = user.PasswordHash
+	}
+	if user.Role != nil && user.Role.ID > 0 {
+		updates["role_id"] = user.Role.ID
+	}
+	result := repo.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", user.ID).Updates(updates)
+	if result.Error != nil {
+		if mapped := mapUserConstraintError(result.Error); mapped != nil {
+			return mapped
+		}
+		return fmt.Errorf("update user failed: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrUserNotFound
+	}
+	user.UpdatedAt = now
 	return nil
 }
 

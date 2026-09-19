@@ -28,10 +28,14 @@ func (s *AdminServiceTestSuite) SetupTest() {
 	s.roleMother = mother.RoleMother{}
 }
 
-func (s *AdminServiceTestSuite) TestBanUser_Positive() {
+func (s *AdminServiceTestSuite) TestBanUser_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	targetID := 2
+	admin := s.userMother.ValidActiveUser()
+	admin.ID = 1
+	admin.Role = s.roleMother.AdminRole()
 
+	s.mockUserRepo.On("GetByID", ctx, 1).Return(admin, nil)
 	s.mockUserRepo.On("Ban", ctx, targetID).Return(nil)
 
 	err := s.service.BanUser(ctx, 1, targetID)
@@ -40,7 +44,7 @@ func (s *AdminServiceTestSuite) TestBanUser_Positive() {
 	s.mockUserRepo.AssertExpectations(s.T())
 }
 
-func (s *AdminServiceTestSuite) TestChangeUserRole_Negative_SelfChange() {
+func (s *AdminServiceTestSuite) TestChangeUserRole_Negative_SelfChange_Combinatorial() {
 	ctx := context.Background()
 	adminID := 1
 
@@ -49,14 +53,18 @@ func (s *AdminServiceTestSuite) TestChangeUserRole_Negative_SelfChange() {
 	s.ErrorIs(err, domain.ErrForbidden)
 }
 
-func (s *AdminServiceTestSuite) TestChangeUserRole_Positive() {
+func (s *AdminServiceTestSuite) TestChangeUserRole_Positive_StateTransition() {
 	ctx := context.Background()
 	adminID := 1
 	targetUser := s.userMother.ValidActiveUser()
 	targetUser.ID = 2
 	targetUser.Role = s.roleMother.DefaultUserRole()
 	newRole := s.roleMother.AdminRole()
+	admin := s.userMother.ValidActiveUser()
+	admin.ID = adminID
+	admin.Role = s.roleMother.AdminRole()
 
+	s.mockUserRepo.On("GetByID", ctx, adminID).Return(admin, nil)
 	s.mockRoleRepo.On("GetByName", ctx, domain.RoleAdmin).Return(newRole, nil)
 	s.mockUserRepo.On("GetByID", ctx, targetUser.ID).Return(targetUser, nil)
 	s.mockUserRepo.On("Update", ctx, targetUser).Return(nil)

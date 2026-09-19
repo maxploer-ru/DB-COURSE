@@ -6,6 +6,8 @@ DROP TABLE IF EXISTS comments;
 DROP TABLE IF EXISTS viewings;
 DROP TABLE IF EXISTS playlists;
 DROP TABLE IF EXISTS videos;
+DROP FUNCTION IF EXISTS log_deleted_video_to_outbox();
+DROP TABLE IF EXISTS delete_s3_tasks;
 DROP TABLE IF EXISTS channels;
 DROP TABLE IF EXISTS users;
 DELETE FROM roles WHERE name IN ('admin', 'moderator', 'user');

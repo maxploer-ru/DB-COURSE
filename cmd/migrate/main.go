@@ -20,6 +20,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Print(err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	var direction string
 	var steps int
 	var driver string
@@ -32,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	if direction != "up" && direction != "down" {
-		log.Fatal("Invalid migration direction: ", direction)
+		return fmt.Errorf("invalid migration direction %q", direction)
 	}
 
 	if driver == "" {
@@ -45,22 +52,24 @@ func main() {
 	switch driver {
 	case "postgres":
 		if err := migratePostgres(migrationsPath, direction, steps); err != nil {
-			log.Fatal("Migration failed:", err)
+			return fmt.Errorf("migration failed: %w", err)
 		}
 	default:
-		log.Fatal("Unknown driver: ", driver)
+		return fmt.Errorf("unknown driver %q", driver)
 	}
 
 	log.Println("Migration completed successfully!")
+	return nil
 }
 
 func migratePostgres(migrationsPath, direction string, steps int) error {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		getEnv("DB_HOST", "localhost"),
 		getEnv("DB_PORT", "5432"),
 		getEnv("DB_USER", "postgres"),
 		getEnv("DB_PASSWORD", "1488"),
 		getEnv("DB_NAME", "zvideo"),
+		getEnv("DB_SSLMODE", "disable"),
 	)
 
 	log.Println("Connecting to Postgres...")

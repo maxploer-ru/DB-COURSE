@@ -236,17 +236,26 @@ func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, use
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return fmt.Errorf("check channel owner failed: %w", err)
+	}
+	if !isOwner {
 		return domain.ErrForbidden
 	}
 
 	video, err := s.videoRepo.GetByID(ctx, videoID)
-	if err != nil || video == nil {
+	if err != nil {
+		return fmt.Errorf("get video failed: %w", err)
+	}
+	if video == nil {
 		return domain.ErrVideoNotFound
 	}
 
 	if video.Status != domain.VideoStatusReady {
-		return fmt.Errorf("cannot add pending video to playlist")
+		return domain.ErrVideoNotReady
+	}
+	if video.ChannelID != playlist.ChannelID {
+		return domain.ErrPlaylistVideoChannelMismatch
 	}
 
 	return s.playlistRepo.AddVideo(ctx, playlistID, videoID)
@@ -254,12 +263,18 @@ func (s *playlistService) AddVideo(ctx context.Context, playlistID, videoID, use
 
 func (s *playlistService) RemoveVideo(ctx context.Context, playlistID, videoID, userID int) error {
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
-	if err != nil || playlist == nil {
+	if err != nil {
+		return fmt.Errorf("get playlist failed: %w", err)
+	}
+	if playlist == nil {
 		return domain.ErrPlaylistNotFound
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return fmt.Errorf("check channel owner failed: %w", err)
+	}
+	if !isOwner {
 		return domain.ErrForbidden
 	}
 
@@ -276,12 +291,18 @@ func (s *playlistService) UpdateVideoPosition(ctx context.Context, playlistID, v
 	)
 
 	playlist, err := s.playlistRepo.GetByID(ctx, playlistID)
-	if err != nil || playlist == nil {
+	if err != nil {
+		return fmt.Errorf("get playlist failed: %w", err)
+	}
+	if playlist == nil {
 		return domain.ErrPlaylistNotFound
 	}
 
 	isOwner, err := s.channelSvc.IsOwner(ctx, playlist.ChannelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return fmt.Errorf("check channel owner failed: %w", err)
+	}
+	if !isOwner {
 		return domain.ErrForbidden
 	}
 

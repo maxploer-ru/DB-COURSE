@@ -26,18 +26,21 @@ func subKey(channelID int) string {
 }
 
 func (r *SubscriberCounter) Increment(ctx context.Context, channelID int) error {
-	key := subKey(channelID)
-	pipe := r.client.Pipeline()
-	pipe.Incr(ctx, key)
-	pipe.Expire(ctx, key, subscriberCountTTL)
-	_, err := pipe.Exec(ctx)
-	return err
+	return incrementExistingSubscriberCount.Run(ctx, r.client, []string{subKey(channelID)}, int(subscriberCountTTL/time.Second)).Err()
 }
+
+var incrementExistingSubscriberCount = redis.NewScript(`
+if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
+redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], ARGV[1])
+return 1
+`)
 
 var decrSubLua = redis.NewScript(`
 local current = redis.call('GET', KEYS[1])
 if current and tonumber(current) > 0 then
     redis.call('DECR', KEYS[1])
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
     return 1
 end
 return 0
@@ -45,11 +48,7 @@ return 0
 
 func (r *SubscriberCounter) Decrement(ctx context.Context, channelID int) error {
 	key := subKey(channelID)
-	err := decrSubLua.Run(ctx, r.client, []string{key}).Err()
-	if err == nil {
-		r.client.Expire(ctx, key, subscriberCountTTL)
-	}
-	return err
+	return decrSubLua.Run(ctx, r.client, []string{key}, int(subscriberCountTTL/time.Second)).Err()
 }
 
 func (r *SubscriberCounter) Get(ctx context.Context, channelID int) (int, bool, error) {
@@ -85,14 +84,29 @@ func (r *SubscriberCounter) LoadAll(ctx context.Context) (map[int]int, error) {
 
 		for _, key := range keys {
 			val, err := r.client.Get(ctx, key).Result()
-			if err == nil {
-				parts := strings.Split(key, ":")
-				if len(parts) == 3 {
-					id, _ := strconv.Atoi(parts[2])
-					cnt, _ := strconv.Atoi(val)
-					result[id] = cnt
-				}
+			if errors.Is(err, redis.Nil) {
+				continue
 			}
+			if err != nil {
+				return nil, fmt.Errorf("load subscriber count %q: %w", key, err)
+			}
+
+			parts := strings.Split(key, ":")
+			if len(parts) != 3 {
+				return nil, fmt.Errorf("invalid subscriber cache key %q", key)
+			}
+			id, err := strconv.Atoi(parts[2])
+			if err != nil {
+				return nil, fmt.Errorf("parse subscriber cache key %q: %w", key, err)
+			}
+			if id <= 0 {
+				return nil, fmt.Errorf("subscriber cache key %q contains invalid channel id", key)
+			}
+			count, err := strconv.Atoi(val)
+			if err != nil {
+				return nil, fmt.Errorf("parse subscriber count for channel %d: %w", id, err)
+			}
+			result[id] = count
 		}
 
 		if cursor == 0 {

@@ -50,10 +50,11 @@ func (r *VideoRepository) Update(ctx context.Context, video *domain.Video) error
 	result := r.db.WithContext(ctx).
 		Model(&models.Video{}).
 		Where("id = ?", dbVideo.ID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"title":       dbVideo.Title,
 			"description": dbVideo.Description,
 			"filepath":    dbVideo.Filepath,
+			"status":      dbVideo.Status,
 		})
 
 	if result.Error != nil {
@@ -81,6 +82,7 @@ func (r *VideoRepository) List(ctx context.Context, limit, offset int) ([]*domai
 	query := r.db.WithContext(ctx).Model(&models.Video{}).
 		Where("status = ?", domain.VideoStatusReady)
 	err := query.
+		Order("created_at DESC, id DESC").
 		Limit(limit).
 		Offset(offset).
 		Preload("Channel").
@@ -113,6 +115,7 @@ func (r *VideoRepository) ListByChannel(ctx context.Context, channelID int, limi
 		Where("channel_id = ?", channelID).
 		Where("status = ?", domain.VideoStatusReady)
 	if err := query.
+		Order("created_at DESC, id DESC").
 		Limit(limit).
 		Offset(offset).
 		Preload("Channel").

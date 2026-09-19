@@ -46,7 +46,7 @@ func (s *ChannelRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *ChannelRepositoryTestSuite) TestCreate_Positive() {
+func (s *ChannelRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -57,7 +57,7 @@ func (s *ChannelRepositoryTestSuite) TestCreate_Positive() {
 	s.NotZero(ch.ID)
 }
 
-func (s *ChannelRepositoryTestSuite) TestCreate_Negative() {
+func (s *ChannelRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch1 := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch1.ID = 0
@@ -70,7 +70,7 @@ func (s *ChannelRepositoryTestSuite) TestCreate_Negative() {
 	s.Error(err)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByID_Positive() {
+func (s *ChannelRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -83,7 +83,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByID_Positive() {
 	s.Equal(ch.Name, found.Name)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByID_Negative() {
+func (s *ChannelRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByID(ctx, 999)
@@ -92,7 +92,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByUserID_Positive() {
+func (s *ChannelRepositoryTestSuite) TestGetByUserID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -104,7 +104,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByUserID_Positive() {
 	s.NotNil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByUserID_Negative() {
+func (s *ChannelRepositoryTestSuite) TestGetByUserID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByUserID(ctx, 999)
@@ -113,7 +113,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByUserID_Negative() {
 	s.Nil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByName_Positive() {
+func (s *ChannelRepositoryTestSuite) TestGetByName_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -125,7 +125,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByName_Positive() {
 	s.NotNil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestGetByName_Negative() {
+func (s *ChannelRepositoryTestSuite) TestGetByName_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByName(ctx, "unknown")
@@ -134,7 +134,7 @@ func (s *ChannelRepositoryTestSuite) TestGetByName_Negative() {
 	s.Nil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestUpdate_Positive() {
+func (s *ChannelRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -148,7 +148,7 @@ func (s *ChannelRepositoryTestSuite) TestUpdate_Positive() {
 	s.Equal("updated_name", found.Name)
 }
 
-func (s *ChannelRepositoryTestSuite) TestUpdate_Negative() {
+func (s *ChannelRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -160,7 +160,7 @@ func (s *ChannelRepositoryTestSuite) TestUpdate_Negative() {
 	s.Error(err)
 }
 
-func (s *ChannelRepositoryTestSuite) TestDelete_Positive() {
+func (s *ChannelRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -173,7 +173,7 @@ func (s *ChannelRepositoryTestSuite) TestDelete_Positive() {
 	s.Nil(found)
 }
 
-func (s *ChannelRepositoryTestSuite) TestDelete_Negative() {
+func (s *ChannelRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999)
@@ -181,7 +181,7 @@ func (s *ChannelRepositoryTestSuite) TestDelete_Negative() {
 	s.NoError(err)
 }
 
-func (s *ChannelRepositoryTestSuite) TestExistsByName_Positive() {
+func (s *ChannelRepositoryTestSuite) TestExistsByName_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -193,7 +193,7 @@ func (s *ChannelRepositoryTestSuite) TestExistsByName_Positive() {
 	s.True(exists)
 }
 
-func (s *ChannelRepositoryTestSuite) TestExistsByName_Negative() {
+func (s *ChannelRepositoryTestSuite) TestExistsByName_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	exists, err := s.repo.ExistsByName(ctx, "unknown")
@@ -202,7 +202,7 @@ func (s *ChannelRepositoryTestSuite) TestExistsByName_Negative() {
 	s.False(exists)
 }
 
-func (s *ChannelRepositoryTestSuite) TestListChannels_Positive() {
+func (s *ChannelRepositoryTestSuite) TestListChannels_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(s.testUser.ID)
 	ch.ID = 0
@@ -214,7 +214,7 @@ func (s *ChannelRepositoryTestSuite) TestListChannels_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *ChannelRepositoryTestSuite) TestListChannels_Negative() {
+func (s *ChannelRepositoryTestSuite) TestListChannels_Negative_BoundaryValueAnalysis() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListChannels(ctx, 10, 999)

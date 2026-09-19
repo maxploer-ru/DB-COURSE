@@ -19,6 +19,11 @@ type commentInteractionService struct {
 	statsCache  repository.CommentStatsCache
 }
 
+type atomicCommentRatingRepository interface {
+	Upsert(ctx context.Context, rating *domain.CommentRating) (previous *domain.CommentRating, created bool, err error)
+	DeleteAndGet(ctx context.Context, userID, commentID int) (previous *domain.CommentRating, found bool, err error)
+}
+
 func NewCommentInteractionService(
 	ratingRepo repository.CommentRatingRepository,
 	commentRepo repository.CommentRepository,
@@ -39,6 +44,9 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 		slog.Int("comment_id", commentID),
 		slog.String("action", string(action)),
 	)
+	if action != domain.RatingActionLike && action != domain.RatingActionDislike && action != domain.RatingActionRemove {
+		return domain.ErrInvalidRatingAction
+	}
 
 	logger.DebugContext(ctx, "Checking comment existence")
 	comment, err := s.commentRepo.GetByID(ctx, commentID)
@@ -59,6 +67,21 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 	}
 
 	if action == domain.RatingActionRemove {
+		if atomicRepo, ok := s.ratingRepo.(atomicCommentRatingRepository); ok {
+			previous, found, err := atomicRepo.DeleteAndGet(ctx, userID, commentID)
+			if err != nil {
+				return err
+			}
+			if !found {
+				return domain.ErrCommentRatingNotFound
+			}
+			if previous.Liked {
+				_ = s.statsCache.DecrLikes(ctx, commentID)
+			} else {
+				_ = s.statsCache.DecrDislikes(ctx, commentID)
+			}
+			return nil
+		}
 		if existing == nil {
 			return domain.ErrCommentRatingNotFound
 		}
@@ -77,6 +100,30 @@ func (s *commentInteractionService) Rate(ctx context.Context, userID, commentID 
 			}
 		}
 		logger.InfoContext(ctx, "Rating removed successfully")
+		return nil
+	}
+
+	if atomicRepo, ok := s.ratingRepo.(atomicCommentRatingRepository); ok {
+		rating := &domain.CommentRating{UserID: userID, CommentID: commentID, Liked: action == domain.RatingActionLike}
+		previous, created, err := atomicRepo.Upsert(ctx, rating)
+		if err != nil {
+			return err
+		}
+		if created {
+			if rating.Liked {
+				_ = s.statsCache.IncrLikes(ctx, commentID)
+			} else {
+				_ = s.statsCache.IncrDislikes(ctx, commentID)
+			}
+		} else if previous.Liked != rating.Liked {
+			if rating.Liked {
+				_ = s.statsCache.IncrLikes(ctx, commentID)
+				_ = s.statsCache.DecrDislikes(ctx, commentID)
+			} else {
+				_ = s.statsCache.IncrDislikes(ctx, commentID)
+				_ = s.statsCache.DecrLikes(ctx, commentID)
+			}
+		}
 		return nil
 	}
 

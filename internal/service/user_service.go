@@ -43,7 +43,9 @@ func (s *userService) GetProfile(ctx context.Context, userID int) (*domain.User,
 		return nil, domain.ErrUserIsBanned
 	}
 
-	return user, nil
+	publicUser := *user
+	publicUser.PasswordHash = ""
+	return &publicUser, nil
 }
 
 func (s *userService) SetNotificationsSettings(ctx context.Context, userID int, enabled bool) error {

@@ -57,7 +57,7 @@ func (s *VideoRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *VideoRepositoryTestSuite) TestCreate_Positive() {
+func (s *VideoRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -68,7 +68,7 @@ func (s *VideoRepositoryTestSuite) TestCreate_Positive() {
 	s.NotZero(vid.ID)
 }
 
-func (s *VideoRepositoryTestSuite) TestCreate_Negative() {
+func (s *VideoRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(999999)
 	vid.ID = 0
@@ -78,7 +78,7 @@ func (s *VideoRepositoryTestSuite) TestCreate_Negative() {
 	s.Error(err)
 }
 
-func (s *VideoRepositoryTestSuite) TestGetByID_Positive() {
+func (s *VideoRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -92,7 +92,7 @@ func (s *VideoRepositoryTestSuite) TestGetByID_Positive() {
 	s.Equal(s.testChannel.Name, found.ChannelName)
 }
 
-func (s *VideoRepositoryTestSuite) TestGetByID_Negative() {
+func (s *VideoRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByID(ctx, 999)
@@ -101,7 +101,7 @@ func (s *VideoRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *VideoRepositoryTestSuite) TestUpdate_Positive() {
+func (s *VideoRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -115,7 +115,7 @@ func (s *VideoRepositoryTestSuite) TestUpdate_Positive() {
 	s.Equal("Updated Title", found.Title)
 }
 
-func (s *VideoRepositoryTestSuite) TestUpdate_Negative() {
+func (s *VideoRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 999999
@@ -125,7 +125,7 @@ func (s *VideoRepositoryTestSuite) TestUpdate_Negative() {
 	s.ErrorIs(err, domain.ErrVideoNotFound)
 }
 
-func (s *VideoRepositoryTestSuite) TestDelete_Positive() {
+func (s *VideoRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -138,7 +138,7 @@ func (s *VideoRepositoryTestSuite) TestDelete_Positive() {
 	s.Nil(found)
 }
 
-func (s *VideoRepositoryTestSuite) TestDelete_Negative() {
+func (s *VideoRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999)
@@ -146,7 +146,7 @@ func (s *VideoRepositoryTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, domain.ErrVideoNotFound)
 }
 
-func (s *VideoRepositoryTestSuite) TestList_Positive() {
+func (s *VideoRepositoryTestSuite) TestList_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -158,7 +158,7 @@ func (s *VideoRepositoryTestSuite) TestList_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *VideoRepositoryTestSuite) TestList_Negative() {
+func (s *VideoRepositoryTestSuite) TestList_Negative_BoundaryValueAnalysis() {
 	ctx := context.Background()
 
 	list, err := s.repo.List(ctx, 10, 999)
@@ -167,7 +167,7 @@ func (s *VideoRepositoryTestSuite) TestList_Negative() {
 	s.Len(list, 0)
 }
 
-func (s *VideoRepositoryTestSuite) TestListByChannel_Positive() {
+func (s *VideoRepositoryTestSuite) TestListByChannel_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	vid := s.vidMother.ReadyVideoForChannel(s.testChannel.ID)
 	vid.ID = 0
@@ -179,7 +179,7 @@ func (s *VideoRepositoryTestSuite) TestListByChannel_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *VideoRepositoryTestSuite) TestListByChannel_Negative() {
+func (s *VideoRepositoryTestSuite) TestListByChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListByChannel(ctx, 999, 10, 0)

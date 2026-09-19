@@ -29,7 +29,7 @@ func (s *CommunityServiceTestSuite) SetupTest() {
 	s.chanMother = mother.ChannelMother{}
 }
 
-func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive() {
+func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	ch := s.chanMother.ChannelForUser(1)
 	expectedPosts := []*domain.CommunityPost{s.mother.PostForChannel(ch.ID, 1)}
@@ -47,7 +47,7 @@ func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Positive() {
 	s.Equal(int64(1), community.TotalCount)
 }
 
-func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative() {
+func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("GetChannel", ctx, 999).Return(nil, domain.ErrChannelNotFound)
@@ -58,7 +58,7 @@ func (s *CommunityServiceTestSuite) TestGetChannelCommunity_Negative() {
 	s.Nil(community)
 }
 
-func (s *CommunityServiceTestSuite) TestCreatePost_Positive() {
+func (s *CommunityServiceTestSuite) TestCreatePost_Positive_StateTransition() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
@@ -71,7 +71,7 @@ func (s *CommunityServiceTestSuite) TestCreatePost_Positive() {
 	s.Equal("Content", post.Content)
 }
 
-func (s *CommunityServiceTestSuite) TestCreatePost_Negative_Forbidden() {
+func (s *CommunityServiceTestSuite) TestCreatePost_Negative_Forbidden_Combinatorial() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("IsOwner", ctx, 1, 999).Return(false, nil)
@@ -82,7 +82,7 @@ func (s *CommunityServiceTestSuite) TestCreatePost_Negative_Forbidden() {
 	s.Nil(post)
 }
 
-func (s *CommunityServiceTestSuite) TestCreatePost_Negative_EmptyContent() {
+func (s *CommunityServiceTestSuite) TestCreatePost_Negative_EmptyContent_BoundaryValueAnalysis() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
@@ -93,7 +93,7 @@ func (s *CommunityServiceTestSuite) TestCreatePost_Negative_EmptyContent() {
 	s.Nil(post)
 }
 
-func (s *CommunityServiceTestSuite) TestUpdatePost_Positive() {
+func (s *CommunityServiceTestSuite) TestUpdatePost_Positive_StateTransition() {
 	ctx := context.Background()
 	post := s.mother.PostForChannel(1, 1)
 
@@ -107,7 +107,7 @@ func (s *CommunityServiceTestSuite) TestUpdatePost_Positive() {
 	s.Equal("New Content", updated.Content)
 }
 
-func (s *CommunityServiceTestSuite) TestUpdatePost_Negative() {
+func (s *CommunityServiceTestSuite) TestUpdatePost_Negative_Combinatorial() {
 	ctx := context.Background()
 	post := s.mother.PostForChannel(1, 1)
 
@@ -120,7 +120,7 @@ func (s *CommunityServiceTestSuite) TestUpdatePost_Negative() {
 	s.Nil(updated)
 }
 
-func (s *CommunityServiceTestSuite) TestDeletePost_Positive() {
+func (s *CommunityServiceTestSuite) TestDeletePost_Positive_StateTransition() {
 	ctx := context.Background()
 	post := s.mother.PostForChannel(1, 1)
 
@@ -133,7 +133,7 @@ func (s *CommunityServiceTestSuite) TestDeletePost_Positive() {
 	s.NoError(err)
 }
 
-func (s *CommunityServiceTestSuite) TestDeletePost_Negative() {
+func (s *CommunityServiceTestSuite) TestDeletePost_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockRepo.On("GetPostByID", ctx, 999).Return(nil, nil)
@@ -143,7 +143,7 @@ func (s *CommunityServiceTestSuite) TestDeletePost_Negative() {
 	s.ErrorIs(err, domain.ErrCommunityPostNotFound)
 }
 
-func (s *CommunityServiceTestSuite) TestCreateComment_Positive() {
+func (s *CommunityServiceTestSuite) TestCreateComment_Positive_StateTransition() {
 	ctx := context.Background()
 	post := s.mother.PostForChannel(1, 1)
 
@@ -157,7 +157,7 @@ func (s *CommunityServiceTestSuite) TestCreateComment_Positive() {
 	s.Equal("Comment Content", comment.Content)
 }
 
-func (s *CommunityServiceTestSuite) TestCreateComment_Negative() {
+func (s *CommunityServiceTestSuite) TestCreateComment_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockRepo.On("GetPostByID", ctx, 999).Return(nil, nil)
@@ -168,7 +168,7 @@ func (s *CommunityServiceTestSuite) TestCreateComment_Negative() {
 	s.Nil(comment)
 }
 
-func (s *CommunityServiceTestSuite) TestUpdateComment_Positive() {
+func (s *CommunityServiceTestSuite) TestUpdateComment_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.mother.CommentForPost(1, 2)
 
@@ -181,7 +181,7 @@ func (s *CommunityServiceTestSuite) TestUpdateComment_Positive() {
 	s.Equal("New Content", updated.Content)
 }
 
-func (s *CommunityServiceTestSuite) TestUpdateComment_Negative() {
+func (s *CommunityServiceTestSuite) TestUpdateComment_Negative_Combinatorial() {
 	ctx := context.Background()
 	comment := s.mother.CommentForPost(1, 2)
 
@@ -193,7 +193,7 @@ func (s *CommunityServiceTestSuite) TestUpdateComment_Negative() {
 	s.Nil(updated)
 }
 
-func (s *CommunityServiceTestSuite) TestDeleteComment_Positive() {
+func (s *CommunityServiceTestSuite) TestDeleteComment_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.mother.CommentForPost(1, 2)
 
@@ -205,7 +205,7 @@ func (s *CommunityServiceTestSuite) TestDeleteComment_Positive() {
 	s.NoError(err)
 }
 
-func (s *CommunityServiceTestSuite) TestDeleteComment_Negative() {
+func (s *CommunityServiceTestSuite) TestDeleteComment_Negative_Combinatorial() {
 	ctx := context.Background()
 	comment := s.mother.CommentForPost(1, 2)
 

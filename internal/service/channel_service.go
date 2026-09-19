@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 type ChannelService interface {
@@ -32,6 +33,11 @@ func NewChannelService(channelRepo repository.ChannelRepository) ChannelService 
 }
 
 func (s *channelService) CreateChannel(ctx context.Context, userID int, name, description string) (*domain.Channel, error) {
+	name = strings.TrimSpace(name)
+	description = strings.TrimSpace(description)
+	if name == "" || len([]rune(name)) > 32 {
+		return nil, domain.ErrInvalidChannelName
+	}
 	logger := domain.GetLogger(ctx).With(
 		slog.String("service", "ChannelService"),
 		slog.String("operation", "CreateChannel"),
@@ -168,6 +174,13 @@ func (s *channelService) UpdateChannel(ctx context.Context, channelID, userID in
 	}
 
 	updated := false
+	if name != nil {
+		trimmedName := strings.TrimSpace(*name)
+		if trimmedName == "" || len([]rune(trimmedName)) > 32 {
+			return nil, domain.ErrInvalidChannelName
+		}
+		*name = trimmedName
+	}
 	if name != nil && *name != ch.Name {
 		logger.DebugContext(ctx, "Checking new channel name uniqueness", slog.String("new_name", *name))
 		exists, err := s.channelRepo.ExistsByName(ctx, *name)
@@ -183,7 +196,7 @@ func (s *channelService) UpdateChannel(ctx context.Context, channelID, userID in
 		updated = true
 	}
 	if description != nil {
-		ch.Description = *description
+		ch.Description = strings.TrimSpace(*description)
 		updated = true
 	}
 

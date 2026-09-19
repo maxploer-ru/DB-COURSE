@@ -35,6 +35,12 @@ func (s *adminService) BanUser(ctx context.Context, adminID, targetUserID int) e
 		slog.Int("admin_id", adminID),
 		slog.Int("target_user_id", targetUserID),
 	)
+	if err := s.requireAdmin(ctx, adminID); err != nil {
+		return err
+	}
+	if adminID == targetUserID {
+		return domain.ErrForbidden
+	}
 
 	if err := s.userRepo.Ban(ctx, targetUserID); err != nil {
 		logger.ErrorContext(ctx, "Failed to ban user", slog.String("error", err.Error()))
@@ -51,6 +57,12 @@ func (s *adminService) UnbanUser(ctx context.Context, adminID, targetUserID int)
 		slog.Int("admin_id", adminID),
 		slog.Int("target_user_id", targetUserID),
 	)
+	if err := s.requireAdmin(ctx, adminID); err != nil {
+		return err
+	}
+	if adminID == targetUserID {
+		return domain.ErrForbidden
+	}
 
 	if err := s.userRepo.Unban(ctx, targetUserID); err != nil {
 		logger.ErrorContext(ctx, "Failed to unban user", slog.String("error", err.Error()))
@@ -72,6 +84,9 @@ func (s *adminService) ChangeUserRole(ctx context.Context, adminID, targetUserID
 	if adminID == targetUserID {
 		logger.WarnContext(ctx, "Admin attempted to change their own role")
 		return domain.ErrForbidden
+	}
+	if err := s.requireAdmin(ctx, adminID); err != nil {
+		return err
 	}
 
 	roleName = strings.TrimSpace(strings.ToLower(roleName))
@@ -113,6 +128,9 @@ func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int
 		slog.String("operation", "ListUsers"),
 		slog.Int("admin_id", adminID),
 	)
+	if err := s.requireAdmin(ctx, adminID); err != nil {
+		return nil, err
+	}
 
 	logger.DebugContext(ctx, "Listing users")
 	users, err := s.userRepo.ListUsers(ctx, limit, offset)
@@ -127,10 +145,26 @@ func (s *adminService) ListUsers(ctx context.Context, adminID, limit, offset int
 	}
 
 	logger.DebugContext(ctx, "Users retrieved successfully", slog.Int("count", len(users)))
+	for _, user := range users {
+		if user != nil {
+			user.PasswordHash = ""
+		}
+	}
 	return &domain.PageResponse[*domain.User]{
 		Items:      users,
 		TotalCount: total,
 		Limit:      limit,
 		Offset:     offset,
 	}, nil
+}
+
+func (s *adminService) requireAdmin(ctx context.Context, adminID int) error {
+	admin, err := s.userRepo.GetByID(ctx, adminID)
+	if err != nil {
+		return fmt.Errorf("load administrator failed: %w", err)
+	}
+	if admin == nil || !admin.IsActive || admin.Role == nil || !strings.EqualFold(admin.Role.Name, domain.RoleAdmin) {
+		return domain.ErrForbidden
+	}
+	return nil
 }

@@ -45,7 +45,7 @@ func (s *AuthServiceTestSuite) SetupTest() {
 	s.roleMother = mother.RoleMother{}
 }
 
-func (s *AuthServiceTestSuite) TestLogin_Negative_UserNotFound() {
+func (s *AuthServiceTestSuite) TestLogin_Negative_UserNotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 	email := "test@example.com"
 	password := "password123"
@@ -58,7 +58,7 @@ func (s *AuthServiceTestSuite) TestLogin_Negative_UserNotFound() {
 	s.Nil(res)
 }
 
-func (s *AuthServiceTestSuite) TestLogin_Positive_Success() {
+func (s *AuthServiceTestSuite) TestLogin_Positive_Success_Combinatorial() {
 	ctx := context.Background()
 	email := "test@example.com"
 	password := "password123"
@@ -91,7 +91,7 @@ func (s *AuthServiceTestSuite) TestLogin_Positive_Success() {
 	s.mockRefreshRepo.AssertExpectations(s.T())
 }
 
-func (s *AuthServiceTestSuite) TestRefresh_Negative_InvalidToken() {
+func (s *AuthServiceTestSuite) TestRefresh_Negative_InvalidToken_EquivalencePartitioning() {
 	ctx := context.Background()
 	refreshToken := "invalid_token"
 

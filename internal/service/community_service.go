@@ -63,6 +63,9 @@ func (s *communityService) GetMyCommunity(ctx context.Context, userID int, limit
 	if err != nil {
 		return nil, fmt.Errorf("get channel by user: %w", err)
 	}
+	if channel == nil {
+		return nil, domain.ErrChannelNotFound
+	}
 	return s.GetChannelCommunity(ctx, channel.ID, limit, offset)
 }
 
@@ -93,7 +96,10 @@ func (s *communityService) GetPostComments(ctx context.Context, postID int, limi
 
 func (s *communityService) CreatePost(ctx context.Context, channelID, userID int, content string) (*domain.CommunityPost, error) {
 	isOwner, err := s.channelSvc.IsOwner(ctx, channelID, userID)
-	if err != nil || !isOwner {
+	if err != nil {
+		return nil, fmt.Errorf("check channel owner: %w", err)
+	}
+	if !isOwner {
 		return nil, domain.ErrForbidden
 	}
 

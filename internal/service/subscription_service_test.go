@@ -31,7 +31,7 @@ func (s *SubscriptionServiceTestSuite) SetupTest() {
 	s.chanMother = mother.ChannelMother{}
 }
 
-func (s *SubscriptionServiceTestSuite) TestSubscribe_Positive_NewSubscription() {
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Positive_NewSubscription_StateTransition() {
 	ctx := context.Background()
 	sub := s.mother.ValidSubscription()
 	channel := s.chanMother.ValidChannel()
@@ -49,7 +49,7 @@ func (s *SubscriptionServiceTestSuite) TestSubscribe_Positive_NewSubscription() 
 	s.mockCounter.AssertExpectations(s.T())
 }
 
-func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_SelfSubscription() {
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_SelfSubscription_Combinatorial() {
 	ctx := context.Background()
 	sub := s.mother.SelfSubscription()
 	channel := s.chanMother.ValidChannel()
@@ -64,7 +64,7 @@ func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_SelfSubscription()
 	s.mockSubRepo.AssertNotCalled(s.T(), "Subscribe")
 }
 
-func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_ChannelNotFound() {
+func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_ChannelNotFound_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockChannelRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -74,7 +74,7 @@ func (s *SubscriptionServiceTestSuite) TestSubscribe_Negative_ChannelNotFound() 
 	s.ErrorIs(err, domain.ErrChannelNotFound)
 }
 
-func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Positive() {
+func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Positive_StateTransition() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("Unsubscribe", ctx, 1, 2).Return(true, nil)
@@ -85,7 +85,7 @@ func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Positive() {
 	s.NoError(err)
 }
 
-func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Negative() {
+func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("Unsubscribe", ctx, 1, 2).Return(false, errors.New("db error"))
@@ -95,7 +95,7 @@ func (s *SubscriptionServiceTestSuite) TestUnsubscribe_Negative() {
 	s.Error(err)
 }
 
-func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Positive() {
+func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("IsSubscribed", ctx, 1, 2).Return(true, nil)
@@ -106,7 +106,7 @@ func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Positive() {
 	s.True(ok)
 }
 
-func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Negative() {
+func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("IsSubscribed", ctx, 1, 2).Return(false, errors.New("db error"))
@@ -117,7 +117,7 @@ func (s *SubscriptionServiceTestSuite) TestIsSubscribed_Negative() {
 	s.False(ok)
 }
 
-func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_CacheHit() {
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_CacheHit_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCounter.On("Get", ctx, 1).Return(42, true, nil)
@@ -128,7 +128,7 @@ func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_CacheHit
 	s.Equal(42, count)
 }
 
-func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_DBFallback() {
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_DBFallback_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCounter.On("Get", ctx, 1).Return(0, false, nil)
@@ -141,7 +141,7 @@ func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Positive_DBFallba
 	s.Equal(15, count)
 }
 
-func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Negative() {
+func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockCounter.On("Get", ctx, 1).Return(0, false, nil)
@@ -153,7 +153,7 @@ func (s *SubscriptionServiceTestSuite) TestGetSubscribersCount_Negative() {
 	s.Equal(0, count)
 }
 
-func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Positive() {
+func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Subscription{s.mother.ValidSubscription()}
 
@@ -167,7 +167,7 @@ func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Positive() {
 	s.Equal(int64(1), subs.TotalCount)
 }
 
-func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Negative() {
+func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("GetUserSubscriptions", ctx, 1, 10, 0).Return(nil, errors.New("db error"))
@@ -178,7 +178,7 @@ func (s *SubscriptionServiceTestSuite) TestGetUserSubscriptions_Negative() {
 	s.Nil(subs)
 }
 
-func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Positive() {
+func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Positive_StateTransition() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("ResetNewVideosCount", ctx, 1, 2).Return(nil)
@@ -188,7 +188,7 @@ func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Positive() {
 	s.NoError(err)
 }
 
-func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Negative() {
+func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("ResetNewVideosCount", ctx, 1, 2).Return(errors.New("db error"))
@@ -198,7 +198,7 @@ func (s *SubscriptionServiceTestSuite) TestResetNewVideosCount_Negative() {
 	s.Error(err)
 }
 
-func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Positive() {
+func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Positive_StateTransition() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("NotifySubscribersAboutNewVideo", ctx, 1).Return(nil)
@@ -208,7 +208,7 @@ func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Positive() {
 	s.NoError(err)
 }
 
-func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Negative() {
+func (s *SubscriptionServiceTestSuite) TestNotifyAboutNewVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockSubRepo.On("NotifySubscribersAboutNewVideo", ctx, 1).Return(errors.New("db error"))

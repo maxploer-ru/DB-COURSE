@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -58,9 +59,10 @@ func (s *commentService) Create(ctx context.Context, userID, videoID int, conten
 		return nil, domain.ErrVideoNotFound
 	}
 
+	content = strings.TrimSpace(content)
 	if content == "" {
 		logger.WarnContext(ctx, "Comment content is empty")
-		return nil, fmt.Errorf("comment content cannot be empty")
+		return nil, domain.ErrInvalidCommentContent
 	}
 
 	comment := &domain.Comment{
@@ -167,9 +169,10 @@ func (s *commentService) Update(ctx context.Context, id, userID int, content str
 		return nil, domain.ErrForbidden
 	}
 
+	content = strings.TrimSpace(content)
 	if content == "" {
 		logger.WarnContext(ctx, "Comment content is empty")
-		return nil, fmt.Errorf("comment content cannot be empty")
+		return nil, domain.ErrInvalidCommentContent
 	}
 
 	comment.Content = content
@@ -207,7 +210,7 @@ func (s *commentService) Delete(ctx context.Context, id, userID int, role string
 	if comment.UserID == userID {
 		allowed = true
 		logger.DebugContext(ctx, "User is comment author, allowed to delete")
-	} else if role == domain.RoleModerator {
+	} else if strings.EqualFold(role, domain.RoleModerator) || strings.EqualFold(role, domain.RoleAdmin) {
 		allowed = true
 		logger.DebugContext(ctx, "User is moderator, allowed to delete")
 	}
@@ -217,6 +220,9 @@ func (s *commentService) Delete(ctx context.Context, id, userID int, role string
 		if err != nil {
 			logger.ErrorContext(ctx, "Failed to get video for owner check", slog.String("error", err.Error()))
 			return fmt.Errorf("get video: %w", err)
+		}
+		if video == nil {
+			return domain.ErrVideoNotFound
 		}
 		isOwner, err := s.channelSvc.IsOwner(ctx, video.ChannelID, userID)
 		if err != nil {

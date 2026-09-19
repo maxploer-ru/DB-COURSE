@@ -31,7 +31,7 @@ func (s *PlaylistServiceTestSuite) SetupTest() {
 	s.vidMother = mother.VideoMother{}
 }
 
-func (s *PlaylistServiceTestSuite) TestCreate_Positive() {
+func (s *PlaylistServiceTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	s.mockChanSvc.On("IsOwner", ctx, 1, 1).Return(true, nil)
 	s.mockPlaylistRepo.On("Create", ctx, mock.AnythingOfType("*domain.Playlist")).Return(nil)
@@ -43,7 +43,7 @@ func (s *PlaylistServiceTestSuite) TestCreate_Positive() {
 	s.Equal("Name", pl.Name)
 }
 
-func (s *PlaylistServiceTestSuite) TestCreate_Negative() {
+func (s *PlaylistServiceTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	pl, err := s.service.Create(ctx, 1, 1, "", "Desc")
@@ -52,7 +52,7 @@ func (s *PlaylistServiceTestSuite) TestCreate_Negative() {
 	s.Nil(pl)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetByID_Positive() {
+func (s *PlaylistServiceTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, expected.ID).Return(expected, nil)
@@ -63,7 +63,7 @@ func (s *PlaylistServiceTestSuite) TestGetByID_Positive() {
 	s.Equal(expected.ID, pl.ID)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetByID_Negative() {
+func (s *PlaylistServiceTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -73,7 +73,7 @@ func (s *PlaylistServiceTestSuite) TestGetByID_Negative() {
 	s.Nil(pl)
 }
 
-func (s *PlaylistServiceTestSuite) TestListByChannel_Positive() {
+func (s *PlaylistServiceTestSuite) TestListByChannel_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Playlist{s.mother.PlaylistForChannel(1)}
 	s.mockChanSvc.On("Exists", ctx, 1).Return(true, nil)
@@ -87,7 +87,7 @@ func (s *PlaylistServiceTestSuite) TestListByChannel_Positive() {
 	s.Equal(int64(1), list.TotalCount)
 }
 
-func (s *PlaylistServiceTestSuite) TestListByChannel_Negative() {
+func (s *PlaylistServiceTestSuite) TestListByChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockChanSvc.On("Exists", ctx, 999).Return(false, nil)
 
@@ -97,7 +97,7 @@ func (s *PlaylistServiceTestSuite) TestListByChannel_Negative() {
 	s.Nil(list)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdate_Positive() {
+func (s *PlaylistServiceTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	newName := "New Name"
@@ -111,7 +111,7 @@ func (s *PlaylistServiceTestSuite) TestUpdate_Positive() {
 	s.Equal(newName, updated.Name)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdate_Negative() {
+func (s *PlaylistServiceTestSuite) TestUpdate_Negative_Combinatorial() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	newName := "New Name"
@@ -124,7 +124,7 @@ func (s *PlaylistServiceTestSuite) TestUpdate_Negative() {
 	s.Nil(updated)
 }
 
-func (s *PlaylistServiceTestSuite) TestDelete_Positive() {
+func (s *PlaylistServiceTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
@@ -136,7 +136,7 @@ func (s *PlaylistServiceTestSuite) TestDelete_Positive() {
 	s.NoError(err)
 }
 
-func (s *PlaylistServiceTestSuite) TestDelete_Negative() {
+func (s *PlaylistServiceTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -145,7 +145,7 @@ func (s *PlaylistServiceTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, domain.ErrPlaylistNotFound)
 }
 
-func (s *PlaylistServiceTestSuite) TestAddVideo_Positive() {
+func (s *PlaylistServiceTestSuite) TestAddVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	vid := s.vidMother.ReadyVideoForChannel(1)
@@ -159,7 +159,7 @@ func (s *PlaylistServiceTestSuite) TestAddVideo_Positive() {
 	s.NoError(err)
 }
 
-func (s *PlaylistServiceTestSuite) TestAddVideo_Negative() {
+func (s *PlaylistServiceTestSuite) TestAddVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	vid := s.vidMother.PendingVideoForChannel(1)
@@ -169,10 +169,10 @@ func (s *PlaylistServiceTestSuite) TestAddVideo_Negative() {
 
 	err := s.service.AddVideo(ctx, pl.ID, vid.ID, 1)
 
-	s.ErrorContains(err, "cannot add pending video")
+	s.ErrorIs(err, domain.ErrVideoNotReady)
 }
 
-func (s *PlaylistServiceTestSuite) TestRemoveVideo_Positive() {
+func (s *PlaylistServiceTestSuite) TestRemoveVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
@@ -184,7 +184,7 @@ func (s *PlaylistServiceTestSuite) TestRemoveVideo_Positive() {
 	s.NoError(err)
 }
 
-func (s *PlaylistServiceTestSuite) TestRemoveVideo_Negative() {
+func (s *PlaylistServiceTestSuite) TestRemoveVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -193,7 +193,7 @@ func (s *PlaylistServiceTestSuite) TestRemoveVideo_Negative() {
 	s.ErrorIs(err, domain.ErrPlaylistNotFound)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Positive() {
+func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
@@ -206,7 +206,7 @@ func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Positive() {
 	s.NoError(err)
 }
 
-func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Negative() {
+func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Negative_Combinatorial() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	s.mockPlaylistRepo.On("GetByID", ctx, pl.ID).Return(pl, nil)
@@ -217,7 +217,7 @@ func (s *PlaylistServiceTestSuite) TestUpdateVideoPosition_Negative() {
 	s.ErrorIs(err, domain.ErrForbidden)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Positive() {
+func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	chMother := mother.ChannelMother{}
 	ch := chMother.ChannelForUser(1)
@@ -234,7 +234,7 @@ func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Positive() {
 	s.Equal(int64(1), list.TotalCount)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Negative() {
+func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockChanSvc.On("GetChannelByUserID", ctx, 999).Return(nil, domain.ErrChannelNotFound)
 
@@ -244,7 +244,7 @@ func (s *PlaylistServiceTestSuite) TestGetMyPlaylists_Negative() {
 	s.Nil(list)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Positive() {
+func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.mother.PlaylistForChannel(1)
 	expected := []*domain.PlaylistItem{{PlaylistID: pl.ID, VideoID: 1, Number: 1}}
@@ -259,7 +259,7 @@ func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Positive() {
 	s.Equal(int64(1), items.TotalCount)
 }
 
-func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Negative() {
+func (s *PlaylistServiceTestSuite) TestGetPlaylistItems_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockPlaylistRepo.On("GetByID", ctx, 999).Return(nil, nil)
 

@@ -64,7 +64,7 @@ func (s *CommentRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *CommentRepositoryTestSuite) TestCreate_Positive() {
+func (s *CommentRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -75,7 +75,7 @@ func (s *CommentRepositoryTestSuite) TestCreate_Positive() {
 	s.NotZero(comment.ID)
 }
 
-func (s *CommentRepositoryTestSuite) TestCreate_Negative() {
+func (s *CommentRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(999999, s.testVideo.ID)
 	comment.ID = 0
@@ -85,7 +85,7 @@ func (s *CommentRepositoryTestSuite) TestCreate_Negative() {
 	s.Error(err)
 }
 
-func (s *CommentRepositoryTestSuite) TestGetByID_Positive() {
+func (s *CommentRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -98,7 +98,7 @@ func (s *CommentRepositoryTestSuite) TestGetByID_Positive() {
 	s.Equal(comment.Content, found.Content)
 }
 
-func (s *CommentRepositoryTestSuite) TestGetByID_Negative() {
+func (s *CommentRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByID(ctx, 999999)
@@ -107,7 +107,7 @@ func (s *CommentRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *CommentRepositoryTestSuite) TestListByVideo_Positive() {
+func (s *CommentRepositoryTestSuite) TestListByVideo_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -119,7 +119,7 @@ func (s *CommentRepositoryTestSuite) TestListByVideo_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *CommentRepositoryTestSuite) TestListByVideo_Negative() {
+func (s *CommentRepositoryTestSuite) TestListByVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListByVideo(ctx, 999999, 10, 0)
@@ -128,7 +128,7 @@ func (s *CommentRepositoryTestSuite) TestListByVideo_Negative() {
 	s.Len(list, 0)
 }
 
-func (s *CommentRepositoryTestSuite) TestUpdate_Positive() {
+func (s *CommentRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -142,7 +142,7 @@ func (s *CommentRepositoryTestSuite) TestUpdate_Positive() {
 	s.Equal("Updated content", found.Content)
 }
 
-func (s *CommentRepositoryTestSuite) TestUpdate_Negative() {
+func (s *CommentRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 999999
@@ -152,7 +152,7 @@ func (s *CommentRepositoryTestSuite) TestUpdate_Negative() {
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
-func (s *CommentRepositoryTestSuite) TestDelete_Positive() {
+func (s *CommentRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -163,7 +163,7 @@ func (s *CommentRepositoryTestSuite) TestDelete_Positive() {
 	s.NoError(err)
 }
 
-func (s *CommentRepositoryTestSuite) TestDelete_Negative() {
+func (s *CommentRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999999)
@@ -171,7 +171,7 @@ func (s *CommentRepositoryTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
-func (s *CommentRepositoryTestSuite) TestCountByVideo_Positive() {
+func (s *CommentRepositoryTestSuite) TestCountByVideo_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForVideo(s.testUser.ID, s.testVideo.ID)
 	comment.ID = 0
@@ -183,7 +183,7 @@ func (s *CommentRepositoryTestSuite) TestCountByVideo_Positive() {
 	s.Equal(int64(1), count)
 }
 
-func (s *CommentRepositoryTestSuite) TestCountByVideo_Negative() {
+func (s *CommentRepositoryTestSuite) TestCountByVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	count, err := s.repo.CountByVideo(ctx, 999999)

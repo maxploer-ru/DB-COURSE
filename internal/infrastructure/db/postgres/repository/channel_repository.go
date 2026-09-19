@@ -6,6 +6,7 @@ import (
 	"ZVideo/internal/infrastructure/db/postgres/models"
 	"context"
 	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -23,7 +24,13 @@ func NewChannelRepository(db *gorm.DB) *ChannelRepository {
 func (r *ChannelRepository) Create(ctx context.Context, channel *domain.Channel) error {
 	model := mappers.FromDomainChannel(channel)
 	if err := r.db.WithContext(ctx).Create(model).Error; err != nil {
-		return err
+		if mapped := mapUniqueConstraint(err, map[string]error{
+			"channels_user_id_key": domain.ErrChannelAlreadyExists,
+			"channels_name_key":    domain.ErrChannelNameAlreadyExists,
+		}); mapped != nil {
+			return mapped
+		}
+		return fmt.Errorf("create channel: %w", err)
 	}
 	channel.ID = model.ID
 	return nil
@@ -69,7 +76,24 @@ func (r *ChannelRepository) GetByName(ctx context.Context, name string) (*domain
 }
 
 func (r *ChannelRepository) Update(ctx context.Context, channel *domain.Channel) error {
-	return r.db.WithContext(ctx).Save(mappers.FromDomainChannel(channel)).Error
+	result := r.db.WithContext(ctx).Model(&models.Channel{}).
+		Where("id = ? AND user_id = ?", channel.ID, channel.UserID).
+		Updates(map[string]any{
+			"name":        channel.Name,
+			"description": channel.Description,
+		})
+	if result.Error != nil {
+		if mapped := mapUniqueConstraint(result.Error, map[string]error{
+			"channels_name_key": domain.ErrChannelNameAlreadyExists,
+		}); mapped != nil {
+			return mapped
+		}
+		return fmt.Errorf("update channel: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return domain.ErrChannelNotFound
+	}
+	return nil
 }
 
 func (r *ChannelRepository) Delete(ctx context.Context, id int) error {
@@ -86,7 +110,7 @@ func (r *ChannelRepository) ListChannels(ctx context.Context, limit, offset int)
 	var dbModels []*models.Channel
 	err := r.db.WithContext(ctx).
 		Preload("User").
-		Order("created_at DESC").
+		Order("created_at DESC, id DESC").
 		Limit(limit).
 		Offset(offset).
 		Find(&dbModels).Error

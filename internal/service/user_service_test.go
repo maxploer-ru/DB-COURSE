@@ -25,7 +25,7 @@ func (s *UserServiceTestSuite) SetupTest() {
 	s.mother = mother.UserMother{}
 }
 
-func (s *UserServiceTestSuite) TestGetProfile_Positive_ReturnsUser() {
+func (s *UserServiceTestSuite) TestGetProfile_Positive_ReturnsUser_EquivalencePartitioning() {
 	ctx := context.Background()
 	expectedUser := s.mother.ValidActiveUser()
 	s.mockRepo.On("GetByID", ctx, expectedUser.ID).Return(expectedUser, nil)
@@ -38,7 +38,7 @@ func (s *UserServiceTestSuite) TestGetProfile_Positive_ReturnsUser() {
 	s.mockRepo.AssertExpectations(s.T())
 }
 
-func (s *UserServiceTestSuite) TestGetProfile_Negative_UserNotFoundException() {
+func (s *UserServiceTestSuite) TestGetProfile_Negative_UserNotFoundException_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("GetByID", ctx, 999).Return(nil, nil)
 
@@ -48,7 +48,7 @@ func (s *UserServiceTestSuite) TestGetProfile_Negative_UserNotFoundException() {
 	s.Nil(actualUser)
 }
 
-func (s *UserServiceTestSuite) TestGetProfile_Negative_UserIsBannedException() {
+func (s *UserServiceTestSuite) TestGetProfile_Negative_UserIsBannedException_EquivalencePartitioning() {
 	ctx := context.Background()
 	bannedUser := s.mother.BannedUser()
 	s.mockRepo.On("GetByID", ctx, bannedUser.ID).Return(bannedUser, nil)
@@ -59,7 +59,7 @@ func (s *UserServiceTestSuite) TestGetProfile_Negative_UserIsBannedException() {
 	s.Nil(actualUser)
 }
 
-func (s *UserServiceTestSuite) TestSetNotificationsSettings_Positive_Success() {
+func (s *UserServiceTestSuite) TestSetNotificationsSettings_Positive_Success_StateTransition() {
 	ctx := context.Background()
 	userID := 1
 	s.mockRepo.On("SetNotificationsEnabled", ctx, userID, false).Return(nil)
@@ -69,7 +69,7 @@ func (s *UserServiceTestSuite) TestSetNotificationsSettings_Positive_Success() {
 	s.NoError(err)
 }
 
-func (s *UserServiceTestSuite) TestSetNotificationsSettings_Negative_RepoError() {
+func (s *UserServiceTestSuite) TestSetNotificationsSettings_Negative_RepoError_EquivalencePartitioning() {
 	ctx := context.Background()
 	expectedErr := errors.New("db connection lost")
 	s.mockRepo.On("SetNotificationsEnabled", ctx, 1, true).Return(expectedErr)
@@ -79,7 +79,7 @@ func (s *UserServiceTestSuite) TestSetNotificationsSettings_Negative_RepoError()
 	s.ErrorContains(err, "update notifications failed")
 }
 
-func (s *UserServiceTestSuite) TestDeleteAccount_Positive_Success() {
+func (s *UserServiceTestSuite) TestDeleteAccount_Positive_Success_StateTransition() {
 	ctx := context.Background()
 	s.mockRepo.On("Delete", ctx, 1).Return(nil)
 
@@ -88,7 +88,7 @@ func (s *UserServiceTestSuite) TestDeleteAccount_Positive_Success() {
 	s.NoError(err)
 }
 
-func (s *UserServiceTestSuite) TestDeleteAccount_Negative_RepoError() {
+func (s *UserServiceTestSuite) TestDeleteAccount_Negative_RepoError_EquivalencePartitioning() {
 	ctx := context.Background()
 	s.mockRepo.On("Delete", ctx, 999).Return(domain.ErrUserNotFound)
 

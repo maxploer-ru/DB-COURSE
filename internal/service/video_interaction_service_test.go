@@ -42,7 +42,7 @@ func (s *VideoInteractionServiceTestSuite) SetupTest() {
 	s.videoMother = mother.VideoMother{}
 }
 
-func (s *VideoInteractionServiceTestSuite) TestRate_Positive_NewLike() {
+func (s *VideoInteractionServiceTestSuite) TestRate_Positive_NewLike_StateTransition() {
 	ctx := context.Background()
 	rating := s.ratingMother.LikedRating()
 
@@ -60,7 +60,7 @@ func (s *VideoInteractionServiceTestSuite) TestRate_Positive_NewLike() {
 	s.mockRatingRepo.AssertExpectations(s.T())
 }
 
-func (s *VideoInteractionServiceTestSuite) TestRate_Negative_VideoPending() {
+func (s *VideoInteractionServiceTestSuite) TestRate_Negative_VideoPending_EquivalencePartitioning() {
 	ctx := context.Background()
 	rating := s.ratingMother.LikedRating()
 
@@ -75,7 +75,7 @@ func (s *VideoInteractionServiceTestSuite) TestRate_Negative_VideoPending() {
 	s.mockRatingRepo.AssertNotCalled(s.T(), "Create")
 }
 
-func (s *VideoInteractionServiceTestSuite) TestRecordView_Positive() {
+func (s *VideoInteractionServiceTestSuite) TestRecordView_Positive_StateTransition() {
 	ctx := context.Background()
 	userID := 1
 	video := s.videoMother.ReadyVideoForChannel(1)

@@ -211,6 +211,18 @@ func (s *CommentServiceTestSuite) TestGetCount_Positive_DBFallback() {
 	s.Equal(int64(15), count)
 }
 
+func (s *CommentServiceTestSuite) TestDelete_Negative_MissingVideo() {
+	ctx := context.Background()
+
+	existing := s.comMother.CommentForVideo(1, 1)
+	s.mockCommentRepo.On("GetByID", ctx, existing.ID).Return(existing, nil)
+
+	s.mockVideoRepo.On("GetByID", ctx, existing.VideoID).Return(nil, nil)
+
+	err := s.service.Delete(ctx, existing.ID, 999, domain.RoleUser)
+	s.ErrorIs(err, domain.ErrVideoNotFound)
+}
+
 func TestCommentServiceSuite(t *testing.T) {
 	suite.Run(t, new(CommentServiceTestSuite))
 }

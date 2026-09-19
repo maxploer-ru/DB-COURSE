@@ -33,7 +33,7 @@ func (s *VideoServiceTestSuite) SetupTest() {
 	s.mother = mother.VideoMother{}
 }
 
-func (s *VideoServiceTestSuite) TestInitUpload_Positive() {
+func (s *VideoServiceTestSuite) TestInitUpload_Positive_StateTransition() {
 	ctx := context.Background()
 	channelID := 1
 	userID := 1
@@ -51,7 +51,7 @@ func (s *VideoServiceTestSuite) TestInitUpload_Positive() {
 	s.Equal(domain.VideoStatusPending, vid.Status)
 }
 
-func (s *VideoServiceTestSuite) TestInitUpload_Negative() {
+func (s *VideoServiceTestSuite) TestInitUpload_Negative_Combinatorial() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("IsOwner", ctx, 1, 999).Return(false, nil)
@@ -63,7 +63,7 @@ func (s *VideoServiceTestSuite) TestInitUpload_Negative() {
 	s.Empty(url)
 }
 
-func (s *VideoServiceTestSuite) TestConfirmUpload_Positive() {
+func (s *VideoServiceTestSuite) TestConfirmUpload_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.mother.PendingVideoForChannel(1)
 
@@ -78,7 +78,7 @@ func (s *VideoServiceTestSuite) TestConfirmUpload_Positive() {
 	s.Equal(domain.VideoStatusReady, vid.Status)
 }
 
-func (s *VideoServiceTestSuite) TestConfirmUpload_Negative() {
+func (s *VideoServiceTestSuite) TestConfirmUpload_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -88,7 +88,7 @@ func (s *VideoServiceTestSuite) TestConfirmUpload_Negative() {
 	s.ErrorIs(err, domain.ErrVideoNotFound)
 }
 
-func (s *VideoServiceTestSuite) TestGetVideo_Positive() {
+func (s *VideoServiceTestSuite) TestGetVideo_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	expected := s.mother.ReadyVideoForChannel(1)
 
@@ -100,7 +100,7 @@ func (s *VideoServiceTestSuite) TestGetVideo_Positive() {
 	s.Equal(expected.ID, vid.ID)
 }
 
-func (s *VideoServiceTestSuite) TestGetVideo_Negative() {
+func (s *VideoServiceTestSuite) TestGetVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -111,7 +111,7 @@ func (s *VideoServiceTestSuite) TestGetVideo_Negative() {
 	s.Nil(vid)
 }
 
-func (s *VideoServiceTestSuite) TestUpdateVideo_Positive() {
+func (s *VideoServiceTestSuite) TestUpdateVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.mother.ReadyVideoForChannel(1)
 	newTitle := "New Title"
@@ -126,7 +126,7 @@ func (s *VideoServiceTestSuite) TestUpdateVideo_Positive() {
 	s.Equal(newTitle, updatedVid.Title)
 }
 
-func (s *VideoServiceTestSuite) TestUpdateVideo_Negative() {
+func (s *VideoServiceTestSuite) TestUpdateVideo_Negative_Combinatorial() {
 	ctx := context.Background()
 	vid := s.mother.ReadyVideoForChannel(1)
 	newTitle := "New Title"
@@ -140,7 +140,7 @@ func (s *VideoServiceTestSuite) TestUpdateVideo_Negative() {
 	s.Nil(updatedVid)
 }
 
-func (s *VideoServiceTestSuite) TestDeleteVideo_Positive() {
+func (s *VideoServiceTestSuite) TestDeleteVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	vid := s.mother.ReadyVideoForChannel(1)
 
@@ -152,7 +152,7 @@ func (s *VideoServiceTestSuite) TestDeleteVideo_Positive() {
 	s.NoError(err)
 }
 
-func (s *VideoServiceTestSuite) TestDeleteVideo_Negative() {
+func (s *VideoServiceTestSuite) TestDeleteVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("GetByID", ctx, 999).Return(nil, nil)
@@ -162,7 +162,7 @@ func (s *VideoServiceTestSuite) TestDeleteVideo_Negative() {
 	s.ErrorIs(err, domain.ErrVideoNotFound)
 }
 
-func (s *VideoServiceTestSuite) TestListChannelVideos_Positive() {
+func (s *VideoServiceTestSuite) TestListChannelVideos_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Video{s.mother.ReadyVideoForChannel(1)}
 
@@ -177,7 +177,7 @@ func (s *VideoServiceTestSuite) TestListChannelVideos_Positive() {
 	s.Equal(int64(1), videos.TotalCount)
 }
 
-func (s *VideoServiceTestSuite) TestListChannelVideos_Negative() {
+func (s *VideoServiceTestSuite) TestListChannelVideos_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("Exists", ctx, 999).Return(false, nil)
@@ -188,7 +188,7 @@ func (s *VideoServiceTestSuite) TestListChannelVideos_Negative() {
 	s.Nil(videos)
 }
 
-func (s *VideoServiceTestSuite) TestListMyVideos_Positive() {
+func (s *VideoServiceTestSuite) TestListMyVideos_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	chMother := mother.ChannelMother{}
 	ch := chMother.ChannelForUser(1)
@@ -206,7 +206,7 @@ func (s *VideoServiceTestSuite) TestListMyVideos_Positive() {
 	s.Equal(int64(1), videos.TotalCount)
 }
 
-func (s *VideoServiceTestSuite) TestListMyVideos_Negative() {
+func (s *VideoServiceTestSuite) TestListMyVideos_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockChanSvc.On("GetChannelByUserID", ctx, 999).Return(nil, errors.New("db error"))
@@ -217,7 +217,7 @@ func (s *VideoServiceTestSuite) TestListMyVideos_Negative() {
 	s.Nil(videos)
 }
 
-func (s *VideoServiceTestSuite) TestListAllVideos_Positive() {
+func (s *VideoServiceTestSuite) TestListAllVideos_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	expected := []*domain.Video{s.mother.ReadyVideoForChannel(1)}
 
@@ -231,7 +231,7 @@ func (s *VideoServiceTestSuite) TestListAllVideos_Positive() {
 	s.Equal(int64(1), videos.TotalCount)
 }
 
-func (s *VideoServiceTestSuite) TestListAllVideos_Negative() {
+func (s *VideoServiceTestSuite) TestListAllVideos_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	s.mockVideoRepo.On("List", ctx, 10, 0).Return(nil, errors.New("db error"))
@@ -242,7 +242,7 @@ func (s *VideoServiceTestSuite) TestListAllVideos_Negative() {
 	s.Nil(videos)
 }
 
-func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Positive() {
+func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	vid := s.mother.ReadyVideoForChannel(1)
 
@@ -255,7 +255,7 @@ func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Positive() {
 	s.Equal("http://stream.url", url)
 }
 
-func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Negative() {
+func (s *VideoServiceTestSuite) TestGetStreamingPresignedURL_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	vid := s.mother.PendingVideoForChannel(1)
 

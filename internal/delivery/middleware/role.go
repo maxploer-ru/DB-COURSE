@@ -3,6 +3,7 @@ package middleware
 import (
 	"ZVideo/internal/delivery/response"
 	"net/http"
+	"strings"
 )
 
 func RequireRole(allowedRoles ...string) func(next http.Handler) http.Handler {
@@ -14,7 +15,7 @@ func RequireRole(allowedRoles ...string) func(next http.Handler) http.Handler {
 				return
 			}
 			for _, role := range allowedRoles {
-				if userCtx.Role == role {
+				if strings.EqualFold(userCtx.Role, role) {
 					next.ServeHTTP(w, r)
 					return
 				}

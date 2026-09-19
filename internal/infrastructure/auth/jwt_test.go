@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,7 +20,7 @@ func (s *JwtServiceTestSuite) SetupTest() {
 	s.service = auth.NewJwtService("access_secret", "refresh_secret", time.Hour, time.Hour*24)
 }
 
-func (s *JwtServiceTestSuite) TestGenerateAccessToken_Positive() {
+func (s *JwtServiceTestSuite) TestGenerateAccessToken_Positive_StateTransition() {
 	ctx := context.Background()
 	data := &domain.AccessTokenData{
 		UserID:   1,
@@ -33,7 +34,7 @@ func (s *JwtServiceTestSuite) TestGenerateAccessToken_Positive() {
 	s.NotEmpty(token)
 }
 
-func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Positive() {
+func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Positive_StateTransition() {
 	ctx := context.Background()
 	userID := 1
 
@@ -46,7 +47,7 @@ func (s *JwtServiceTestSuite) TestGenerateRefreshToken_Positive() {
 	s.NotEmpty(data.TokenID)
 }
 
-func (s *JwtServiceTestSuite) TestValidateAccessToken_Positive() {
+func (s *JwtServiceTestSuite) TestValidateAccessToken_Positive_Combinatorial() {
 	ctx := context.Background()
 	data := &domain.AccessTokenData{
 		UserID:   1,
@@ -63,7 +64,7 @@ func (s *JwtServiceTestSuite) TestValidateAccessToken_Positive() {
 	s.Equal("test", claims.UserName)
 }
 
-func (s *JwtServiceTestSuite) TestValidateAccessToken_Negative() {
+func (s *JwtServiceTestSuite) TestValidateAccessToken_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	invalidToken := "invalid.token.string"
 
@@ -73,7 +74,24 @@ func (s *JwtServiceTestSuite) TestValidateAccessToken_Negative() {
 	s.Nil(claims)
 }
 
-func (s *JwtServiceTestSuite) TestValidateRefreshToken_Positive() {
+func (s *JwtServiceTestSuite) TestValidateAccessToken_RejectsDifferentHMACAlgorithm() {
+	ctx := context.Background()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
+		"user_id":  1,
+		"username": "test",
+		"role":     "user",
+		"exp":      time.Now().Add(time.Hour).Unix(),
+	})
+	signed, err := token.SignedString([]byte("access_secret"))
+	s.Require().NoError(err)
+
+	claims, err := s.service.ValidateAccessToken(ctx, signed)
+
+	s.Error(err)
+	s.Nil(claims)
+}
+
+func (s *JwtServiceTestSuite) TestValidateRefreshToken_Positive_Combinatorial() {
 	ctx := context.Background()
 	token, generatedData, _ := s.service.GenerateRefreshToken(ctx, 1)
 
@@ -85,7 +103,7 @@ func (s *JwtServiceTestSuite) TestValidateRefreshToken_Positive() {
 	s.Equal(generatedData.TokenID, claims.TokenID)
 }
 
-func (s *JwtServiceTestSuite) TestValidateRefreshToken_Negative() {
+func (s *JwtServiceTestSuite) TestValidateRefreshToken_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	invalidToken := "invalid.token.string"
 

@@ -28,7 +28,7 @@ func RespondWithError(w http.ResponseWriter, statusCode int, code, message strin
 	})
 }
 
-func RespondWithJSON(w http.ResponseWriter, statusCode int, payload interface{}) {
+func RespondWithJSON(w http.ResponseWriter, statusCode int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if payload != nil {
@@ -70,6 +70,8 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 		RespondWithError(w, http.StatusConflict, "CHANNEL_ALREADY_EXISTS", "Channel already exists")
 	case errors.Is(err, domain.ErrChannelNameAlreadyExists):
 		RespondWithError(w, http.StatusConflict, "CHANNEL_NAME_TAKEN", "Channel name already exists")
+	case errors.Is(err, domain.ErrInvalidChannelName):
+		RespondWithError(w, http.StatusBadRequest, "INVALID_CHANNEL_NAME", "Channel name is invalid")
 
 	case errors.Is(err, domain.ErrVideoNotFound):
 		RespondWithError(w, http.StatusNotFound, "VIDEO_NOT_FOUND", "Video not found")
@@ -79,6 +81,8 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 		RespondWithError(w, http.StatusBadRequest, "PLAYLIST_NAME_EMPTY", "Playlist name cannot be empty")
 	case errors.Is(err, domain.ErrPlaylistVideoChannelMismatch):
 		RespondWithError(w, http.StatusBadRequest, "PLAYLIST_VIDEO_CHANNEL_MISMATCH", "Video belongs to another channel")
+	case errors.Is(err, domain.ErrVideoNotReady):
+		RespondWithError(w, http.StatusConflict, "VIDEO_NOT_READY", "Video is not ready yet")
 
 	case errors.Is(err, domain.ErrSelfSubscription):
 		RespondWithError(w, http.StatusBadRequest, "SELF_SUBSCRIPTION", "Cannot subscribe to your own channel")
@@ -90,6 +94,8 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 
 	case errors.Is(err, domain.ErrCommentNotFound):
 		RespondWithError(w, http.StatusNotFound, "COMMENT_NOT_FOUND", "Comment not found")
+	case errors.Is(err, domain.ErrInvalidCommentContent):
+		RespondWithError(w, http.StatusBadRequest, "INVALID_COMMENT_CONTENT", "Comment content cannot be empty")
 	case errors.Is(err, domain.ErrCommunityPostNotFound):
 		RespondWithError(w, http.StatusNotFound, "COMMUNITY_POST_NOT_FOUND", "Community post not found")
 	case errors.Is(err, domain.ErrCommunityCommentNotFound):
@@ -98,6 +104,8 @@ func HandleDomainError(w http.ResponseWriter, err error) {
 		RespondWithError(w, http.StatusBadRequest, "COMMUNITY_POST_CONTENT_EMPTY", "Community post content cannot be empty")
 	case errors.Is(err, domain.ErrCommunityCommentContentEmpty):
 		RespondWithError(w, http.StatusBadRequest, "COMMUNITY_COMMENT_CONTENT_EMPTY", "Community comment content cannot be empty")
+	case errors.Is(err, domain.ErrInvalidRatingAction):
+		RespondWithError(w, http.StatusBadRequest, "INVALID_RATING_ACTION", "Rating action is invalid")
 
 	case errors.Is(err, domain.ErrCommentRatingNotFound):
 		RespondWithError(w, http.StatusNotFound, "RATING_NOT_FOUND", "Comment rating not found")

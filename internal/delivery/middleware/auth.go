@@ -12,13 +12,16 @@ import (
 func Auth(authSvc service.AuthService) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token := r.Header.Get("Authorization")
-			if strings.HasPrefix(token, "Bearer ") {
-				token = strings.TrimPrefix(token, "Bearer ")
+			header := strings.TrimSpace(r.Header.Get("Authorization"))
+			parts := strings.Fields(header)
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
+				response.RespondWithError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Bearer token is required")
+				return
 			}
+			token := parts[1]
 			accessTokenData, err := authSvc.ValidateAccessToken(r.Context(), token)
 			if err != nil {
-				response.RespondWithError(w, http.StatusUnauthorized, "INVALID_ACCESS_TOKEN", err.Error())
+				response.HandleDomainError(w, err)
 				return
 			}
 			userCtx := &UserContext{
@@ -26,7 +29,7 @@ func Auth(authSvc service.AuthService) func(next http.Handler) http.Handler {
 				Role:   accessTokenData.Role,
 			}
 			ctx := context.WithValue(r.Context(), UserContextKey, userCtx)
-			ctx = context.WithValue(ctx, domain.UserIDKey, accessTokenData.UserID)
+			ctx = domain.WithUserID(ctx, accessTokenData.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

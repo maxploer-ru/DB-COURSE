@@ -23,6 +23,11 @@ type videoInteractionService struct {
 	statsCache  repository.VideoStatsCache
 }
 
+type atomicVideoRatingRepository interface {
+	Upsert(ctx context.Context, rating *domain.VideoRating) (previous *domain.VideoRating, created bool, err error)
+	DeleteAndGet(ctx context.Context, userID, videoID int) (previous *domain.VideoRating, found bool, err error)
+}
+
 func NewVideoInteractionService(
 	ratingRepo repository.VideoRatingRepository,
 	viewingRepo repository.ViewingRepository,
@@ -47,6 +52,9 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 		slog.Int("video_id", videoID),
 		slog.String("action", string(action)),
 	)
+	if action != domain.RatingActionLike && action != domain.RatingActionDislike && action != domain.RatingActionRemove {
+		return domain.ErrInvalidRatingAction
+	}
 
 	video, err := s.videoRepo.GetByID(ctx, videoID)
 	if err != nil {
@@ -64,6 +72,21 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 	}
 
 	if action == domain.RatingActionRemove {
+		if atomicRepo, ok := s.ratingRepo.(atomicVideoRatingRepository); ok {
+			previous, found, err := atomicRepo.DeleteAndGet(ctx, userID, videoID)
+			if err != nil {
+				return err
+			}
+			if !found {
+				return domain.ErrRatingNotFound
+			}
+			if previous.Liked {
+				_ = s.statsCache.DecrLikes(ctx, videoID)
+			} else {
+				_ = s.statsCache.DecrDislikes(ctx, videoID)
+			}
+			return nil
+		}
 		if existing == nil {
 			return domain.ErrRatingNotFound
 		}
@@ -77,6 +100,30 @@ func (s *videoInteractionService) Rate(ctx context.Context, userID, videoID int,
 			_ = s.statsCache.DecrDislikes(ctx, videoID)
 		}
 		logger.InfoContext(ctx, "Rating removed")
+		return nil
+	}
+
+	if atomicRepo, ok := s.ratingRepo.(atomicVideoRatingRepository); ok {
+		rating := &domain.VideoRating{UserID: userID, VideoID: videoID, Liked: action == domain.RatingActionLike}
+		previous, created, err := atomicRepo.Upsert(ctx, rating)
+		if err != nil {
+			return err
+		}
+		if created {
+			if rating.Liked {
+				_ = s.statsCache.IncrLikes(ctx, videoID)
+			} else {
+				_ = s.statsCache.IncrDislikes(ctx, videoID)
+			}
+		} else if previous.Liked != rating.Liked {
+			if rating.Liked {
+				_ = s.statsCache.IncrLikes(ctx, videoID)
+				_ = s.statsCache.DecrDislikes(ctx, videoID)
+			} else {
+				_ = s.statsCache.IncrDislikes(ctx, videoID)
+				_ = s.statsCache.DecrLikes(ctx, videoID)
+			}
+		}
 		return nil
 	}
 

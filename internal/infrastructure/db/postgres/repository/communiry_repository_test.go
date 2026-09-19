@@ -64,7 +64,7 @@ func (s *CommunityRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *CommunityRepositoryTestSuite) TestCreatePost_Positive() {
+func (s *CommunityRepositoryTestSuite) TestCreatePost_Positive_StateTransition() {
 	ctx := context.Background()
 	post := s.comMother.PostForChannel(s.testChannel.ID, s.testUser.ID)
 	post.ID = 0
@@ -75,7 +75,7 @@ func (s *CommunityRepositoryTestSuite) TestCreatePost_Positive() {
 	s.NotZero(post.ID)
 }
 
-func (s *CommunityRepositoryTestSuite) TestCreatePost_Negative() {
+func (s *CommunityRepositoryTestSuite) TestCreatePost_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	post := s.comMother.PostForChannel(999999, s.testUser.ID)
 	post.ID = 0
@@ -85,7 +85,7 @@ func (s *CommunityRepositoryTestSuite) TestCreatePost_Negative() {
 	s.Error(err)
 }
 
-func (s *CommunityRepositoryTestSuite) TestGetPostByID_Positive() {
+func (s *CommunityRepositoryTestSuite) TestGetPostByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetPostByID(ctx, s.testPost.ID)
@@ -95,7 +95,7 @@ func (s *CommunityRepositoryTestSuite) TestGetPostByID_Positive() {
 	s.Equal(s.testPost.Content, found.Content)
 }
 
-func (s *CommunityRepositoryTestSuite) TestGetPostByID_Negative() {
+func (s *CommunityRepositoryTestSuite) TestGetPostByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetPostByID(ctx, 999)
@@ -104,7 +104,7 @@ func (s *CommunityRepositoryTestSuite) TestGetPostByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *CommunityRepositoryTestSuite) TestUpdatePost_Positive() {
+func (s *CommunityRepositoryTestSuite) TestUpdatePost_Positive_StateTransition() {
 	ctx := context.Background()
 	s.testPost.Content = "Updated Content"
 
@@ -115,7 +115,7 @@ func (s *CommunityRepositoryTestSuite) TestUpdatePost_Positive() {
 	s.Equal("Updated Content", found.Content)
 }
 
-func (s *CommunityRepositoryTestSuite) TestUpdatePost_Negative() {
+func (s *CommunityRepositoryTestSuite) TestUpdatePost_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	post := s.comMother.PostForChannel(s.testChannel.ID, s.testUser.ID)
 	post.ID = 999999
@@ -125,7 +125,7 @@ func (s *CommunityRepositoryTestSuite) TestUpdatePost_Negative() {
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
-func (s *CommunityRepositoryTestSuite) TestDeletePost_Positive() {
+func (s *CommunityRepositoryTestSuite) TestDeletePost_Positive_StateTransition() {
 	ctx := context.Background()
 
 	err := s.repo.DeletePost(ctx, s.testPost.ID)
@@ -135,7 +135,7 @@ func (s *CommunityRepositoryTestSuite) TestDeletePost_Positive() {
 	s.Nil(found)
 }
 
-func (s *CommunityRepositoryTestSuite) TestDeletePost_Negative() {
+func (s *CommunityRepositoryTestSuite) TestDeletePost_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.DeletePost(ctx, 999)
@@ -143,7 +143,7 @@ func (s *CommunityRepositoryTestSuite) TestDeletePost_Negative() {
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
-func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Positive() {
+func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListPostsByChannel(ctx, s.testChannel.ID, 10, 0)
@@ -152,7 +152,7 @@ func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Negative() {
+func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListPostsByChannel(ctx, 999, 10, 0)
@@ -161,7 +161,7 @@ func (s *CommunityRepositoryTestSuite) TestListPostsByChannel_Negative() {
 	s.Len(list, 0)
 }
 
-func (s *CommunityRepositoryTestSuite) TestCreateComment_Positive() {
+func (s *CommunityRepositoryTestSuite) TestCreateComment_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(s.testPost.ID, s.testUser.ID)
 	comment.ID = 0
@@ -172,7 +172,7 @@ func (s *CommunityRepositoryTestSuite) TestCreateComment_Positive() {
 	s.NotZero(comment.ID)
 }
 
-func (s *CommunityRepositoryTestSuite) TestCreateComment_Negative() {
+func (s *CommunityRepositoryTestSuite) TestCreateComment_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(999999, s.testUser.ID)
 	comment.ID = 0
@@ -182,7 +182,7 @@ func (s *CommunityRepositoryTestSuite) TestCreateComment_Negative() {
 	s.Error(err)
 }
 
-func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Positive() {
+func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(s.testPost.ID, s.testUser.ID)
 	comment.ID = 0
@@ -195,7 +195,7 @@ func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Positive() {
 	s.Equal(comment.Content, found.Content)
 }
 
-func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Negative() {
+func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetCommentByID(ctx, 999)
@@ -204,7 +204,7 @@ func (s *CommunityRepositoryTestSuite) TestGetCommentByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *CommunityRepositoryTestSuite) TestUpdateComment_Positive() {
+func (s *CommunityRepositoryTestSuite) TestUpdateComment_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(s.testPost.ID, s.testUser.ID)
 	comment.ID = 0
@@ -218,7 +218,7 @@ func (s *CommunityRepositoryTestSuite) TestUpdateComment_Positive() {
 	s.Equal("Updated Comment", found.Content)
 }
 
-func (s *CommunityRepositoryTestSuite) TestUpdateComment_Negative() {
+func (s *CommunityRepositoryTestSuite) TestUpdateComment_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(s.testPost.ID, s.testUser.ID)
 	comment.ID = 999999
@@ -228,7 +228,7 @@ func (s *CommunityRepositoryTestSuite) TestUpdateComment_Negative() {
 	s.ErrorIs(err, gorm.ErrRecordNotFound)
 }
 
-func (s *CommunityRepositoryTestSuite) TestDeleteComment_Positive() {
+func (s *CommunityRepositoryTestSuite) TestDeleteComment_Positive_StateTransition() {
 	ctx := context.Background()
 	comment := s.comMother.CommentForPost(s.testPost.ID, s.testUser.ID)
 	comment.ID = 0
@@ -241,7 +241,7 @@ func (s *CommunityRepositoryTestSuite) TestDeleteComment_Positive() {
 	s.Nil(found)
 }
 
-func (s *CommunityRepositoryTestSuite) TestDeleteComment_Negative() {
+func (s *CommunityRepositoryTestSuite) TestDeleteComment_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.DeleteComment(ctx, 999)

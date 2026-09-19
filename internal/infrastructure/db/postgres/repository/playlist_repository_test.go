@@ -69,7 +69,7 @@ func (s *PlaylistRepositoryTestSuite) TearDownTest() {
 	s.tx.Rollback()
 }
 
-func (s *PlaylistRepositoryTestSuite) TestCreate_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestCreate_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -80,7 +80,7 @@ func (s *PlaylistRepositoryTestSuite) TestCreate_Positive() {
 	s.NotZero(pl.ID)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestCreate_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestCreate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(999999)
 	pl.ID = 0
@@ -90,7 +90,7 @@ func (s *PlaylistRepositoryTestSuite) TestCreate_Negative() {
 	s.Error(err)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestGetByID_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestGetByID_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -103,7 +103,7 @@ func (s *PlaylistRepositoryTestSuite) TestGetByID_Positive() {
 	s.Equal(pl.Name, found.Name)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestGetByID_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestGetByID_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	found, err := s.repo.GetByID(ctx, 999)
@@ -112,7 +112,7 @@ func (s *PlaylistRepositoryTestSuite) TestGetByID_Negative() {
 	s.Nil(found)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestListByChannel_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestListByChannel_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -124,7 +124,7 @@ func (s *PlaylistRepositoryTestSuite) TestListByChannel_Positive() {
 	s.Len(list, 1)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestListByChannel_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestListByChannel_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	list, err := s.repo.ListByChannel(ctx, 999, 10, 0)
@@ -133,7 +133,7 @@ func (s *PlaylistRepositoryTestSuite) TestListByChannel_Negative() {
 	s.Len(list, 0)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestUpdate_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestUpdate_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -147,7 +147,7 @@ func (s *PlaylistRepositoryTestSuite) TestUpdate_Positive() {
 	s.Equal("Updated", found.Name)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestUpdate_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestUpdate_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 999999
@@ -157,7 +157,7 @@ func (s *PlaylistRepositoryTestSuite) TestUpdate_Negative() {
 	s.ErrorIs(err, domain.ErrPlaylistNotFound)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestDelete_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestDelete_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -170,7 +170,7 @@ func (s *PlaylistRepositoryTestSuite) TestDelete_Positive() {
 	s.Nil(found)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestDelete_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestDelete_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.Delete(ctx, 999)
@@ -178,7 +178,7 @@ func (s *PlaylistRepositoryTestSuite) TestDelete_Negative() {
 	s.ErrorIs(err, domain.ErrPlaylistNotFound)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestAddVideo_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestAddVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -191,7 +191,7 @@ func (s *PlaylistRepositoryTestSuite) TestAddVideo_Positive() {
 	s.Equal(1, count)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestAddVideo_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestAddVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -202,7 +202,7 @@ func (s *PlaylistRepositoryTestSuite) TestAddVideo_Negative() {
 	s.Error(err)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -216,7 +216,7 @@ func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Positive() {
 	s.Equal(0, count)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.RemoveVideo(ctx, 999, 999)
@@ -224,7 +224,7 @@ func (s *PlaylistRepositoryTestSuite) TestRemoveVideo_Negative() {
 	s.NoError(err)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Positive_StateTransition() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -244,7 +244,7 @@ func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Positive() {
 	s.Equal(1, items[0].Number)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	err := s.repo.UpdateVideoPosition(ctx, 999, 999, 1)
@@ -252,7 +252,7 @@ func (s *PlaylistRepositoryTestSuite) TestUpdateVideoPosition_Negative() {
 	s.Error(err)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestListItems_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestListItems_Positive_BoundaryValueAnalysis() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -266,7 +266,7 @@ func (s *PlaylistRepositoryTestSuite) TestListItems_Positive() {
 	s.Equal(s.testVideo.Title, items[0].VideoTitle)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestListItems_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestListItems_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	items, err := s.repo.ListItems(ctx, 999, 10, 0)
@@ -275,7 +275,7 @@ func (s *PlaylistRepositoryTestSuite) TestListItems_Negative() {
 	s.Len(items, 0)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestGetItemsCount_Positive() {
+func (s *PlaylistRepositoryTestSuite) TestGetItemsCount_Positive_EquivalencePartitioning() {
 	ctx := context.Background()
 	pl := s.plMother.PlaylistForChannel(s.testChannel.ID)
 	pl.ID = 0
@@ -288,7 +288,7 @@ func (s *PlaylistRepositoryTestSuite) TestGetItemsCount_Positive() {
 	s.Equal(1, count)
 }
 
-func (s *PlaylistRepositoryTestSuite) TestGetItemsCount_Negative() {
+func (s *PlaylistRepositoryTestSuite) TestGetItemsCount_Negative_EquivalencePartitioning() {
 	ctx := context.Background()
 
 	count, err := s.repo.GetItemsCount(ctx, 999)

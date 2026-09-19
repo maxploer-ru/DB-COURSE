@@ -5,9 +5,7 @@ import (
 	"ZVideo/internal/infrastructure/db/postgres/mappers"
 	"ZVideo/internal/infrastructure/db/postgres/models"
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -30,7 +28,7 @@ func (r *SubscriptionRepository) Subscribe(ctx context.Context, userID, channelI
 	}
 	err := r.db.WithContext(ctx).Create(sub).Error
 	if err != nil {
-		if errors.Is(err, gorm.ErrDuplicatedKey) || strings.Contains(err.Error(), "duplicate key") {
+		if isUniqueViolation(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("subscribe failed: %w", err)

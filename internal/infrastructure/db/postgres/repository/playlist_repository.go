@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PlaylistRepository struct {
@@ -70,7 +71,7 @@ func (r *PlaylistRepository) Update(ctx context.Context, playlist *domain.Playli
 	result := r.db.WithContext(ctx).
 		Model(&models.Playlist{}).
 		Where("id = ?", playlist.ID).
-		Updates(map[string]interface{}{
+		Updates(map[string]any{
 			"name":        playlist.Name,
 			"description": playlist.Description,
 		})
@@ -96,6 +97,23 @@ func (r *PlaylistRepository) Delete(ctx context.Context, playlistID int) error {
 
 func (r *PlaylistRepository) AddVideo(ctx context.Context, playlistID, videoID int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var playlist models.Playlist
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&playlist, playlistID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrPlaylistNotFound
+			}
+			return fmt.Errorf("lock playlist: %w", err)
+		}
+		var video models.Video
+		if err := tx.First(&video, videoID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrVideoNotFound
+			}
+			return fmt.Errorf("get playlist video: %w", err)
+		}
+		if video.ChannelID != playlist.ChannelID {
+			return domain.ErrPlaylistVideoChannelMismatch
+		}
 		var count int64
 		if err := tx.Model(&models.PlaylistItem{}).
 			Where("playlist_id = ? AND video_id = ?", playlistID, videoID).
@@ -127,23 +145,55 @@ func (r *PlaylistRepository) AddVideo(ctx context.Context, playlistID, videoID i
 }
 
 func (r *PlaylistRepository) RemoveVideo(ctx context.Context, playlistID, videoID int) error {
-	res := r.db.WithContext(ctx).
-		Where("playlist_id = ? AND video_id = ?", playlistID, videoID).
-		Delete(&models.PlaylistItem{})
-	if res.Error != nil {
-		return fmt.Errorf("remove video from playlist failed: %w", res.Error)
-	}
-	return nil
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var playlist models.Playlist
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&playlist, playlistID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		var item models.PlaylistItem
+		if err := tx.Where("playlist_id = ? AND video_id = ?", playlistID, videoID).First(&item).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		if err := tx.Delete(&models.PlaylistItem{}, map[string]any{"playlist_id": playlistID, "video_id": videoID}).Error; err != nil {
+			return fmt.Errorf("remove video from playlist failed: %w", err)
+		}
+		return tx.Model(&models.PlaylistItem{}).
+			Where("playlist_id = ? AND number > ?", playlistID, item.Number).
+			UpdateColumn("number", gorm.Expr("number - 1")).Error
+	})
 }
 
 func (r *PlaylistRepository) UpdateVideoPosition(ctx context.Context, playlistID, videoID, newPosition int) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var playlist models.Playlist
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&playlist, playlistID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrPlaylistNotFound
+			}
+			return err
+		}
 		var currentItem models.PlaylistItem
 		if err := tx.Where("playlist_id = ? AND video_id = ?", playlistID, videoID).First(&currentItem).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return domain.ErrVideoNotFound
 			}
 			return fmt.Errorf("get current item position: %w", err)
+		}
+		var itemCount int64
+		if err := tx.Model(&models.PlaylistItem{}).Where("playlist_id = ?", playlistID).Count(&itemCount).Error; err != nil {
+			return fmt.Errorf("count playlist items: %w", err)
+		}
+		if newPosition < 1 {
+			newPosition = 1
+		}
+		if int64(newPosition) > itemCount {
+			newPosition = int(itemCount)
 		}
 
 		oldPos := currentItem.Number
